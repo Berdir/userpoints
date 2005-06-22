@@ -147,8 +147,10 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
       }
       break;
     default:
-      watchdog('userpoints', t('Node type "%d" not configured in userpoints module', $node->type));
-      $points = 1;
+      // Node type is not defined, log a message
+      watchdog('userpoints',
+        t('Node type "%type" not configured in userpoints module',
+        array('%type' => $node->type)));
       break;
     }
 }
