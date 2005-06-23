@@ -45,6 +45,9 @@ function userpoints_settings() {
   $output .= form_textfield ('Points for posting a story', 'userpoints_post_story',
     variable_get('userpoints_post_story', '1'), 5, 5);
 
+  $output .= form_textfield ('Points for posting a blog entry', 'userpoints_post_blog',
+    variable_get('userpoints_post_blog', '1'), 5, 5);
+
   $output .= form_textfield ('Points for posting a forum topic', 'userpoints_post_forum',
     variable_get('userpoints_post_forum', '1'), 5, 5);
 
@@ -134,6 +137,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
     case 'story':
     case 'page':
     case 'forum':
+    case 'blog':
       $points = variable_get('userpoints_post_' . $node->type, '1');
       switch($op) {
         case 'insert':
