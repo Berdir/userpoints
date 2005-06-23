@@ -92,8 +92,8 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
           case 0:
             $title = $block_title[$delta];
             if ($user->uid) {
-              $points = db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
-              $content = t('Your points: ') . $points;
+              $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
+              $content = t('You have: %point-count', array('%point-count' => format_plural($points, '1 point', '%count points')));
             }
             else {
               $content = t('Points are visible to logged in users only');
