@@ -90,7 +90,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
             $title = $block_title[$delta];
             if ($user->uid) {
               $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
-              $content = t('You have: %point-count', array('%point-count' => format_plural($points, '1 point', '%count points')));
+              $content = t('You have %p %c', array('%p' => $points, '%c' => format_plural($points, 'point', 'points')));
             }
             else {
               $content = t('Points are visible to logged in users only');
@@ -172,26 +172,25 @@ function userpoints_invite($user, $op) {
   }
 }
 
-function _userpoints_update_points($points = 0, $info = '', $orig_user = '') {
-  global $current_user;
+function _userpoints_update_points($new_points = 0, $info = '', $orig_user = '') {
+  global $user;
 
   if (isset($orig_user->uid)) {
-    $user = $orig_user;
+    $real_user = $orig_user;
   }
   else {
-    $user = $current_user;
+    $real_user = $user;
   }
 
-  $points = (int)$points;
-  $new_points = $points + _userpoints_get_current_points($user);
+  $points = (int)$new_points + (int)_userpoints_get_current_points($real_user);
 
-  if (_userpoints_user_exists()) {
+  if (_userpoints_user_exists($real_user)) {
     db_query("UPDATE {userpoints} SET points = '%d', last_update = '%d' WHERE uid = %d",
-      $new_points, time(), $user->uid);
+      $points, time(), $real_user->uid);
   }
   else {
     $result = db_query("INSERT INTO {userpoints} VALUES ('%d', '%d', '%d')",
-      $user->uid, $new_points, time());
+      $real_user->uid, $points, time());
   }
 }
 
