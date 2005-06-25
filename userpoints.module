@@ -7,10 +7,10 @@
 function userpoints_help($section) {
   switch ($section) {
     case 'admin/modules#description':
-      $output = t('Users earn points as they post articles, images, comments, and vote on nodes');
+      $output = t('Users earn points as they post nodes, comments, and vote on nodes');
       break;
     case 'admin/settings/userpoints':
-      $output = t('Users earn points as they post articles, images, comments, and vote on nodes');
+      $output = t('Users earn points as they post nodes, comments, and vote on nodes');
       break;
   }
 
@@ -48,7 +48,13 @@ function userpoints_settings() {
   $output .= form_textfield ('Points for voting on a node', 'userpoints_nodevote',
     variable_get('userpoints_nodevote', '1'), 5, 5);
 
-  $form= form_group(t('Points for each event'), $output);
+  $output .= form_textfield ('Points for inviting a user', 'userpoints_invite_invite',
+    variable_get('userpoints_invite_invite', '1'), 5, 5);
+
+  $output .= form_textfield ('Points when invited user registers', 'userpoints_invite_register',
+    variable_get('userpoints_invite_register', '1'), 5, 5);
+
+  $form = form_group(t('Points for each event'), $output);
 
   return $form;
 }  
@@ -152,11 +158,32 @@ function userpoints_nodevote($nid) {
   _userpoints_update_points($points, 'nodevote');
 }
 
-function _userpoints_update_points($points = 0, $info = '') {
-  global $user;
+function userpoints_invite($user, $op) {
+  switch($op) {
+    case 'invite':
+      $points = variable_get('userpoints_invite_invite', '1');
+      _userpoints_update_points($points, 'invite', $user);
+      break;
+
+    case 'register':
+      $points = variable_get('userpoints_invite_register', '1');
+      _userpoints_update_points($points, 'register', $user);
+      break;
+  }
+}
+
+function _userpoints_update_points($points = 0, $info = '', $orig_user = '') {
+  global $current_user;
+
+  if (isset($orig_user->uid)) {
+    $user = $orig_user;
+  }
+  else {
+    $user = $current_user;
+  }
 
   $points = (int)$points;
-  $new_points = $points + (int)_userpoints_get_current_points();
+  $new_points = $points + _userpoints_get_current_points($user);
 
   if (_userpoints_user_exists()) {
     db_query("UPDATE {userpoints} SET points = '%d', last_update = '%d' WHERE uid = %d",
@@ -168,18 +195,12 @@ function _userpoints_update_points($points = 0, $info = '') {
   }
 }
 
-function _userpoints_user_exists() {
-  global $user;
-
-  $r = db_result(db_query('SELECT COUNT(*) FROM {userpoints} WHERE uid = %d', $user->uid));
-
-  return $r;
+function _userpoints_user_exists($user) {
+  return (int)db_result(db_query('SELECT COUNT(*) FROM {userpoints} WHERE uid = %d', $user->uid));
 }
 
-function _userpoints_get_current_points() {
-  global $user;
-
-  return db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
+function _userpoints_get_current_points($user) {
+  return (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
 }
 
 ?>
