@@ -60,6 +60,8 @@ function userpoints_settings() {
 }  
 
 function userpoints_user($op) {
+  global $user;
+
   switch($op) {
     case 'delete':
       db_query('DELETE FROM {userpoints} WHERE uid = %d', $user->uid);
@@ -135,7 +137,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
       break;
     case 'delete':
       $points = -$points;
-      _userpoints_update_points($points, "op=$op type=".$node->type);
+      _userpoints_update_points($points, "op=$op type=".$node->type, $node->user);
       break;
   }
 }
