@@ -1,0 +1,75 @@
+# LANGUAGE translation of Drupal (userpoints.module)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from file: userpoints.module,v 1.8 2005/07/17 16:48:40 kbahey
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2005-07-28 13:51-0700\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: userpoints.module:10;13
+msgid "Users earn points as they post nodes, comments, and vote on nodes"
+msgstr ""
+
+#: userpoints.module:26
+msgid "userpoints view"
+msgstr ""
+
+#: userpoints.module:41
+msgid "Points for posting an %node-name"
+msgstr ""
+
+#: userpoints.module:57
+msgid "Points for each event"
+msgstr ""
+
+#: userpoints.module:79
+msgid "User Points"
+msgstr ""
+
+#: userpoints.module:80
+msgid "Highest Users"
+msgstr ""
+
+#: userpoints.module:95
+msgid "You have %p %c"
+msgstr ""
+
+#: userpoints.module:98
+msgid "Points are visible to logged in users only"
+msgstr ""
+
+#: userpoints.module:111
+msgid "user"
+msgstr ""
+
+#: userpoints.module:111
+msgid "points"
+msgstr ""
+
+#: userpoints.module:95
+msgid "point"
+msgid_plural "points"
+msgstr[0] ""
+msgstr[1] ""
+
+#: userpoints.module:34
+msgid "view userpoints"
+msgstr ""
+
+#: userpoints.module:34
+msgid "use userpoints"
+msgstr ""
+
+#: userpoints.module:0
+msgid "userpoints"
+msgstr ""
+
