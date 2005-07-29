@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Userpoints pt-pt\n"
 "POT-Creation-Date: 2005-07-28 13:51-0700\n"
-"PO-Revision-Date: 2005-07-28 22:05-0000\n"
+"PO-Revision-Date: 2005-07-29 08:58-0000\n"
 "Last-Translator: Miguel Duarte <miguel.duarte@gmail.com>\n"
 "Language-Team: Portuguese from Portugal <miguel.duarte@gmail.com>\n"
 "MIME-Version: 1.0\n"
@@ -35,11 +35,11 @@ msgstr "Pontos por cada evento"
 
 #: userpoints.module:79
 msgid "User Points"
-msgstr "Os seus pontos"
+msgstr "Pontos de Utilização"
 
 #: userpoints.module:80
 msgid "Highest Users"
-msgstr "Maiores utilizadores"
+msgstr "Maiores Utilizadores"
 
 #: userpoints.module:95
 msgid "You have %p %c"
