@@ -21,11 +21,11 @@ function userpoints_menu($may_cache) {
   $items = array();
 
   $items[] = array(
-    'path'     => '',
-    'callback' => '',
-    'title'    => t('userpoints view'),
+    'path'     => 'userpoints',
+    'callback' => 'userpoints_list_users',
+    'title'    => t('Users by Points'),
     'access'   => user_access('view userpoints'),
-    'type'     => MENU_CALLBACK);
+    'type'     => MENU_NORMAL_ITEM);
 
    return $items;
 }
@@ -66,7 +66,31 @@ function userpoints_user($op) {
     case 'delete':
       db_query('DELETE FROM {userpoints} WHERE uid = %d', $user->uid);
       break;
+    case 'view':
+      $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
+      return array(t('Points') => form_item(t('Your Points'), $points));
+      break;
   }
+}
+
+function userpoints_list_users() {
+  
+  $header = array(t('user'), t('points'));
+
+  $result = db_query('SELECT p.uid, u.name, p.points FROM {userpoints} p, {users} u WHERE u.uid = p.uid GROUP BY p.uid ORDER BY p.points DESC', 30, 0, NULL);
+  while ($data = db_fetch_object($result)) {
+    $rows[] =
+      array(
+        array('data' => l($data->name, 'user/' . $data->uid)),
+        array('data' => $data->points, 'align' => 'right'));
+  }
+
+  if ($pager = theme('pager', NULL, 30, 0)) {
+    $rows[] = array(array('data' => $pager, 'colspan' => '2'));
+  }
+
+  print theme('page', theme('table', $header, $rows));
+
 }
 
 function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
@@ -124,7 +148,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
 function userpoints_page() {
   $edit = $_POST['edit'];
 
-  print theme('page', $o);
+  print theme('page', '');
 }
 
 function userpoints_nodeapi(&$node, $op, $teaser, $page) {
