@@ -59,8 +59,7 @@ function userpoints_settings() {
   return $form;
 }  
 
-function userpoints_user($op) {
-  global $user;
+function userpoints_user($op, &$edit, &$user, $category) {
 
   switch($op) {
     case 'delete':
