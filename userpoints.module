@@ -162,6 +162,19 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
       $points = -$points;
       _userpoints_update_points($points, "op=$op type=".$node->type, $node->uid);
       break;
+    case 'update':
+      $orig_node = node_load(array('nid' => $node->nid));
+      if ($node->uid != $orig_node->uid) {
+        // subtract from the original node owner
+        $points = -$points;
+        _userpoints_update_points($points, "op=$op type=".$node->type, $orig_node->uid);
+
+        // Add to the new node owner
+        $points = -$points;
+        _userpoints_update_points($points, "op=$op type=".$node->type, $node->uid);
+      }
+      break;
+
   }
 }
 
