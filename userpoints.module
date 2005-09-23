@@ -156,22 +156,22 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
   switch($op) {
     case 'insert':
       $points = $points;
-      _userpoints_update_points($points, "op=$op type=".$node->type, $node->uid);
+      _userpoints_update_points($points, $node->uid, "op=$op type=".$node->type);
       break;
     case 'delete':
       $points = -$points;
-      _userpoints_update_points($points, "op=$op type=".$node->type, $node->uid);
+      _userpoints_update_points($points, $node->uid, "op=$op type=".$node->type);
       break;
     case 'update':
       $orig_node = node_load(array('nid' => $node->nid));
       if ($node->uid != $orig_node->uid) {
         // subtract from the original node owner
         $points = -$points;
-        _userpoints_update_points($points, "op=$op type=".$node->type, $orig_node->uid);
+        _userpoints_update_points($points, $orig_node->uid, "op=$op type=".$node->type);
 
         // Add to the new node owner
         $points = -$points;
-        _userpoints_update_points($points, "op=$op type=".$node->type, $node->uid);
+        _userpoints_update_points($points, $node->uid, "op=$op type=".$node->type);
       }
       break;
 
@@ -179,42 +179,42 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
 }
 
 function userpoints_comment($op, $comment) {
+  global $user;
   $points = variable_get('userpoints_post_comment', '1');
   switch($op) {
     case 'insert':
-      _userpoints_update_points($points, 'comment');
+      _userpoints_update_points($points, $user->uid, 'comment '.$op);
       break;
     case 'delete':
       $points = -$points;
-      _userpoints_update_points($points, 'comment');
+      _userpoints_update_points($points, $user->uid, 'comment '.$op);
       break;
   }
 }
 
 function userpoints_nodevote($nid) {
   $points = variable_get('userpoints_nodevote', '1');
-  _userpoints_update_points($points, 'nodevote');
+  _userpoints_update_points($points, $user->uid, 'nodevote');
 }
 
 function userpoints_invite($user, $op) {
   switch($op) {
     case 'invite':
       $points = variable_get('userpoints_invite_invite', '1');
-      _userpoints_update_points($points, 'invite', $user->uid);
+      _userpoints_update_points($points, $user->uid, 'invite');
       break;
 
     case 'register':
       $points = variable_get('userpoints_invite_register', '1');
-      _userpoints_update_points($points, 'register', $user->uid);
+      _userpoints_update_points($points, $user->uid, 'register');
       break;
   }
 }
 
-function _userpoints_update_points($new_points = 0, $info = '', $orig_uid = '') {
-  global $user;
+function _userpoints_update_points($new_points = 0, $uid = '', $info = '') {
 
-  if (isset($orig_uid)) {
-    $real_uid = $orig_uid;
+  if (isset($uid)) {
+    $real_uid = $uid;
   }
   else {
     $real_uid = $user->uid;
