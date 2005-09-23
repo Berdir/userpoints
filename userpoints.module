@@ -45,6 +45,9 @@ function userpoints_settings() {
   $output .= form_textfield ('Points for posting a comment', 'userpoints_post_comment',
     variable_get('userpoints_post_comment', '1'), 5, 5);
 
+  $output .= form_textfield ('Points for moderating a comment', 'userpoints_moderate_comment',
+    variable_get('userpoints_moderate_comment', '1'), 5, 5);
+
   $output .= form_textfield ('Points for voting on a node', 'userpoints_nodevote',
     variable_get('userpoints_nodevote', '1'), 5, 5);
 
@@ -180,6 +183,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
 
 function userpoints_comment($op, $comment) {
   global $user;
+
   $points = variable_get('userpoints_post_comment', '1');
   switch($op) {
     case 'insert':
@@ -187,6 +191,10 @@ function userpoints_comment($op, $comment) {
       break;
     case 'delete':
       $points = -$points;
+      _userpoints_update_points($points, $user->uid, 'comment '.$op);
+      break;
+    case 'moderate':
+      $points = variable_get('userpoints_moderate_comment', '1');
       _userpoints_update_points($points, $user->uid, 'comment '.$op);
       break;
   }
@@ -220,7 +228,18 @@ function _userpoints_update_points($new_points = 0, $uid = '', $info = '') {
     $real_uid = $user->uid;
   }
 
+  if ($new_points <= 0) {
+    $msg = t('lost');
+  }
+  else {
+    $msg = t('earned');
+  }
+
+
   $points = (int)$new_points + (int)_userpoints_get_current_points($real_uid);
+
+  drupal_set_message(t('You %m %p points! You now have a total of %t points.',
+    array('%m'=>$msg, '%p'=> abs($new_points), '%t'=>$points)));
 
   if (_userpoints_user_exists($real_uid)) {
     db_query("UPDATE {userpoints} SET points = '%d', last_update = '%d' WHERE uid = %d",
