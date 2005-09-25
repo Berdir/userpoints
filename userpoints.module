@@ -27,15 +27,33 @@ function userpoints_menu($may_cache) {
     'access'   => user_access('view userpoints'),
     'type'     => MENU_NORMAL_ITEM);
 
+  $items[] = array(
+    'path'     => 'admin/settings/userpoints/reset',
+    'callback' => 'userpoints_reset',
+    'title'    => t('Reset all user points'),
+    'access'   => user_access('admin userpoints'),
+    'type'     => MENU_CALLBACK);
+
    return $items;
 }
 
 function userpoints_perm() {
-  return array ('view userpoints', 'use userpoints');
+  return array ('view userpoints', 'use userpoints', 'admin userpoints');
+}
+
+function userpoints_reset() {
+  if ($_POST['confirm']) {
+    db_query('DELETE FROM {userpoints}');
+    drupal_set_message(t('All user points have been reset'));
+    $output = '';
+  }
+  else {
+    $output = form(form_submit('Reset', 'confirm'));
+  }
+  print theme('page',$output);
 }
 
 function userpoints_settings() {
-  
   foreach (node_list() as $type) {
     $name = node_invoke($type, 'node_name');
     $output .= form_textfield (t('Points for posting an %node-name', array('%node-name' => $name)),
@@ -57,7 +75,13 @@ function userpoints_settings() {
   $output .= form_textfield ('Points when invited user registers', 'userpoints_invite_register',
     variable_get('userpoints_invite_register', '1'), 5, 5);
 
-  $form = form_group(t('Points for each event'), $output);
+  $points = form_group(t('Points for each event'), $output);
+
+  $output = t('You can %s. This is useful in certain situations such as monthly contests.',
+    array('%s'=> l( 'reset all user points', 'admin/settings/userpoints/reset')));
+
+  $advanced = form_group(t('Advanced Options'), $output);
+  $form = $points . $advanced;
 
   return $form;
 }  
@@ -221,12 +245,7 @@ function userpoints_invite($user, $op) {
 
 function _userpoints_update_points($new_points = 0, $uid = '', $info = '') {
 
-  if (isset($uid)) {
-    $real_uid = $uid;
-  }
-  else {
-    $real_uid = $user->uid;
-  }
+  $user = user_load(array('uid'=>$uid));
 
   if ($new_points <= 0) {
     $msg = t('lost');
@@ -235,19 +254,22 @@ function _userpoints_update_points($new_points = 0, $uid = '', $info = '') {
     $msg = t('earned');
   }
 
+  $points = (int)$new_points + (int)_userpoints_get_current_points($uid);
 
-  $points = (int)$new_points + (int)_userpoints_get_current_points($real_uid);
+  drupal_set_message(t('User %uname %op %points points! Total now is %total points.',
+    array(
+      '%uname'=>$user->name,
+      '%op'=>$msg,
+      '%points'=> abs($new_points),
+      '%total'=>$points)));
 
-  drupal_set_message(t('You %m %p points! You now have a total of %t points.',
-    array('%m'=>$msg, '%p'=> abs($new_points), '%t'=>$points)));
-
-  if (_userpoints_user_exists($real_uid)) {
+  if (_userpoints_user_exists($uid)) {
     db_query("UPDATE {userpoints} SET points = '%d', last_update = '%d' WHERE uid = %d",
-      $points, time(), $real_uid);
+      $points, time(), $uid);
   }
   else {
     $result = db_query("INSERT INTO {userpoints} VALUES ('%d', '%d', '%d')",
-      $real_uid, $points, time());
+      $uid, $points, time());
   }
 }
 
