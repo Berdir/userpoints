@@ -215,11 +215,11 @@ function userpoints_comment($op, $comment) {
       break;
     case 'delete':
       $points = -$points;
-      _userpoints_update_points($points, $user->uid, 'comment '.$op);
+      _userpoints_update_points($points, $comment->uid, 'comment '.$op);
       break;
     case 'moderate':
       $points = variable_get('userpoints_moderate_comment', '1');
-      _userpoints_update_points($points, $user->uid, 'comment '.$op);
+      _userpoints_update_points($points, $comment->uid, 'comment '.$op);
       break;
   }
 }
@@ -243,7 +243,12 @@ function userpoints_invite($user, $op) {
   }
 }
 
-function _userpoints_update_points($new_points = 0, $uid = '', $info = '') {
+function _userpoints_update_points($new_points = 0, $uid = 0, $info = '') {
+
+  if ($uid == 0) {
+    // anonymous users do not get points
+    return;
+  }
 
   $user = user_load(array('uid'=>$uid));
 
