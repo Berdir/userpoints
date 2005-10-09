@@ -225,11 +225,14 @@ function userpoints_comment($op, $comment) {
 }
 
 function userpoints_nodevote($nid) {
+  global $user;
   $points = variable_get('userpoints_nodevote', '1');
   _userpoints_update_points($points, $user->uid, 'nodevote');
 }
 
-function userpoints_invite($user, $op) {
+function userpoints_invite($inviteduser, $op) {
+  global $user;
+
   switch($op) {
     case 'invite':
       $points = variable_get('userpoints_invite_invite', '1');
@@ -238,7 +241,7 @@ function userpoints_invite($user, $op) {
 
     case 'register':
       $points = variable_get('userpoints_invite_register', '1');
-      _userpoints_update_points($points, $user->uid, 'register');
+      _userpoints_update_points($points, $inviteduser->uid, 'register');
       break;
   }
 }
