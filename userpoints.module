@@ -23,7 +23,7 @@ function userpoints_menu($may_cache) {
   $items[] = array(
     'path'     => 'userpoints',
     'callback' => 'userpoints_list_users',
-    'title'    => t('Users by Points'),
+    'title'    => t('users by points'),
     'access'   => user_access('view userpoints'),
     'type'     => MENU_NORMAL_ITEM);
 
@@ -60,28 +60,43 @@ function userpoints_settings() {
       'userpoints_post_'. $type, variable_get('userpoints_post_'. $type, '1'), 5, 5);
   }
 
-  $output .= form_textfield ('Points for posting a comment', 'userpoints_post_comment',
+  $output .= form_textfield (t('Points for posting a comment'), 'userpoints_post_comment',
     variable_get('userpoints_post_comment', '1'), 5, 5);
 
-  $output .= form_textfield ('Points for moderating a comment', 'userpoints_moderate_comment',
+  $output .= form_textfield (t('Points for moderating a comment'), 'userpoints_moderate_comment',
     variable_get('userpoints_moderate_comment', '1'), 5, 5);
 
-  $output .= form_textfield ('Points for voting on a node', 'userpoints_nodevote',
+  $output .= form_textfield (t('Points for voting on a node'), 'userpoints_nodevote',
     variable_get('userpoints_nodevote', '1'), 5, 5);
 
-  $output .= form_textfield ('Points for inviting a user', 'userpoints_invite_invite',
+  $output .= form_textfield (t('Points for inviting a user'), 'userpoints_invite_invite',
     variable_get('userpoints_invite_invite', '1'), 5, 5);
 
-  $output .= form_textfield ('Points when invited user registers', 'userpoints_invite_register',
+  $output .= form_textfield (t('Points when invited user registers'), 'userpoints_invite_register',
     variable_get('userpoints_invite_register', '1'), 5, 5);
 
   $points = form_group(t('Points for each event'), $output);
+
+  $output = form_radios(t('Use points as form of payment?'), 'userpoints_ec_payment',
+    variable_get('userpoints_ec_payment', 0), array(t('Disable'), t('Enable')));
+
+  $output .= form_textfield (t('Points multiplier for buying'), 'userpoints_ec_buy',
+    variable_get('userpoints_ec_buy', 1), 5, 5);
+
+  $output .= form_textfield (t('Points to get on selling (for every dollar)'), 'userpoints_ec_sell',
+    variable_get('userpoints_ec_sell', 1), 5, 5);
+
+  $output .= form_textfield (t('Minimum amount for purchase'), 'userpoints_min_purchase',
+    variable_get('userpoints_min_purchase', '5.00'), 5, 5);
+
+  $ecommerce = form_group(t('Ecommerce Options'), $output);
 
   $output = t('You can %s. This is useful in certain situations such as monthly contests.',
     array('%s'=> l( 'reset all user points', 'admin/settings/userpoints/reset')));
 
   $advanced = form_group(t('Advanced Options'), $output);
-  $form = $points . $advanced;
+
+  $form = $points . $ecommerce . $advanced;
 
   return $form;
 }  
@@ -230,20 +245,16 @@ function userpoints_nodevote($nid) {
   _userpoints_update_points($points, $user->uid, 'nodevote');
 }
 
-function userpoints_invite($inviteduser, $op) {
-  global $user;
-
+function userpoints_invite($uid, $op) {
   switch($op) {
     case 'invite':
       $points = variable_get('userpoints_invite_invite', '1');
-      _userpoints_update_points($points, $user->uid, 'invite');
       break;
-
     case 'register':
       $points = variable_get('userpoints_invite_register', '1');
-      _userpoints_update_points($points, $inviteduser->uid, 'register');
       break;
   }
+  _userpoints_update_points($points, $uid, $op);
 }
 
 function _userpoints_update_points($new_points = 0, $uid = 0, $info = '') {
@@ -266,10 +277,10 @@ function _userpoints_update_points($new_points = 0, $uid = 0, $info = '') {
 
   drupal_set_message(t('User %uname %op %points points! Total now is %total points.',
     array(
-      '%uname'=>$user->name,
-      '%op'=>$msg,
-      '%points'=> abs($new_points),
-      '%total'=>$points)));
+      '%uname'  => $user->name,
+      '%op'     => $msg,
+      '%points' => abs($new_points),
+      '%total'  => $points)));
 
   if (_userpoints_user_exists($uid)) {
     db_query("UPDATE {userpoints} SET points = '%d', last_update = '%d' WHERE uid = %d",
@@ -289,4 +300,103 @@ function _userpoints_get_current_points($uid) {
   return (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $uid));
 }
 
-?>
+function userpoints_ecommerceapi($data, $op) {
+  switch($op) {
+    case 'on payment completion':
+      $multiplier = (int)variable_get('userpoints_ec_buy', 1);
+
+      $uid = $data['uid'];
+      $points = $multiplier * $data['gross'];
+      $payment_status = $data['payment_status'];
+
+      if ($payment_status == payment_get_status_id('completed')) {
+        // Payment completed
+        if ($uid) {
+          // User id from the transaction
+          if ($points) {
+            // 
+            if ($data['payment_method'] != 'userpoints') {
+              // We cannot use points to purchase points. It does not make sense!
+              _userpoints_update_points($points, $uid);
+            }
+          }
+        }
+      }
+    break;
+  }
+}
+
+function userpoints_paymentapi(&$txn, $op, $arg = '') {
+  global $user;
+  $uid = $user->uid;
+
+  $edit = $_POST['edit'];
+
+  if (!variable_get('userpoints_ec_payment', 0)) {
+    return;
+  }
+
+  $multiplier = (int)variable_get('userpoints_ec_sell', 1);
+  $min = variable_get('userpoints_min_purchase', '5.00');
+
+  switch ($op) {
+    case 'display name':
+      return t('User Points');
+
+    case 'on checkout':
+      $gross = $edit['gross'];
+      $points = ($gross / $multiplier);
+
+      if ($points < $min) {
+        form_set_error('gross', t('Minimum points for purchase is %min', array('%min' => $min)));
+      }
+
+      $balance = _userpoints_get_current_points($uid);
+      if ($balance < $points) {
+        form_set_error('gross', t('You do not have enough points for this purchase'));
+      }
+      break;
+
+    case 'payment page':
+      $gross = $edit['gross'];
+      $points = ($gross / $multiplier);
+
+      // Check the user's balance
+      $balance = _userpoints_get_current_points($uid);
+      if ($balance >= $points) {
+
+        $txnid = $txn['txnid'];
+        // Check if we have a transaction ID
+        if ($txnid) {
+          // User has sufficient balance
+          _userpoints_update_points(-$points, $uid);
+
+          // Check if we have shippable items
+          $has_shippable_item = false;
+          foreach($txn['item'] as $key => $value) {
+            if (product_is_shippable($key['nid'])) {
+              $has_shippable_item = true;
+            }
+          }
+
+          // If there are no shippable items, then push workflow to completion
+          if (!$has_shippabale_item) {
+            $edit['workflow'] = 6;
+          }
+
+          // Setup payment to completed
+          $edit['payment_status'] = payment_get_status_id('completed');
+          $edit['txnid'] = $txn['txnid'];
+          // Update the transaction
+          $result = store_transaction_save($edit);
+
+          if ($result) {
+            // Send an email notification
+            store_send_invoice_email($txnid);
+          }
+        }
+      }
+      break;
+  }
+}
+
