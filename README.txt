@@ -7,12 +7,20 @@ Description
 This module provides the ability for users to gain points when they
 do certain actions, such as:
 
-- posting an image
-- posting a page
-- posting a story
-- posting a forum topic
+- posting a node (different points can be awarded for different
+  node types, e.g. page, story, forum, image, ...etc.)
 - posting a comment
+- moderating a comment
 - voting on a node (requires the nodevote module)
+- inviting a person to register on the site
+- invited person actually registers on the site
+- purchasing from your e-commerce store (reward points)
+
+Using real money, users can purchase points from your ecommerce store
+as well.
+
+Moreover, the points can be used as currency for ecommerce as well,
+as in a form of payment
 
 Upon deleting a node or a comment the number of points is subtracted.
 
@@ -25,7 +33,7 @@ displays the top 5 users who earned points.
 This module is useful in providing an incentive for users to participate
 in the site, and be more active.
 
-Sponsored by: http://artalyst.com
+Initally sponsored by: http://artalyst.com
 
 Extended Version
 ----------------
@@ -54,9 +62,35 @@ To enable this module do the following:
 
 2. Go to Admin -> Settings -> userpoints.
 
-   Assign how many points you want assigned for each action.
+   Configure the options as per your requirements
 
 3. Go to Admin -> Access Control and enable viewing for the roles you want.
+
+For configuring with e-commerce, you have to have the ecommerce modules
+installed and configured.
+
+- User points can be used as a form of payment, with an admin defined
+  multiplier
+
+- Users gain points when purchasing items via e-commerce for every dollar
+  they spend.
+
+This is useful as a reward system.
+
+This also allows purchasing of points for real money. You have to setup
+a non-shippable product, and adjust the multiplier accordingly.
+
+API
+---
+This modules provides a callable interface for adding or subtracting points
+to a user account, as well as querying a user's account for how much points
+he currently has:
+
+The functions are:
+
+ hook_userpoints($points, $uid) 
+
+ userpoints_get_current_points($uid) 
 
 Bugs/Features/Patches:
 ----------------------

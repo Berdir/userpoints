@@ -257,11 +257,31 @@ function userpoints_invite($uid, $op) {
   _userpoints_update_points($points, $uid, $op);
 }
 
+/**
+ * @param uid: user id of the user to get or lose the points
+ *
+ * @return number of current points in that user's account
+ */
+function userpoints_get_current_points($uid) {
+  return (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $uid));
+}
+
+/**
+ * @param points: number of points to add (if positive) or subtract (if negative)
+ * @param uid: user id of the user to get or lose the points
+ * @param info: optional description 
+ *
+ * @return false when no action is take, true when points are credited or debited
+ */
+function userpoints_userpoints($points = 0, $uid = 0, $info = '') {
+  return _userpoints_update_points($points, $uid, $info);
+}
+
 function _userpoints_update_points($new_points = 0, $uid = 0, $info = '') {
 
-  if ($uid == 0) {
-    // anonymous users do not get points
-    return;
+  // anonymous users do not get points, and there have to be points to process
+  if ($uid == 0 || $new_points == 0) {
+    return false;
   }
 
   $user = user_load(array('uid'=>$uid));
@@ -273,7 +293,7 @@ function _userpoints_update_points($new_points = 0, $uid = 0, $info = '') {
     $msg = t('earned');
   }
 
-  $points = (int)$new_points + (int)_userpoints_get_current_points($uid);
+  $points = (int)$new_points + (int)userpoints_get_current_points($uid);
 
   drupal_set_message(t('User %uname %op %points points! Total now is %total points.',
     array(
@@ -290,14 +310,11 @@ function _userpoints_update_points($new_points = 0, $uid = 0, $info = '') {
     $result = db_query("INSERT INTO {userpoints} VALUES ('%d', '%d', '%d')",
       $uid, $points, time());
   }
+  return true;
 }
 
 function _userpoints_user_exists($uid) {
   return (int)db_result(db_query('SELECT COUNT(*) FROM {userpoints} WHERE uid = %d', $uid));
-}
-
-function _userpoints_get_current_points($uid) {
-  return (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $uid));
 }
 
 function userpoints_ecommerceapi($data, $op) {
@@ -351,7 +368,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
         form_set_error('gross', t('Minimum points for purchase is %min', array('%min' => $min)));
       }
 
-      $balance = _userpoints_get_current_points($uid);
+      $balance = userpoints_get_current_points($uid);
       if ($balance < $points) {
         form_set_error('gross', t('You do not have enough points for this purchase'));
       }
@@ -362,7 +379,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
       $points = ($gross / $multiplier);
 
       // Check the user's balance
-      $balance = _userpoints_get_current_points($uid);
+      $balance = userpoints_get_current_points($uid);
       if ($balance >= $points) {
 
         $txnid = $txn['txnid'];
