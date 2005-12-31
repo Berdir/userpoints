@@ -4,6 +4,17 @@
 
 // Copyright 2005 Khalid Baheyeldin http://2bits.com
 
+define('userpoints_post_',            USERPOINTS_POST);
+define('userpoints_post_comment',     USERPOINTS_POST_COMMENT);
+define('userpoints_moderate_comment', USERPOINTS_MODERATE_COMMENT);
+define('userpoints_nodevote',         USERPOINTS_NODEVOTE);
+define('userpoints_invite_invite',    USERPOINTS_INVITE_INVITE);
+define('userpoints_invite_register',  USERPOINTS_INVITE_REGISTER);
+define('userpoints_ec_payment',       USERPOINTS_EC_PAYMENT);
+define('userpoints_ec_buy',           USERPOINTS_EC_BUY);
+define('userpoints_ec_sell',          USERPOINTS_EC_SELL);
+define('userpoints_min_purchase',     USERPOINTS_MIN_PURCHASE);
+
 function userpoints_help($section) {
   switch ($section) {
     case 'admin/modules#description':
@@ -28,11 +39,11 @@ function userpoints_menu($may_cache) {
     'type'     => MENU_NORMAL_ITEM);
 
   $items[] = array(
-    'path'     => 'admin/settings/userpoints/reset',
+    'path'     => 'userpoints_reset',
     'callback' => 'userpoints_reset',
-    'title'    => t('Reset all user points'),
+    'title'    => t('reset points'),
     'access'   => user_access('admin userpoints'),
-    'type'     => MENU_CALLBACK);
+    'type'     => MENU_NORMAL_ITEM);
 
    return $items;
 }
@@ -42,62 +53,136 @@ function userpoints_perm() {
 }
 
 function userpoints_reset() {
-  if ($_POST['confirm']) {
-    db_query('DELETE FROM {userpoints}');
-    drupal_set_message(t('All user points have been reset'));
-    $output = '';
+  $form['confirm'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Reset all user points. This is useful in certain situations such as monthly contests. Enter YES without the quotes to reset'),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#default_value' => t('NO'));
+
+  $form['reset'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reset'));
+
+  return drupal_get_form('userpoints_reset', $form);
+}
+
+function userpoints_reset_submit($form_id, $edit) {
+  if ($edit['reset']) {
+    if ($edit['confirm'] == t('YES')) {
+      db_query('DELETE FROM {userpoints}');
+      drupal_set_message(t('All user points have been reset!'));
+    }
   }
-  else {
-    $output = form(form_submit('Reset', 'confirm'));
-  }
-  print theme('page',$output);
+
+  drupal_goto();
 }
 
 function userpoints_settings() {
-  foreach (node_list() as $type) {
-    $name = node_invoke($type, 'node_name');
-    $output .= form_textfield (t('Points for posting an %node-name', array('%node-name' => $name)),
-      'userpoints_post_'. $type, variable_get('userpoints_post_'. $type, '1'), 5, 5);
+  $group = 'points';
+  $form[$group] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => true,
+    '#title' => t('Points for each event'),
+    );
+
+  foreach(node_get_types() as $type => $name) {
+    $form[$group][USERPOINTS_POST. $type] = array(
+      '#type' => 'textfield',
+      '#title' => t('Points for posting an %node-name', array('%node-name' => $name)),
+      '#default_value' => variable_get(USERPOINTS_POST. $type, '1'),
+      '#size' => 5,
+      '#maxlength' => 5,
+      );
   }
 
-  $output .= form_textfield (t('Points for posting a comment'), 'userpoints_post_comment',
-    variable_get('userpoints_post_comment', '1'), 5, 5);
+  $form[$group][USERPOINTS_POST_COMMENT] = array(
+    '#type' => 'textfield',
+    '#title' => t('Points for posting a comment'),
+    '#default_value' => variable_get(USERPOINTS_POST_COMMENT, 1),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $output .= form_textfield (t('Points for moderating a comment'), 'userpoints_moderate_comment',
-    variable_get('userpoints_moderate_comment', '1'), 5, 5);
+  $form[$group][USERPOINTS_MODERATE_COMMENT] = array(
+    '#type' => 'textfield',
+    '#title' => t('Points for moderating a comment'),
+    '#default_value' => variable_get(USERPOINTS_MODERATE_COMMENT, 1),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $output .= form_textfield (t('Points for voting on a node'), 'userpoints_nodevote',
-    variable_get('userpoints_nodevote', '1'), 5, 5);
+  $form[$group][USERPOINTS_NODEVOTE] = array(
+    '#type' => 'textfield',
+    '#title' => t('Points for voting on a node'),
+    '#default_value' => variable_get(USERPOINTS_NODEVOTE, 1),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $output .= form_textfield (t('Points for inviting a user'), 'userpoints_invite_invite',
-    variable_get('userpoints_invite_invite', '1'), 5, 5);
+  $form[$group][USERPOINTS_INVITE_INVITE] = array(
+    '#type' => 'textfield',
+    '#title' => t('Points for inviting a user'),
+    '#default_value' => variable_get(USERPOINTS_INVITE_INVITE, 1),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $output .= form_textfield (t('Points when invited user registers'), 'userpoints_invite_register',
-    variable_get('userpoints_invite_register', '1'), 5, 5);
+  $form[$group][USERPOINTS_INVITE_REGISTER] = array(
+    '#type' => 'textfield',
+    '#title' => t('Points when invited user registers'),
+    '#default_value' => variable_get(USERPOINTS_INVITE_REGISTER, 1),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $points = form_group(t('Points for each event'), $output);
+  $group = 'ecommerce';
+  $form[$group] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => true,
+    '#collapsed' => true,
+    '#title' => t('Ecommerce Options'),
+    );
 
-  $output = form_radios(t('Use points as form of payment?'), 'userpoints_ec_payment',
-    variable_get('userpoints_ec_payment', 0), array(t('Disable'), t('Enable')));
+  $form[$group][USERPOINTS_EC_PAYMENT] = array(
+    '#type' => 'radios',
+    '#title' => t('Use points as form of payment?'),
+    '#default_value' => variable_get(USERPOINTS_EC_PAYMENT, 0),
+    '#options' => array(t('Disable'), t('Enable')),
+    );
 
-  $output .= form_textfield (t('Points multiplier for buying'), 'userpoints_ec_buy',
-    variable_get('userpoints_ec_buy', 1), 5, 5);
+  $form[$group][USERPOINTS_EC_BUY] = array(
+    '#type' => 'textfield',
+    '#title' => t('Points multiplier for buying'),
+    '#default_value' => variable_get(USERPOINTS_EC_BUY, 1),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $output .= form_textfield (t('Points to get on selling (for every dollar)'), 'userpoints_ec_sell',
-    variable_get('userpoints_ec_sell', 1), 5, 5);
+  $form[$group][USERPOINTS_EC_SELL] = array(
+    '#type' => 'textfield',
+    '#title' => t('Points to get on selling (for every dollar)'),
+    '#default_value' => variable_get(USERPOINTS_EC_SELL, 1),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $output .= form_textfield (t('Minimum amount for purchase'), 'userpoints_min_purchase',
-    variable_get('userpoints_min_purchase', '5.00'), 5, 5);
+  $form[$group][USERPOINTS_MIN_PURCHASE] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum amount for purchase'),
+    '#default_value' => variable_get(USERPOINTS_MIN_PURCHASE, '5.00'),
+    '#size' => 5,
+    '#maxlength' => 5,
+    );
 
-  $ecommerce = form_group(t('Ecommerce Options'), $output);
-
-  $output = t('You can %s. This is useful in certain situations such as monthly contests.',
-    array('%s'=> l( 'reset all user points', 'admin/settings/userpoints/reset')));
-
-  $advanced = form_group(t('Advanced Options'), $output);
-
-  $form = $points . $ecommerce . $advanced;
-
+  $group = 'advanced';
+  $form[$group] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => true,
+    '#collapsed' => true,
+    '#title' => t('Advanced Options'),
+    );
+  
   return $form;
 }  
 
@@ -194,7 +279,7 @@ function userpoints_page() {
 
 function userpoints_nodeapi(&$node, $op, $teaser, $page) {
 
-  $points = variable_get('userpoints_post_' . $node->type, '1');
+  $points = variable_get(USERPOINTS_POST . $node->type, '1');
   switch($op) {
     case 'insert':
       $points = $points;
@@ -223,7 +308,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
 function userpoints_comment($op, $comment) {
   global $user;
 
-  $points = variable_get('userpoints_post_comment', '1');
+  $points = variable_get(USERPOINTS_POST_COMMENT, '1');
   switch($op) {
     case 'insert':
       _userpoints_update_points($points, $user->uid, 'comment '.$op);
@@ -233,7 +318,7 @@ function userpoints_comment($op, $comment) {
       _userpoints_update_points($points, $comment->uid, 'comment '.$op);
       break;
     case 'moderate':
-      $points = variable_get('userpoints_moderate_comment', '1');
+      $points = variable_get(USERPOINTS_MODERATE_COMMENT, '1');
       _userpoints_update_points($points, $comment->uid, 'comment '.$op);
       break;
   }
@@ -241,17 +326,17 @@ function userpoints_comment($op, $comment) {
 
 function userpoints_nodevote($nid) {
   global $user;
-  $points = variable_get('userpoints_nodevote', '1');
+  $points = variable_get(USERPOINTS_NODEVOTE, '1');
   _userpoints_update_points($points, $user->uid, 'nodevote');
 }
 
 function userpoints_invite($uid, $op) {
   switch($op) {
     case 'invite':
-      $points = variable_get('userpoints_invite_invite', '1');
+      $points = variable_get(USERPOINTS_INVITE_INVITE, '1');
       break;
     case 'register':
-      $points = variable_get('userpoints_invite_register', '1');
+      $points = variable_get(USERPOINTS_INVITE_REGISTER, '1');
       break;
   }
   _userpoints_update_points($points, $uid, $op);
@@ -320,7 +405,7 @@ function _userpoints_user_exists($uid) {
 function userpoints_ecommerceapi($data, $op) {
   switch($op) {
     case 'on payment completion':
-      $multiplier = (int)variable_get('userpoints_ec_buy', 1);
+      $multiplier = (int)variable_get(USERPOINTS_EC_BUY, 1);
 
       $uid = $data['uid'];
       $points = $multiplier * $data['gross'];
@@ -349,12 +434,12 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
 
   $edit = $_POST['edit'];
 
-  if (!variable_get('userpoints_ec_payment', 0)) {
+  if (!variable_get(USERPOINTS_EC_PAYMENT, 0)) {
     return;
   }
 
-  $multiplier = (int)variable_get('userpoints_ec_sell', 1);
-  $min = variable_get('userpoints_min_purchase', '5.00');
+  $multiplier = (int)variable_get(USERPOINTS_EC_SELL, 1);
+  $min = variable_get(USERPOINTS_MIN_PURCHASE, '5.00');
 
   switch ($op) {
     case 'display name':
