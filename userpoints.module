@@ -432,8 +432,6 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
   global $user;
   $uid = $user->uid;
 
-  $edit = $_POST['edit'];
-
   if (!variable_get(USERPOINTS_EC_PAYMENT, 0)) {
     return;
   }
@@ -446,7 +444,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
       return t('User Points');
 
     case 'on checkout':
-      $gross = $edit['gross'];
+      $gross = $txn->gross;
       $points = ($gross / $multiplier);
 
       if ($points < $min) {
@@ -457,17 +455,18 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
       if ($balance < $points) {
         form_set_error('gross', t('You do not have enough points for this purchase'));
       }
+      drupal_set_message(t('This purchase will cost you %points points', array('%points' => $points)));
       break;
 
     case 'payment page':
-      $gross = $edit['gross'];
+      $gross = $txn->gross;
       $points = ($gross / $multiplier);
 
       // Check the user's balance
       $balance = userpoints_get_current_points($uid);
       if ($balance >= $points) {
 
-        $txnid = $txn['txnid'];
+        $txnid = $txn->txnid;
         // Check if we have a transaction ID
         if ($txnid) {
           // User has sufficient balance
@@ -475,27 +474,29 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
 
           // Check if we have shippable items
           $has_shippable_item = false;
-          foreach($txn['item'] as $key => $value) {
+          foreach($txn->items as $key => $value) {
             if (product_is_shippable($key['nid'])) {
               $has_shippable_item = true;
             }
           }
 
           // If there are no shippable items, then push workflow to completion
-          if (!$has_shippabale_item) {
-            $edit['workflow'] = 6;
+          if (!$has_shippable_item) {
+            $txn->workflow = 6;
           }
 
           // Setup payment to completed
-          $edit['payment_status'] = payment_get_status_id('completed');
-          $edit['txnid'] = $txn['txnid'];
+          $txn->payment_status = payment_get_status_id('completed');
+
           // Update the transaction
-          $result = store_transaction_save($edit);
+          $result = store_transaction_save($txn);
 
           if ($result) {
             // Send an email notification
             store_send_invoice_email($txnid);
           }
+
+          drupal_set_message(t('Your purchase using %points points has been completed', array('%points' => $points)));
         }
       }
       break;
