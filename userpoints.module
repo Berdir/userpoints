@@ -504,3 +504,6 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
   }
 }
 
+function userpoints_update_1() {
+  return _system_update_utf8(array('userpoints'));
+}
