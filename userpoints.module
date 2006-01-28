@@ -4,16 +4,19 @@
 
 // Copyright 2005 Khalid Baheyeldin http://2bits.com
 
-define('userpoints_post_',            USERPOINTS_POST);
-define('userpoints_post_comment',     USERPOINTS_POST_COMMENT);
-define('userpoints_moderate_comment', USERPOINTS_MODERATE_COMMENT);
-define('userpoints_nodevote',         USERPOINTS_NODEVOTE);
-define('userpoints_invite_invite',    USERPOINTS_INVITE_INVITE);
-define('userpoints_invite_register',  USERPOINTS_INVITE_REGISTER);
-define('userpoints_ec_payment',       USERPOINTS_EC_PAYMENT);
-define('userpoints_ec_buy',           USERPOINTS_EC_BUY);
-define('userpoints_ec_sell',          USERPOINTS_EC_SELL);
-define('userpoints_min_purchase',     USERPOINTS_MIN_PURCHASE);
+define('USERPOINTS_POST',             'userpoints_post_');
+define('USERPOINTS_POST_COMMENT',     'userpoints_post_comment');
+define('USERPOINTS_MODERATE_COMMENT', 'userpoints_moderate_comment');
+define('USERPOINTS_NODEVOTE',         'userpoints_nodevote');
+define('USERPOINTS_INVITE_INVITE',    'userpoints_invite_invite');
+define('USERPOINTS_INVITE_REGISTER',  'userpoints_invite_register');
+define('USERPOINTS_EC_PAYMENT',       'userpoints_ec_payment');
+define('USERPOINTS_EC_BUY',           'userpoints_ec_buy');
+define('USERPOINTS_EC_SELL',          'userpoints_ec_sell');
+define('USERPOINTS_MIN_PURCHASE',     'userpoints_min_purchase');
+define('USERPOINTS_PERM_VIEW',        'view userpoints');
+define('USERPOINTS_PERM_USE',         'use userpoints');
+define('USERPOINTS_PERM_ADMIN',       'admin userpoints');
 
 function userpoints_help($section) {
   switch ($section) {
@@ -35,21 +38,21 @@ function userpoints_menu($may_cache) {
     'path'     => 'userpoints',
     'callback' => 'userpoints_list_users',
     'title'    => t('users by points'),
-    'access'   => user_access('view userpoints'),
+    'access'   => user_access(USERPOINTS_PERM_VIEW),
     'type'     => MENU_NORMAL_ITEM);
 
   $items[] = array(
     'path'     => 'userpoints_reset',
     'callback' => 'userpoints_reset',
     'title'    => t('reset points'),
-    'access'   => user_access('admin userpoints'),
+    'access'   => user_access(USERPOINTS_PERM_ADMIN),
     'type'     => MENU_NORMAL_ITEM);
 
    return $items;
 }
 
 function userpoints_perm() {
-  return array ('view userpoints', 'use userpoints', 'admin userpoints');
+  return array (USERPOINTS_PERM_VIEW, USERPOINTS_PERM_USE, USERPOINTS_PERM_ADMIN);
 }
 
 function userpoints_reset() {
@@ -237,7 +240,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
       return $blocks;
 
     case 'view':
-      if (user_access('view userpoints')) {
+      if (user_access(USERPOINTS_PERM_VIEW)) {
         switch ($delta) {
           case 0:
             $title = $block_title[$delta];
@@ -446,7 +449,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
 
     case 'on checkout':
       $gross = $txn->gross;
-      $points = ($gross / $multiplier);
+      $points = ($gross * $multiplier);
 
       if ($points < $min) {
         form_set_error('gross', t('Minimum points for purchase is %min', array('%min' => $min)));
@@ -461,7 +464,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
 
     case 'payment page':
       $gross = $txn->gross;
-      $points = ($gross / $multiplier);
+      $points = ($gross * $multiplier);
 
       // Check the user's balance
       $balance = userpoints_get_current_points($uid);
