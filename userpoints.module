@@ -10,7 +10,7 @@ define('USERPOINTS_MODERATE_COMMENT', 'userpoints_moderate_comment');
 define('USERPOINTS_NODEVOTE',         'userpoints_nodevote');
 define('USERPOINTS_INVITE_INVITE',    'userpoints_invite_invite');
 define('USERPOINTS_INVITE_REGISTER',  'userpoints_invite_register');
-define('USERPOINTS_REFERRAL',         'userpoints_referral')
+define('USERPOINTS_REFERRAL',         'userpoints_referral');
 define('USERPOINTS_EC_PAYMENT',       'userpoints_ec_payment');
 define('USERPOINTS_EC_BUY',           'userpoints_ec_buy');
 define('USERPOINTS_EC_SELL',          'userpoints_ec_sell');
@@ -220,8 +220,11 @@ function userpoints_user($op, &$edit, &$user, $category = '') {
       break;
     case 'view':
       $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
-      return array(t('Points') => $form[] = array(
-        '#default_value' => $points));
+      $disp_points[] = array(
+        'title' => t('User points'),
+        'value' => $points,
+        );
+      return array(t('Points') => $disp_points);
       break;
   }
 }
