@@ -207,7 +207,7 @@ function userpoints_settings() {
   
   $form[$group]['reset'] = array(
     '#title' => t('Reset points'),
-    '#value' => l('userpoints_reset', t('Reset the points for all users.')),
+    '#value' => l(t('Reset the points for all users.'), 'userpoints_reset'),
   );
   return $form;
 }  
