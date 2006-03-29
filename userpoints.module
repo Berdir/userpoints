@@ -72,13 +72,10 @@ function userpoints_reset() {
 }
 
 function userpoints_reset_submit($form_id, $edit) {
-  if ($edit['reset']) {
-    if ($edit['confirm'] == t('YES')) {
-      db_query('DELETE FROM {userpoints}');
-      drupal_set_message(t('All user points have been reset!'));
-    }
+  if ($edit['confirm'] == t('YES')) {
+    db_query('DELETE FROM {userpoints}');
+    drupal_set_message(t('All user points have been reset!'));
   }
-
   drupal_goto();
 }
 
