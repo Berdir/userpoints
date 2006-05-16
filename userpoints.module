@@ -332,7 +332,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
   }
 }
 
-function userpoints_comment($op, $comment) {
+function userpoints_comment($comment, $op) {
   global $user;
 
   $points = variable_get(USERPOINTS_POST_COMMENT, '1');
