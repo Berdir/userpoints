@@ -90,8 +90,8 @@ function userpoints_settings() {
   foreach(node_get_types() as $type => $name) {
     $form[$group][USERPOINTS_POST. $type] = array(
       '#type' => 'textfield',
-      '#title' => t('Points for posting an %node-name', array('%node-name' => $name)),
-      '#default_value' => variable_get(USERPOINTS_POST. $type, '1'),
+      '#title' => t('Points for posting a %node-name', array('%node-name' => $name)),
+      '#default_value' => variable_get(USERPOINTS_POST. $type, '0'),
       '#size' => 5,
       '#maxlength' => 5,
       );
@@ -100,7 +100,7 @@ function userpoints_settings() {
   $form[$group][USERPOINTS_POST_COMMENT] = array(
     '#type' => 'textfield',
     '#title' => t('Points for posting a comment'),
-    '#default_value' => variable_get(USERPOINTS_POST_COMMENT, 1),
+    '#default_value' => variable_get(USERPOINTS_POST_COMMENT, 0),
     '#size' => 5,
     '#maxlength' => 5,
     );
@@ -108,7 +108,7 @@ function userpoints_settings() {
   $form[$group][USERPOINTS_MODERATE_COMMENT] = array(
     '#type' => 'textfield',
     '#title' => t('Points for moderating a comment'),
-    '#default_value' => variable_get(USERPOINTS_MODERATE_COMMENT, 1),
+    '#default_value' => variable_get(USERPOINTS_MODERATE_COMMENT, 0),
     '#size' => 5,
     '#maxlength' => 5,
     );
@@ -117,7 +117,7 @@ function userpoints_settings() {
     $form[$group][USERPOINTS_NODEVOTE] = array(
       '#type' => 'textfield',
       '#title' => t('Points for voting on a node (requires nodevote module)'),
-      '#default_value' => variable_get(USERPOINTS_NODEVOTE, 1),
+      '#default_value' => variable_get(USERPOINTS_NODEVOTE, 0),
       '#size' => 5,
       '#maxlength' => 5,
     );
@@ -127,7 +127,7 @@ function userpoints_settings() {
     $form[$group][USERPOINTS_REFERRAL] = array(
       '#type' => 'textfield',
       '#title' => t('Points for referring a user (requires the user_referral module)'),
-      '#default_value' => variable_get(USERPOINTS_REFERRAL, 1),
+      '#default_value' => variable_get(USERPOINTS_REFERRAL, 0),
       '#size' => 5,
       '#maxlength' => 5,
     );
@@ -137,7 +137,7 @@ function userpoints_settings() {
     $form[$group][USERPOINTS_INVITE_INVITE] = array(
       '#type' => 'textfield',
       '#title' => t('Points for inviting a user (requires the invite module)'),
-      '#default_value' => variable_get(USERPOINTS_INVITE_INVITE, 1),
+      '#default_value' => variable_get(USERPOINTS_INVITE_INVITE, 0),
       '#size' => 5,
       '#maxlength' => 5,
     );
@@ -147,7 +147,7 @@ function userpoints_settings() {
     $form[$group][USERPOINTS_INVITE_REGISTER] = array(
       '#type' => 'textfield',
       '#title' => t('Points when invited user registers (requires the invite module)'),
-      '#default_value' => variable_get(USERPOINTS_INVITE_REGISTER, 1),
+      '#default_value' => variable_get(USERPOINTS_INVITE_REGISTER, 0),
       '#size' => 5,
       '#maxlength' => 5,
     );
@@ -164,22 +164,22 @@ function userpoints_settings() {
 
     $form[$group][USERPOINTS_EC_PAYMENT] = array(
       '#type' => 'radios',
-      '#title' => t('Use points as form of payment?'),
+      '#title' => t('Accept user points as payment?'),
       '#default_value' => variable_get(USERPOINTS_EC_PAYMENT, 0),
       '#options' => array(t('Disable'), t('Enable')),
     );
 
     $form[$group][USERPOINTS_EC_BUY] = array(
       '#type' => 'textfield',
-      '#title' => t('Points multiplier for buying'),
-      '#default_value' => variable_get(USERPOINTS_EC_BUY, 1),
+      '#title' => t('Points awarded for buying (multiplied by price)'),
+      '#default_value' => variable_get(USERPOINTS_EC_BUY, 0),
       '#size' => 5,
       '#maxlength' => 5,
     );
 
     $form[$group][USERPOINTS_EC_SELL] = array(
       '#type' => 'textfield',
-      '#title' => t('Points to get on selling (for every dollar)'),
+      '#title' => t('Points used in payment (for every dollar)'),
       '#default_value' => variable_get(USERPOINTS_EC_SELL, 1),
       '#size' => 5,
       '#maxlength' => 5,
@@ -188,7 +188,7 @@ function userpoints_settings() {
     $form[$group][USERPOINTS_MIN_PURCHASE] = array(
       '#type' => 'textfield',
       '#title' => t('Minimum amount for purchase'),
-      '#default_value' => variable_get(USERPOINTS_MIN_PURCHASE, '5.00'),
+      '#default_value' => variable_get(USERPOINTS_MIN_PURCHASE, '0.00'),
       '#size' => 5,
       '#maxlength' => 5,
     );
@@ -432,10 +432,22 @@ function _userpoints_user_exists($uid) {
 function userpoints_ecommerceapi($data, $op) {
   switch($op) {
     case 'on payment completion':
-      $multiplier = (int)variable_get(USERPOINTS_EC_BUY, 1);
+      $multiplier = (int)variable_get(USERPOINTS_EC_BUY, 0);
+      $min = variable_get(USERPOINTS_MIN_PURCHASE, '5.00');
+      $txnid = $data['txnid'];
+      $total = 0;
 
       $uid = $data['uid'];
-      $points = $multiplier * $data['gross'];
+      $result = db_query('SELECT price, qty FROM {ec_transaction_product} WHERE txnid = %d', $txnid);
+      while ($item = db_fetch_array($result)) {
+        $total = $total + $item['price'] * $item['qty'];
+      }
+      if ($total < $min) {
+        $points = 0;
+      }
+      else {
+        $points = $multiplier * $total;
+      }
       $payment_status = $data['payment_status'];
 
       if ($payment_status == payment_get_status_id('completed')) {
@@ -464,14 +476,14 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
   }
 
   $multiplier = (int)variable_get(USERPOINTS_EC_SELL, 1);
-  $min = variable_get(USERPOINTS_MIN_PURCHASE, '5.00');
+  $min = variable_get(USERPOINTS_MIN_PURCHASE, '0.00');
 
   switch ($op) {
     case 'display name':
       return t('User Points');
 
     case 'on checkout':
-      $gross = $txn->gross;
+      $gross = store_transaction_calc_gross($txn);
       $points = ($gross * $multiplier);
 
       if ($points < $min) {
