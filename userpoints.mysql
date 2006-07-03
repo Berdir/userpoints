@@ -1,6 +1,0 @@
-CREATE TABLE userpoints (
-  uid int(10) NOT NULL default '0',
-  points int(5) NOT NULL default '0',
-  last_update int(11) NOT NULL default '0',
-  PRIMARY KEY (uid)
-) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;
