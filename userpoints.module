@@ -11,10 +11,11 @@ define('USERPOINTS_NODEVOTE',         'userpoints_nodevote');
 define('USERPOINTS_INVITE_INVITE',    'userpoints_invite_invite');
 define('USERPOINTS_INVITE_REGISTER',  'userpoints_invite_register');
 define('USERPOINTS_REFERRAL',         'userpoints_referral');
-define('USERPOINTS_EC_PAYMENT',       'userpoints_ec_payment');
-define('USERPOINTS_EC_BUY',           'userpoints_ec_buy');
-define('USERPOINTS_EC_SELL',          'userpoints_ec_sell');
+define('USERPOINTS_EC_EARN',          'userpoints_ec_earn');
 define('USERPOINTS_MIN_PURCHASE',     'userpoints_min_purchase');
+define('USERPOINTS_EC_PAYMENT',       'userpoints_ec_payment');
+define('USERPOINTS_EC_SPEND',         'userpoints_ec_spend');
+define('USERPOINTS_MIN_SPEND',        'userpoints_min_spend');
 define('USERPOINTS_PERM_VIEW',        'view userpoints');
 define('USERPOINTS_PERM_USE',         'use userpoints');
 define('USERPOINTS_PERM_ADMIN',       'admin userpoints');
@@ -59,7 +60,7 @@ function userpoints_perm() {
 function userpoints_reset() {
   $form['confirm'] = array(
     '#type' => 'textfield',
-    '#title' => t('Reset all user points. This is useful in certain situations such as monthly contests. Enter YES without the quotes to reset'),
+    '#title' => t('Reset all user points. This is useful in certain situations such as monthly contests. Enter YES without quotes to reset'),
     '#size' => 3,
     '#maxlength' => 3,
     '#default_value' => t('NO'));
@@ -162,6 +163,22 @@ function userpoints_settings() {
       '#title' => t('Ecommerce Options'),
     );
 
+    $form[$group][USERPOINTS_EC_EARN] = array(
+      '#type' => 'textfield',
+      '#title' => t('Points awarded for buying (multiplied by price)'),
+      '#default_value' => variable_get(USERPOINTS_EC_EARN, 0),
+      '#size' => 5,
+      '#maxlength' => 5,
+    );
+
+    $form[$group][USERPOINTS_MIN_PURCHASE] = array(
+      '#type' => 'textfield',
+      '#title' => t('Smallest purchase for which points are awarded'),
+      '#default_value' => variable_get(USERPOINTS_MIN_PURCHASE, '0.00'),
+      '#size' => 5,
+      '#maxlength' => 5,
+    );
+
     $form[$group][USERPOINTS_EC_PAYMENT] = array(
       '#type' => 'radios',
       '#title' => t('Accept user points as payment?'),
@@ -169,26 +186,18 @@ function userpoints_settings() {
       '#options' => array(t('Disable'), t('Enable')),
     );
 
-    $form[$group][USERPOINTS_EC_BUY] = array(
-      '#type' => 'textfield',
-      '#title' => t('Points awarded for buying (multiplied by price)'),
-      '#default_value' => variable_get(USERPOINTS_EC_BUY, 0),
-      '#size' => 5,
-      '#maxlength' => 5,
-    );
-
-    $form[$group][USERPOINTS_EC_SELL] = array(
+    $form[$group][USERPOINTS_EC_SPEND] = array(
       '#type' => 'textfield',
       '#title' => t('Points used in payment (for every dollar)'),
-      '#default_value' => variable_get(USERPOINTS_EC_SELL, 1),
+      '#default_value' => variable_get(USERPOINTS_EC_SPEND, 1),
       '#size' => 5,
       '#maxlength' => 5,
     );
-
-    $form[$group][USERPOINTS_MIN_PURCHASE] = array(
+    
+    $form[$group][USERPOINTS_MIN_SPEND] = array(
       '#type' => 'textfield',
-      '#title' => t('Minimum amount for purchase'),
-      '#default_value' => variable_get(USERPOINTS_MIN_PURCHASE, '0.00'),
+      '#title' => t('Number of points that must be spent per purchase'),
+      '#default_value' => variable_get(USERPOINTS_MIN_SPEND, '0'),
       '#size' => 5,
       '#maxlength' => 5,
     );
@@ -432,8 +441,8 @@ function _userpoints_user_exists($uid) {
 function userpoints_ecommerceapi($data, $op) {
   switch($op) {
     case 'on payment completion':
-      $multiplier = (int)variable_get(USERPOINTS_EC_BUY, 0);
-      $min = variable_get(USERPOINTS_MIN_PURCHASE, '5.00');
+      $multiplier = (int)variable_get(USERPOINTS_EC_EARN, 0);
+      $min = variable_get(USERPOINTS_MIN_PURCHASE, '0.00');
       $txnid = $data['txnid'];
       $total = 0;
 
@@ -475,8 +484,8 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
     return;
   }
 
-  $multiplier = (int)variable_get(USERPOINTS_EC_SELL, 1);
-  $min = variable_get(USERPOINTS_MIN_PURCHASE, '0.00');
+  $multiplier = (int)variable_get(USERPOINTS_EC_SPEND, 1);
+  $min = variable_get(USERPOINTS_MIN_SPEND, '0');
 
   switch ($op) {
     case 'display name':
@@ -487,7 +496,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
       $points = ($gross * $multiplier);
 
       if ($points < $min) {
-        form_set_error('gross', t('Minimum points for purchase is %min', array('%min' => $min)));
+        form_set_error('gross', t('You must spend at least %min points', array('%min' => $min)));
       }
 
       $balance = userpoints_get_current_points($uid);
