@@ -236,23 +236,25 @@ function userpoints_user($op, &$edit, &$user, $category = '') {
 }
 
 function userpoints_list_users() {
-  
-  $header = array(t('user'), t('points'));
-
-  $result = db_query('SELECT p.uid, u.name, p.points FROM {userpoints} p, {users} u WHERE u.uid = p.uid GROUP BY p.uid ORDER BY p.points DESC', 30, 0, NULL);
+  $sql = "SELECT p.uid, u.name, p.points FROM {userpoints} p INNER JOIN {users} u WHERE u.uid = p.uid GROUP BY p.uid";
+  $sql_cnt = "SELECT COUNT(DISTINCT(uid)) FROM {userpoints}";
+  $header = array(
+    array('data' => t('User'), 'field' => 'u.name'),
+    array('data' => t('Points'), 'field' => 'p.points', 'sort' => 'desc'),
+  );
+  $sql .= tablesort_sql($header);
+  $result = pager_query($sql, 30, 0, $sql_cnt);
   while ($data = db_fetch_object($result)) {
-    $rows[] =
-      array(
-        array('data' => l($data->name, 'user/' . $data->uid)),
-        array('data' => $data->points, 'align' => 'right'));
+    $rows[] = array(
+      array('data' => theme('username', $data)),
+      array('data' => $data->points, 'align' => 'right'),
+    );
   }
 
-  if ($pager = theme('pager', NULL, 30, 0)) {
-    $rows[] = array(array('data' => $pager, 'colspan' => '2'));
-  }
+  $output = theme('table', $header, $rows);
+  $output .= theme('pager', NULL, 30, 0);
 
-  print theme('page', theme('table', $header, $rows));
-
+  return $output;
 }
 
 function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
@@ -262,8 +264,8 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
   $num = 5;
 
   $block_title = array();
-  $block_title[] = t('User Points');
-  $block_title[] = t('Highest Users');
+  $block_title[] = t('User points');
+  $block_title[] = t('Highest users');
 
   switch ($op) {
     case 'list':
@@ -291,11 +293,12 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
             while ($data = db_fetch_object($result)) {
               $rows[] =
                 array(
-                  array('data' => l($data->name, 'user/' . $data->uid)),
+                  array('data' => theme('username', $data)),
                   array('data' => $data->points, 'align' => 'right'));
             }
-            $header = array(t('user'), t('points'));
+            $header = array(t('User'), t('Points'));
             $content = theme('table', $header, $rows);
+            $content .= '<div class="more-link">'. l(t('more'), 'userpoints', array('title' => t('All users by points'))) .'</div>';
             break;
         }
 
