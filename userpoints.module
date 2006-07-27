@@ -264,7 +264,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
   $num = 5;
 
   $block_title = array();
-  $block_title[] = $user->name . t('\'s points');
+  $block_title[] = t('%user\'s points', array('%user' => $user->name));
   $block_title[] = t('Highest users');
 
   switch ($op) {
