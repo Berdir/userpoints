@@ -46,19 +46,18 @@ Installation
 ------------
 To install this module, do the following:
 
-1. Create the database table by pasting the included userpoints.mysql script
-   in phpmyadmin or some other SQL tool you use. If you are familiar with
-   mysql command line, you may do:
+1. Extract the tar ball that you downloaded from Drupal.org.
 
-     mysql -udatabaseusername -ppassword databasename < userpoints.mysql
-
-2. Upload or copy the userpoints.module file to your modules directory.
+2. Upload the userpoints directory and all its contents to your
+   modules directory.
 
 Configuration
 -------------
 To enable this module do the following:
 
 1. Go to Admin -> Modules, and enable userpoints.
+   Check the messages to make sure that you did not get any errors
+   on database creation.
 
 2. Go to Admin -> Settings -> userpoints.
 
