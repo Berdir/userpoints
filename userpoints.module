@@ -19,34 +19,52 @@ define('USERPOINTS_MIN_SPEND',        'userpoints_min_spend');
 define('USERPOINTS_PERM_VIEW',        'view userpoints');
 define('USERPOINTS_PERM_USE',         'use userpoints');
 define('USERPOINTS_PERM_ADMIN',       'admin userpoints');
+define('USERPOINTS_TRANS_UCPOINTS',   'userpoints_trans_ucpoints');
+define('USERPOINTS_TRANS_LCPOINTS',   'userpoints_trans_lcpoints');
+define('USERPOINTS_TRANS_LCPOINT',    'userpoints_trans_lcpoint');
+
+/**
+ * returns an array of common translation placeholders
+ */
+function userpoints_translation() {
+  static $trans;
+  
+  if (!isset($trans)) {
+    $trans = array(
+      '%Points' => variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points'),
+      '%points' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
+      '%point'  => variable_get(USERPOINTS_TRANS_LCPOINT, 'point')
+      );
+  }
+  return $trans;  
+}
 
 function userpoints_help($section) {
   switch ($section) {
     case 'admin/modules#description':
-      $output = t('Users earn points as they post nodes, comments, and vote on nodes');
+      $output = t('Users earn %points as they post nodes, comments, and vote on nodes', userpoints_translation());
       break;
     case 'admin/settings/userpoints':
-      $output = t('Users earn points as they post nodes, comments, and vote on nodes');
+      $output = t('Users earn %points as they post nodes, comments, and vote on nodes', userpoints_translation());
       break;
   }
-
   return $output;
 }
-  
+
 function userpoints_menu($may_cache) {
   $items = array();
 
   $items[] = array(
     'path'     => 'userpoints',
     'callback' => 'userpoints_list_users',
-    'title'    => t('users by points'),
+    'title'    => t('users by %points', userpoints_translation()),
     'access'   => user_access(USERPOINTS_PERM_VIEW),
     'type'     => MENU_NORMAL_ITEM);
 
   $items[] = array(
     'path'     => 'userpoints_reset',
     'callback' => 'userpoints_reset',
-    'title'    => t('reset points'),
+    'title'    => t('reset %points', userpoints_translation()),
     'access'   => user_access(USERPOINTS_PERM_ADMIN),
     'type'     => MENU_NORMAL_ITEM);
 
@@ -60,7 +78,7 @@ function userpoints_perm() {
 function userpoints_reset() {
   $form['confirm'] = array(
     '#type' => 'textfield',
-    '#title' => t('Reset all user points. This is useful in certain situations such as monthly contests. Enter YES without quotes to reset'),
+    '#title' => t('Reset all user %points. This is useful in certain situations such as monthly contests. Enter YES without quotes to reset', userpoints_translation()),
     '#size' => 3,
     '#maxlength' => 3,
     '#default_value' => t('NO'));
@@ -75,7 +93,7 @@ function userpoints_reset() {
 function userpoints_reset_submit($form_id, $edit) {
   if ($edit['confirm'] == t('YES')) {
     db_query('DELETE FROM {userpoints}');
-    drupal_set_message(t('All user points have been reset!'));
+    drupal_set_message(t('All user %points have been reset!', userpoints_translation()));
   }
   drupal_goto();
 }
@@ -85,13 +103,13 @@ function userpoints_settings() {
   $form[$group] = array(
     '#type' => 'fieldset',
     '#collapsible' => true,
-    '#title' => t('Points for each event'),
+    '#title' => t('%Points for each event', userpoints_translation()),
     );
 
   foreach(node_get_types() as $type => $name) {
     $form[$group][USERPOINTS_POST. $type] = array(
       '#type' => 'textfield',
-      '#title' => t('Points for posting a %node-name', array('%node-name' => $name)),
+      '#title' => t('%Points for posting a %node-name', array_merge(userpoints_translation(), array('%node-name' => $name))),
       '#default_value' => variable_get(USERPOINTS_POST. $type, '0'),
       '#size' => 5,
       '#maxlength' => 5,
@@ -100,7 +118,7 @@ function userpoints_settings() {
 
   $form[$group][USERPOINTS_POST_COMMENT] = array(
     '#type' => 'textfield',
-    '#title' => t('Points for posting a comment'),
+    '#title' => t('%Points for posting a comment', userpoints_translation()),
     '#default_value' => variable_get(USERPOINTS_POST_COMMENT, 0),
     '#size' => 5,
     '#maxlength' => 5,
@@ -108,7 +126,7 @@ function userpoints_settings() {
 
   $form[$group][USERPOINTS_MODERATE_COMMENT] = array(
     '#type' => 'textfield',
-    '#title' => t('Points for moderating a comment'),
+    '#title' => t('%Points for moderating a comment', userpoints_translation()),
     '#default_value' => variable_get(USERPOINTS_MODERATE_COMMENT, 0),
     '#size' => 5,
     '#maxlength' => 5,
@@ -117,7 +135,7 @@ function userpoints_settings() {
   if (module_exist('nodevote')) {
     $form[$group][USERPOINTS_NODEVOTE] = array(
       '#type' => 'textfield',
-      '#title' => t('Points for voting on a node (requires nodevote module)'),
+      '#title' => t('%Points for voting on a node (requires nodevote module)', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_NODEVOTE, 0),
       '#size' => 5,
       '#maxlength' => 5,
@@ -127,7 +145,7 @@ function userpoints_settings() {
   if (module_exist('user_referral')) {
     $form[$group][USERPOINTS_REFERRAL] = array(
       '#type' => 'textfield',
-      '#title' => t('Points for referring a user (requires the user_referral module)'),
+      '#title' => t('%Points for referring a user (requires the user_referral module)', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_REFERRAL, 0),
       '#size' => 5,
       '#maxlength' => 5,
@@ -137,7 +155,7 @@ function userpoints_settings() {
   if (module_exist('invite')) {
     $form[$group][USERPOINTS_INVITE_INVITE] = array(
       '#type' => 'textfield',
-      '#title' => t('Points for inviting a user (requires the invite module)'),
+      '#title' => t('%Points for inviting a user (requires the invite module)', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_INVITE_INVITE, 0),
       '#size' => 5,
       '#maxlength' => 5,
@@ -147,7 +165,7 @@ function userpoints_settings() {
   if (module_exist('invite')) {
     $form[$group][USERPOINTS_INVITE_REGISTER] = array(
       '#type' => 'textfield',
-      '#title' => t('Points when invited user registers (requires the invite module)'),
+      '#title' => t('%Points when invited user registers (requires the invite module)', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_INVITE_REGISTER, 0),
       '#size' => 5,
       '#maxlength' => 5,
@@ -165,7 +183,7 @@ function userpoints_settings() {
 
     $form[$group][USERPOINTS_EC_EARN] = array(
       '#type' => 'textfield',
-      '#title' => t('Points awarded for buying (multiplied by price)'),
+      '#title' => t('%Points awarded for buying (multiplied by price)', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_EC_EARN, 0),
       '#size' => 5,
       '#maxlength' => 5,
@@ -173,7 +191,7 @@ function userpoints_settings() {
 
     $form[$group][USERPOINTS_MIN_PURCHASE] = array(
       '#type' => 'textfield',
-      '#title' => t('Smallest purchase for which points are awarded'),
+      '#title' => t('Smallest purchase for which %points are awarded', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_MIN_PURCHASE, '0.00'),
       '#size' => 5,
       '#maxlength' => 5,
@@ -181,14 +199,14 @@ function userpoints_settings() {
 
     $form[$group][USERPOINTS_EC_PAYMENT] = array(
       '#type' => 'radios',
-      '#title' => t('Accept user points as payment?'),
+      '#title' => t('Accept user %points as payment?', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_EC_PAYMENT, 0),
       '#options' => array(t('Disable'), t('Enable')),
     );
 
     $form[$group][USERPOINTS_EC_SPEND] = array(
       '#type' => 'textfield',
-      '#title' => t('Points used in payment (for every dollar)'),
+      '#title' => t('%Points used in payment (for every dollar)', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_EC_SPEND, 1),
       '#size' => 5,
       '#maxlength' => 5,
@@ -196,7 +214,7 @@ function userpoints_settings() {
     
     $form[$group][USERPOINTS_MIN_SPEND] = array(
       '#type' => 'textfield',
-      '#title' => t('Number of points that must be spent per purchase'),
+      '#title' => t('Number of %points that must be spent per purchase', userpoints_translation()),
       '#default_value' => variable_get(USERPOINTS_MIN_SPEND, '0'),
       '#size' => 5,
       '#maxlength' => 5,
@@ -213,8 +231,34 @@ function userpoints_settings() {
   
   $form[$group]['reset'] = array(
     '#title' => t('Reset points'),
-    '#value' => l(t('Reset the points for all users.'), 'userpoints_reset'),
+    '#value' => l(t('Reset the %points for all users.', userpoints_translation()), 'userpoints_reset'),
   );
+  
+  $form[$group][USERPOINTS_TRANS_UCPOINTS] = array(
+  '#type' => 'textfield',
+  '#title' => t('Word to use in the interface for the upper case plural word %Points', userpoints_translation()),
+  '#default_value' => variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points'),
+  '#size' => 20,
+  '#maxlength' => 20,
+  );
+  
+  $form[$group][USERPOINTS_TRANS_LCPOINTS] = array(
+  '#type' => 'textfield',
+  '#title' => t('Word to use in the interface for the lower case plural word %points', userpoints_translation()),
+  '#default_value' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
+  '#size' => 20,
+  '#maxlength' => 20,
+  );
+  
+  $form[$group][USERPOINTS_TRANS_LCPOINT] = array(
+  '#type' => 'textfield',
+  '#title' => t('Word to use in the interface for the lower case singular word %point', userpoints_translation()),
+  '#default_value' => variable_get(USERPOINTS_TRANS_LCPOINT, 'point'),
+  '#size' => 20,
+  '#maxlength' => 20,
+  );
+
+
   return $form;
 }  
 
@@ -227,10 +271,10 @@ function userpoints_user($op, &$edit, &$user, $category = '') {
     case 'view':
       $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
       $disp_points[] = array(
-        'title' => t('User points'),
+        'title' => t('User %points', userpoints_translation()),
         'value' => $points,
         );
-      return array(t('Points') => $disp_points);
+      return array(t('%Points', userpoints_translation()) => $disp_points);
       break;
   }
 }
@@ -242,7 +286,7 @@ function userpoints_list_users() {
   $sql_cnt = "SELECT COUNT(DISTINCT(uid)) FROM {userpoints}";
   $header = array(
     array('data' => t('User'), 'field' => 'u.name'),
-    array('data' => t('Points'), 'field' => 'p.points', 'sort' => 'desc'),
+    array('data' => t('%Points', userpoints_translation()), 'field' => 'p.points', 'sort' => 'desc'),
   );
   $sql .= tablesort_sql($header);
   $result = pager_query($sql, 30, 0, $sql_cnt);
@@ -266,8 +310,8 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
   $num = 5;
 
   $block_title = array();
-  $block_title[] = t('%user\'s points', array('%user' => $user->name));
-  $block_title[] = t('Highest users');
+  $block_title[] = t('%user\'s %points', array_merge(array('%user' => $user->name), userpoints_translation()));
+  $block_title[] = t('Highest Users');
 
   switch ($op) {
     case 'list':
@@ -282,10 +326,12 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
             $title = $block_title[$delta];
             if ($user->uid) {
               $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
-              $content = t('You have %p %c', array('%p' => $points, '%c' => format_plural($points, 'point', 'points')));
+              $singular = t('%point', userpoints_translation());
+              $plural = t('%points', userpoints_translation());
+              $content = t('You have %p %c', array('%p' => $points, '%c' => format_plural($points, $singular, $plural)));
             }
             else {
-              $content = t('Points are visible to logged in users only');
+              $content = t('%Points are visible to logged in users only',userpoints_translation());
             }
             break;
 
@@ -301,9 +347,9 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
                   array('data' => theme('username', $data)),
                   array('data' => $data->points, 'align' => 'right'));
             }
-            $header = array(t('User'), t('Points'));
+            $header = array(t('User'), t('%Points', userpoints_translation()));
             $content = theme('table', $header, $rows);
-            $content .= '<div class="more-link">'. l(t('more'), 'userpoints', array('title' => t('All users by points'))) .'</div>';
+            $content .= '<div class="more-link">'. l(t('more'), 'userpoints', array('title' => t('All users by %points', userpoints_translation()))) .'</div>';
             break;
         }
 
@@ -424,12 +470,13 @@ function _userpoints_update_points($new_points = 0, $uid = 0, $info = '') {
 
   $points = (int)$new_points + (int)userpoints_get_current_points($uid);
 
-  drupal_set_message(t('User %uname %op %points points! Total now is %total points.',
-    array(
+  drupal_set_message(t('User %uname %op %pointsvalue %points! Total now is %total points.',
+    array_merge(userpoints_translation(), array(
       '%uname'  => $user->name,
       '%op'     => $msg,
-      '%points' => abs($new_points),
-      '%total'  => $points)));
+      '%pointsvalue' => abs($new_points),
+      '%total'  => $points)
+      )));
 
   if (_userpoints_user_exists($uid)) {
     db_query("UPDATE {userpoints} SET points = '%d', last_update = '%d' WHERE uid = %d",
@@ -497,21 +544,21 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
 
   switch ($op) {
     case 'display name':
-      return t('User Points');
+      return t('User %Points', userpoints_translation());
 
     case 'on checkout':
       $gross = store_transaction_calc_gross($txn);
       $points = ($gross * $multiplier);
 
       if ($points < $min) {
-        form_set_error('gross', t('You must spend at least %min points', array('%min' => $min)));
+        form_set_error('gross', t('You must spend at least %min %points', array_merge(array('%min' => $min),userpoints_translation())));
       }
 
       $balance = userpoints_get_current_points($uid);
       if ($balance < $points) {
-        form_set_error('gross', t('You do not have enough points for this purchase'));
+        form_set_error('gross', t('You do not have enough %points for this purchase', userpoints_translation()));
       }
-      drupal_set_message(t('This purchase will cost you %points points', array('%points' => $points)));
+      drupal_set_message(t('This purchase will cost you %point_value %points', array_merge(array('%point_value' => $points), userpoints_translation())));
       break;
 
     case 'payment page':
@@ -552,7 +599,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
             store_send_invoice_email($txnid);
           }
 
-          drupal_set_message(t('Your purchase using %points points has been completed', array('%points' => $points)));
+          drupal_set_message(t('Your purchase using %pointsvalue %points has been completed', array_merge(array('%pointsvalue' => $points), userpoints_translation())));
         }
       }
       break;
