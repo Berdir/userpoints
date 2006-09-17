@@ -61,41 +61,11 @@ function userpoints_menu($may_cache) {
     'access'   => user_access(USERPOINTS_PERM_VIEW),
     'type'     => MENU_NORMAL_ITEM);
 
-  $items[] = array(
-    'path'     => 'userpoints_reset',
-    'callback' => 'userpoints_reset',
-    'title'    => t('reset %points', userpoints_translation()),
-    'access'   => user_access(USERPOINTS_PERM_ADMIN),
-    'type'     => MENU_NORMAL_ITEM);
-
    return $items;
 }
 
 function userpoints_perm() {
   return array (USERPOINTS_PERM_VIEW, USERPOINTS_PERM_USE, USERPOINTS_PERM_ADMIN);
-}
-
-function userpoints_reset() {
-  $form['confirm'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Reset all user %points. This is useful in certain situations such as monthly contests. Enter YES without quotes to reset', userpoints_translation()),
-    '#size' => 3,
-    '#maxlength' => 3,
-    '#default_value' => t('NO'));
-
-  $form['reset'] = array(
-    '#type' => 'submit',
-    '#value' => t('Reset'));
-
-  return drupal_get_form('userpoints_reset', $form);
-}
-
-function userpoints_reset_submit($form_id, $edit) {
-  if ($edit['confirm'] == t('YES')) {
-    db_query('DELETE FROM {userpoints}');
-    drupal_set_message(t('All user %points have been reset!', userpoints_translation()));
-  }
-  drupal_goto();
 }
 
 function userpoints_settings() {
@@ -227,11 +197,6 @@ function userpoints_settings() {
     '#collapsible' => true,
     '#collapsed' => true,
     '#title' => t('Advanced Options'),
-  );
-  
-  $form[$group]['reset'] = array(
-    '#title' => t('Reset points'),
-    '#value' => l(t('Reset the %points for all users.', userpoints_translation()), 'userpoints_reset'),
   );
   
   $form[$group][USERPOINTS_TRANS_UCPOINTS] = array(
