@@ -185,7 +185,7 @@ function userpoints_settings() {
     $form[$group][USERPOINTS_MIN_SPEND] = array(
       '#type' => 'textfield',
       '#title' => t('Number of %points that must be spent per purchase', userpoints_translation()),
-      '#default_value' => variable_get(USERPOINTS_MIN_SPEND, '0'),
+      '#default_value' => variable_get(USERPOINTS_MIN_SPEND, 0),
       '#size' => 5,
       '#maxlength' => 5,
     );
@@ -334,7 +334,7 @@ function userpoints_page() {
 
 function userpoints_nodeapi(&$node, $op, $teaser, $page) {
 
-  $points = variable_get(USERPOINTS_POST . $node->type, '1');
+  $points = variable_get(USERPOINTS_POST . $node->type, 0);
   switch($op) {
     case 'insert':
       $points = $points;
@@ -363,7 +363,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
 function userpoints_comment($comment, $op) {
   global $user;
 
-  $points = variable_get(USERPOINTS_POST_COMMENT, '1');
+  $points = variable_get(USERPOINTS_POST_COMMENT, 0);
   switch($op) {
     case 'insert':
       _userpoints_update_points($points, $user->uid, 'comment '.$op);
@@ -373,7 +373,7 @@ function userpoints_comment($comment, $op) {
       _userpoints_update_points($points, $comment->uid, 'comment '.$op);
       break;
     case 'moderate':
-      $points = variable_get(USERPOINTS_MODERATE_COMMENT, '1');
+      $points = variable_get(USERPOINTS_MODERATE_COMMENT, 0);
       _userpoints_update_points($points, $comment->uid, 'comment '.$op);
       break;
   }
@@ -381,17 +381,17 @@ function userpoints_comment($comment, $op) {
 
 function userpoints_nodevote($nid) {
   global $user;
-  $points = variable_get(USERPOINTS_NODEVOTE, '1');
+  $points = variable_get(USERPOINTS_NODEVOTE, 0);
   _userpoints_update_points($points, $user->uid, 'nodevote');
 }
 
 function userpoints_invite($uid, $op) {
   switch($op) {
     case 'invite':
-      $points = variable_get(USERPOINTS_INVITE_INVITE, '1');
+      $points = variable_get(USERPOINTS_INVITE_INVITE, 0);
       break;
     case 'register':
-      $points = variable_get(USERPOINTS_INVITE_REGISTER, '1');
+      $points = variable_get(USERPOINTS_INVITE_REGISTER, 0);
       break;
   }
   _userpoints_update_points($points, $uid, $op);
@@ -505,7 +505,7 @@ function userpoints_paymentapi(&$txn, $op, $arg = '') {
   }
 
   $multiplier = (int)variable_get(USERPOINTS_EC_SPEND, 1);
-  $min = variable_get(USERPOINTS_MIN_SPEND, '0');
+  $min = variable_get(USERPOINTS_MIN_SPEND, 0);
 
   switch ($op) {
     case 'display name':
