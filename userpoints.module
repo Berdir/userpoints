@@ -385,16 +385,16 @@ function userpoints_nodevote($nid) {
   _userpoints_update_points($points, $user->uid, 'nodevote');
 }
 
-function userpoints_invite($uid, $op) {
+function userpoints_invite($op, $args) {
   switch($op) {
     case 'invite':
       $points = variable_get(USERPOINTS_INVITE_INVITE, 0);
       break;
-    case 'register':
+    case 'escalate':
       $points = variable_get(USERPOINTS_INVITE_REGISTER, 0);
       break;
   }
-  _userpoints_update_points($points, $uid, $op);
+  _userpoints_update_points($points, $args['inviter']->uid, $op);
 }
 
 /**
