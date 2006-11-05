@@ -247,7 +247,7 @@ function userpoints_user($op, &$edit, &$user, $category = '') {
 function userpoints_list_users() {
   $sql = "SELECT p.uid, u.name, p.points
     FROM {userpoints} p INNER JOIN {users} u USING (uid)
-    GROUP BY p.uid";
+    GROUP BY p.uid,u.name,p.points";
   $sql_cnt = "SELECT COUNT(DISTINCT(uid)) FROM {userpoints}";
   $header = array(
     array('data' => t('User'), 'field' => 'u.name'),

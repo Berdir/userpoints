@@ -24,5 +24,22 @@ function userpoints_install() {
       	drupal_set_message(t('Problems occurred while creating the database schema for the userpoints module.'));
       }
       break;
+    case 'pgsql':
+      $result = db_query("
+        CREATE TABLE {userpoints} (
+          uid int NOT NULL default '0',
+          points int NOT NULL default '0',
+          last_update int NOT NULL default '0',
+          PRIMARY KEY (uid)
+        )
+      ");
+      
+      if ($result) {
+      	drupal_set_message(t('The database schema for the userpoints module has been successfully created'));
+      }
+      else {
+      	drupal_set_message(t('Problems occurred while creating the database schema for the userpoints module.'));
+      }
+      break;
   }
 }
