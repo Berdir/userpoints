@@ -1,0 +1,5 @@
+; $Id$
+name = User points
+description = User gain points as they perform actions
+package = 
+version = "$Name$"
