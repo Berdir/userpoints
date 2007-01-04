@@ -64,7 +64,7 @@ function userpoints_menu($may_cache) {
       'description' => t('Userpoints settings.'),
       'callback' => 'drupal_get_form',
       'callback arguments' => 'userpoints_settings',
-      'access'   => user_access(USERPOINTS_PERM_VIEW),
+      'access'   => user_access(USERPOINTS_PERM_ADMIN),
       'type' => MENU_NORMAL_ITEM,);
   }
 
