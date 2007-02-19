@@ -8,35 +8,65 @@ function userpoints_install() {
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
-      $result = db_query("
-        CREATE TABLE {userpoints} (
-          uid int(10) NOT NULL default '0',
-          points int(5) NOT NULL default '0',
-          last_update int(11) NOT NULL default '0',
+      db_query("CREATE TABLE {userpoints} (
+          uid           int(10) NOT NULL default '0',
+          points        int(10) NOT NULL default '0',
+          max_points    int(10) NOT NULL default '0',
+          last_update   int(11) NOT NULL default '0',
           PRIMARY KEY (uid)
         ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      
-      break;
-    case 'pgsql':
-      $result = db_query("
-        CREATE TABLE {userpoints} (
-          uid int NOT NULL default '0',
-          points int NOT NULL default '0',
-          last_update int NOT NULL default '0',
-          PRIMARY KEY (uid)
-        )");
-      break;
-  }
-  if ($result) {
-    drupal_set_message(t('The database schema for the userpoints module has been successfully created'));
-  }
-  else {
-    drupal_set_message(t('Problems occurred while creating the database schema for the userpoints module.'));
-  }
+
+     db_query("CREATE TABLE {userpoints_txn} (
+          txn_id        int NOT NULL auto_increment,
+          uid           int(10) NOT NULL default '0',
+          approver_uid  int(10) NOT NULL default '0',
+          points        int(10) NOT NULL default '0',
+          time_stamp    int(11) NOT NULL default '0',
+          event         text,
+          description   text,
+          status        int (1) NOT NULL default '0',
+          PRIMARY KEY (txn_id)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+ }
 }
 
-function userpoints_uninstall() {
-  db_query("DROP TABLE {userpoints}");
-  db_query("DELETE FROM {variable} WHERE name LIKE 'userpoints%%'");
+function userpoints_update_1() {
+  return _system_update_utf8(array('userpoints'));
 }
 
+function userpoints_update_2() {
+  $ret = array();
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $ret[] = update_sql("
+        CREATE TABLE {userpoints_txn} (
+          txn_id        int NOT NULL auto_increment,
+          uid           int(10) NOT NULL default '0',
+          approver_uid  int(10) NOT NULL default '0',
+          points        int(5)  NOT NULL default '0',
+          time_stamp    int(11) NOT NULL default '0',
+          event         text,
+          status        int (1) NOT NULL default '0',
+          PRIMARY KEY (txn_id)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      // Add the max_points column
+      $ret[] = update_sql("ALTER TABLE {userpoints} ADD max_points int(10) NOT NULL default '0' AFTER points");
+      // Make the points column bigger
+      $ret[] = update_sql("ALTER TABLE {userpoints} CHANGE points points int(10) NOT NULL default '0'");
+      break;
+  }
+  return $ret;
+}
+
+function userpoints_update_3() {
+  $ret = array();
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      // Add the description column
+      $ret[] = update_sql("ALTER TABLE {userpoints_txn} ADD description text AFTER event");
+      break;
+  }
+  return $ret;
+}

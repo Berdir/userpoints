@@ -1,0 +1,6 @@
+; $Id$
+name = Userpoints Basic
+description = Some basic interfaces for userpoints, such as posting nodes, comments, ...etc.
+package = Userpoints
+dependencies = userpoints
+version = "$Name$"
