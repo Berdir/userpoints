@@ -586,21 +586,17 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
 
   $num = 5;
 
-  $block_title = array();
-  $block_title[] = t('%user\'s !points', array_merge(array('%user' => $user->name), userpoints_translation()));
-  $block_title[] = t('Highest Users');
-
   switch ($op) {
     case 'list':
-      $blocks[0]['info'] = $block_title[0];
-      $blocks[1]['info'] = $block_title[1];
+      $blocks[0]['info'] = t('User\'s !points', userpoints_translation());
+      $blocks[1]['info'] = t('Highest Users');
       return $blocks;
 
     case 'view':
       if (user_access(USERPOINTS_PERM_VIEW)) {
         switch ($delta) {
           case 0:
-            $title = $block_title[$delta];
+            $title = t('@user\'s !points', array_merge(array('@user' => $user->name), userpoints_translation()));;
             if ($user->uid) {
               $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
               $singular = t('!point', userpoints_translation());
@@ -613,7 +609,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
             break;
 
           case 1:
-            $title = $block_title[$delta];
+            $title = t('Highest Users');
             $result = db_query_range('SELECT p.uid, u.name, p.points
               FROM {userpoints} p INNER JOIN {users} u USING (uid)
               GROUP BY p.uid
