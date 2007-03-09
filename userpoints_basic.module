@@ -27,13 +27,13 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
         '#type'        => 'fieldset',
         '#collapsible' => TRUE,
         '#collapsed'   => TRUE,
-        '#title'       => t('%Points for basic events', userpoints_translation()),
+        '#title'       => t('!Points for basic events', userpoints_translation()),
       );
       
       foreach(node_get_types() as $type => $name) {
         $form[$group][USERPOINTS_POST. $type] = array(
           '#type'          => 'textfield',
-          '#title'         => t('%Points for posting a %node-name', array_merge(userpoints_translation(), array('%node-name' => $name->name))),
+          '#title'         => t('!Points for posting a !node-name', array_merge(userpoints_translation(), array('!node-name' => $name->name))),
           '#default_value' => variable_get(USERPOINTS_POST. $type, '0'),
           '#size'          => 5,
           '#maxlength'     => 5,
@@ -42,7 +42,7 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
 
       $form[$group][USERPOINTS_POST_COMMENT] = array(
         '#type'          => 'textfield',
-        '#title'         => t('%Points for posting a comment', userpoints_translation()),
+        '#title'         => t('!Points for posting a comment', userpoints_translation()),
         '#default_value' => variable_get(USERPOINTS_POST_COMMENT, 0),
         '#size'          => 5,
         '#maxlength'     => 5,
@@ -50,16 +50,16 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
 
       $form[$group][USERPOINTS_MODERATE_COMMENT] = array(
         '#type'          => 'textfield',
-        '#title'         => t('%Points for moderating a comment', userpoints_translation()),
+        '#title'         => t('!Points for moderating a comment', userpoints_translation()),
         '#default_value' => variable_get(USERPOINTS_MODERATE_COMMENT, 0),
         '#size'          => 5,
         '#maxlength'     => 5,
         );
 
-      if (module_exist('invite')) {
+      if (module_exists('invite')) {
         $form[$group][USERPOINTS_INVITE_INVITE] = array(
           '#type'          => 'textfield',
-          '#title'         => t('%Points for inviting a user (requires the invite module)', userpoints_translation()),
+          '#title'         => t('!Points for inviting a user (requires the invite module)', userpoints_translation()),
           '#default_value' => variable_get(USERPOINTS_INVITE_INVITE, 0),
           '#size'          => 5,
           '#maxlength'     => 5,
@@ -67,7 +67,7 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
     
         $form[$group][USERPOINTS_INVITE_REGISTER] = array(
           '#type'          => 'textfield',
-          '#title'         => t('%Points when invited user registers (requires the invite module)', userpoints_translation()),
+          '#title'         => t('!Points when invited user registers (requires the invite module)', userpoints_translation()),
           '#default_value' => variable_get(USERPOINTS_INVITE_REGISTER, 0),
           '#size'          => 5,
           '#maxlength'     => 5,
