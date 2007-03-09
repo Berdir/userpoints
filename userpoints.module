@@ -81,31 +81,38 @@ function userpoints_menu($may_cache) {
       'callback' => 'drupal_get_form',
       'callback arguments' => array('userpoints_admin_settings'),
       'title'    => t('Userpoints settings'),
-      'description' => t('Congigure userpoints settings'),
+      'description' => t('Configure userpoints settings'),
       'access'   => user_access(USERPOINTS_PERM_ADMIN),
       'type'     => MENU_NORMAL_ITEM,
     );
 
     $items[] = array(
-      'path'     => 'admin/user/userpoints/manage',
+      'path'     => 'admin/user/userpoints',
       'callback' => 'userpoints_admin_manage',
       'title'    => t('!Points', userpoints_translation()),
-      'description' => t('Manage userpoints'),
+      'description' => t('Manage !points'),
       'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_NORMAL_ITEM,
     );
     $items[] = array(
-      'path'     => 'admin/user/userpoints/manage/add',
+      'path'     => 'admin/user/userpoints/manage',
+      'callback' => 'userpoints_admin_manage',
+      'title'    => t('Manage'),
+      'access'   => user_access(USERPOINTS_PERM_ADMIN),
+      'type'     => MENU_DEFAULT_LOCAL_TASK,
+      'weight'   => -1,
+    );
+    $items[] = array(
+      'path'     => 'admin/user/userpoints/add',
       'callback' => 'drupal_get_form',
       'callback arguments' => array('userpoints_admin_txn'),
-      'title'    => t('add'),
+      'title'    => t('Add'),
       'description' => t('Admin add/delete userpoints'),
       'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_NORMAL_ITEM,
+      'type'     => MENU_LOCAL_TASK,
       );
     
     $items[] = array(
-      'path'     => 'admin/user/userpoints/manage/edit',
+      'path'     => 'admin/user/userpoints/edit',
       'callback' => 'drupal_get_form',
       'callback arguments' => array('userpoints_admin_txn'),
       'access'   => user_access(USERPOINTS_PERM_ADMIN),
@@ -363,7 +370,7 @@ function userpoints_admin_manage() {
         array('data' => $data->event),
         array('data' => l('approve', "admin/user/userpoints/approve/$data->txn_id") .
                   ' ' . l('decline', "admin/user/userpoints/decline/$data->txn_id") .
-                  ' ' . l('edit',    "admin/user/userpoints/manage/edit/$data->txn_id")
+                  ' ' . l('edit',    "admin/user/userpoints/edit/$data->txn_id")
              ),
       );
     }
@@ -406,7 +413,7 @@ function userpoints_admin_approve() {
         break;
     }
   }
-  drupal_goto('admin/user/userpoints/manage');
+  drupal_goto('admin/user/userpoints');
 }
 
 function userpoints_admin_txn() {
@@ -554,7 +561,7 @@ function userpoints_admin_txn_submit($form_id, $form = NULL) {
       drupal_set_message(t('Transaction has been updated.'));
   }
   
-  drupal_goto('admin/user/userpoints/manage');
+  drupal_goto('admin/user/userpoints');
 }
 
 function userpoints_list_users() {
