@@ -1,0 +1,122 @@
+# $Id$
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  userpoints_reset.module,v 1.1.2.3 2007/03/10 14:54:50 kbahey
+#  userpoints_retroactive.module,v 1.1.2.5 2007/04/04 01:53:01 kbahey
+#  referral_points.info,v 1.1.2.4 2007/03/12 23:08:30 kbahey
+#  userpoints_nodelimit.module,v 1.1.2.2 2007/03/10 14:54:50 kbahey
+#  userpoints_nodelimit.info,v 1.1.2.4 2007/03/12 23:08:30 kbahey
+#  userpoints_reset.info,v 1.1.2.6 2007/03/12 23:08:30 kbahey
+#  userpoints_retroactive.info,v 1.1.2.7 2007/03/12 23:08:30 kbahey
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2007-04-11 09:58-0400\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: contrib/userpoints_reset/userpoints_reset.module:44 contrib/userpoints_retroactive/userpoints_retroactive.module:40
+msgid "NO"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.module:53 contrib/userpoints_retroactive/userpoints_retroactive.module:50
+msgid "YES"
+msgstr ""
+
+#: contrib/referral_points/referral_points.module:22
+msgid "Percentage multiplier for referral points (0 for none, or 1 to 100 of points gained/lost)"
+msgstr ""
+
+#: contrib/referral_points/referral_points.module:60
+msgid "Percentage multiplier must be between 0 and 100"
+msgstr ""
+
+#: contrib/referral_points/referral_points.info:0
+msgid "Allows referrers to get bonus points percentage points for all user points awarded to their referrees."
+msgstr ""
+
+#: contrib/userpoints_nodelimit/userpoints_nodelimit.module:30
+msgid "You don't have enough points to create more nodes of this type."
+msgstr ""
+
+#: contrib/userpoints_nodelimit/userpoints_nodelimit.module:0
+msgid "userpoints_nodelimit"
+msgstr ""
+
+#: contrib/userpoints_nodelimit/userpoints_nodelimit.info:0
+msgid "Userpoints Node Limit"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.module:9
+msgid "Reset userpoints"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.module:21;48
+msgid "Reset"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.module:41
+msgid "Reset all userpoints. This is useful in certain situations such as monthly contests. Enter YES to reset"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.module:55
+msgid "All userpoints have been reset!"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.module:0
+msgid "userpoints_reset"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.info:0
+msgid "Userpoints Reset"
+msgstr ""
+
+#: contrib/userpoints_reset/userpoints_reset.info:0
+msgid "Resets all userpoints on the site."
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.module:9
+msgid "Calculate userpoints for nodes and comments created in the past."
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.module:21
+msgid "Retroactive"
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.module:37
+msgid "Give users points for nodes and comments they created in the past. Enter YES to reset"
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.module:44
+msgid "Submit"
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.module:52
+msgid "Points awarded for past nodes and comments."
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.module:60
+msgid "User points updated with node and comment values"
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.module:0
+msgid "userpoints_retroactive"
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.info:0
+msgid "Userpoints Retroactive"
+msgstr ""
+
+#: contrib/userpoints_retroactive/userpoints_retroactive.info:0
+msgid "Calculate userpoints for nodes and comments created so far."
+msgstr ""
+
