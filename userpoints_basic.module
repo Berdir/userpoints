@@ -7,8 +7,6 @@
 define('USERPOINTS_POST',                'userpoints_post_');
 define('USERPOINTS_POST_COMMENT',        'userpoints_post_comment');
 define('USERPOINTS_MODERATE_COMMENT',    'userpoints_moderate_comment');
-define('USERPOINTS_INVITE_INVITE',       'userpoints_invite_invite');
-define('USERPOINTS_INVITE_REGISTER',     'userpoints_invite_register');
 
 function userpoints_basic_help($section) {
   switch ($section) {
@@ -56,23 +54,6 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
         '#maxlength'     => 5,
         );
 
-      if (module_exists('invite')) {
-        $form[$group][USERPOINTS_INVITE_INVITE] = array(
-          '#type'          => 'textfield',
-          '#title'         => t('!Points for inviting a user (requires the invite module)', userpoints_translation()),
-          '#default_value' => variable_get(USERPOINTS_INVITE_INVITE, 0),
-          '#size'          => 5,
-          '#maxlength'     => 5,
-        );
-    
-        $form[$group][USERPOINTS_INVITE_REGISTER] = array(
-          '#type'          => 'textfield',
-          '#title'         => t('!Points when invited user registers (requires the invite module)', userpoints_translation()),
-          '#default_value' => variable_get(USERPOINTS_INVITE_REGISTER, 0),
-          '#size'          => 5,
-          '#maxlength'     => 5,
-        );
-      }
       return $form;
       break;
   }
@@ -121,21 +102,5 @@ function userpoints_comment($comment, $op) {
       userpoints_userpointsapi('points', $points, $comment->uid, 'moderate comment');
       break;
   }
-}
-
-function userpoints_invite($op, $args) {
-  switch($op) {
-    case 'invite':
-      $points = variable_get(USERPOINTS_INVITE_INVITE, 0);
-      break;
-    case 'cancel':
-      $points = -variable_get(USERPOINTS_INVITE_INVITE, 0);
-      break;
-    case 'escalate':
-      $points = variable_get(USERPOINTS_INVITE_REGISTER, 0);
-      $op = 'register';
-      break;
-  }
-  userpoints_userpointsapi('points', $points, $args['inviter']->uid, 'invite '.$op);
 }
 

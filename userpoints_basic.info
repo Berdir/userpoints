@@ -1,6 +1,6 @@
 ; $Id$
 name = Userpoints Basic
-description = Some basic interfaces for userpoints, such as posting nodes, comments, ...etc.
+description = Userpoints for core Drupal, such as posting nodes and comments, and moderating comments.
 package = Userpoints
 dependencies = userpoints
 version = "$Name$"
