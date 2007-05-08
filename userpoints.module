@@ -80,7 +80,7 @@ function userpoints_menu($may_cache) {
       'path'     => 'admin/settings/userpoints',
       'callback' => 'drupal_get_form',
       'callback arguments' => array('userpoints_admin_settings'),
-      'title'    => t('Userpoints settings'),
+      'title'    => t('!Points settings', userpoints_translation()),
       'description' => t('Configure userpoints settings'),
       'access'   => user_access(USERPOINTS_PERM_ADMIN),
       'type'     => MENU_NORMAL_ITEM,
@@ -90,7 +90,7 @@ function userpoints_menu($may_cache) {
       'path'     => 'admin/user/userpoints',
       'callback' => 'userpoints_admin_manage',
       'title'    => t('!Points', userpoints_translation()),
-      'description' => t('Manage !points'),
+      'description' => t('Manage !points', userpoints_translation()),
       'access'   => user_access(USERPOINTS_PERM_ADMIN),
     );
     $items[] = array(
@@ -295,7 +295,7 @@ function userpoints_userpointsapi($op, $points = 0, $uid = 0, $event = NULL, $de
 
   if (_userpoints_user_exists($uid)) {
     db_query("UPDATE {userpoints}
-      SET points = '%d', max_points = '%d', last_update = '%d' WHERE uid = %d",
+      SET points = %d, max_points = %d, last_update = %d WHERE uid = %d",
       $current_points,
       $max_points,
       time(),
@@ -303,7 +303,7 @@ function userpoints_userpointsapi($op, $points = 0, $uid = 0, $event = NULL, $de
   }
   else {
     $result = db_query("INSERT INTO {userpoints}
-      VALUES ('%d', '%d', '%d', '%d')",
+      VALUES (%d, %d, %d, %d)",
       $uid,
       $current_points,
       $max_points,
@@ -417,36 +417,37 @@ function userpoints_admin_approve() {
 }
 
 function userpoints_admin_txn() {
-  $mode = arg(4);
+  global $user;
+
+  $mode = arg(3);
+  $txn_id = (int)arg(4);
+
   $timestamp = format_date(time(), 'custom', 'Y-m-d H:i O');
 
-  if ($mode == 'edit') {
-    $txn_id = (int)arg(5);
-      if ($txn_id) {
-        $result = db_query('SELECT * FROM {userpoints_txn} WHERE txn_id = %d', $txn_id);
-        $txn = db_fetch_object($result);
-        $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i O');
-      }
+  if ($mode == 'edit' && $txn_id) {
+    $result = db_query('SELECT * FROM {userpoints_txn} WHERE txn_id = %d', $txn_id);
+    $txn = db_fetch_object($result);
+    $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i O');
   }
 
   $form['uid'] = array(
     '#type'          => 'textfield',
     '#title'         => t('User ID'),
     '#size'          => 10,
-    '#maxlength'     => 7,
+    '#maxlength'     => 10,
     '#default_value' => $txn->uid,
     '#description'   => t('Drupal User ID for the user you want the points to affect'),
     );
-  
+
   $form['points'] = array(
     '#type'          => 'textfield',
     '#title'         => t('Points'),
     '#size'          => 10,
-    '#maxlength'     => 7,
+    '#maxlength'     => 10,
     '#default_value' => $txn->points,
     '#description'   => t('Number of points to add/subtract from the user. For example, 25 (to add points) or -25 (to subtract points).'),
     );
-  
+
   $form['time_stamp'] = array(
     '#type'          => 'textfield',
     '#title'         => t('Date/Time'),
@@ -463,37 +464,37 @@ function userpoints_admin_txn() {
     '#width'         => 70,
     '#lines'         => 5,
     '#description'   => t('Enter an optional description for this transaction, such as the reason it is created.'),
-    );  
-      
+    );
+
   switch($mode) {
     case 'add':
       $form['approver_uid'] = array(
         '#type'  => 'hidden',
         '#value' => $user->uid,
-        ); 
-      
+        );
+
       $form['event'] = array(
         '#type'  => 'hidden',
         '#value' => 'admin',
-        );  
-      
+        );
+
       $form['status'] = array(
         '#type'  => 'hidden',
         '#value' => USERPOINTS_TXN_STATUS_PENDING,
         );
-      
+
       $form['mode'] = array(
         '#type'  => 'hidden',
         '#value' => $mode,
         );
       break;
-      
+
    case 'edit':
      $form['txn_id'] = array(
        '#type'  => 'hidden',
        '#value' => $txn->txn_id,
-       ); 
-     
+       );
+
      $form['approver_uid'] = array(
        '#type'  => 'textfield',
        '#description' => t('Approver ID'),
@@ -501,8 +502,8 @@ function userpoints_admin_txn() {
        '#size'          => 10,
        '#maxlength'     => 7,
        '#description'   => t('The user ID of the person who approved this transaction. 0 means not yet approved.'),
-       ); 
-    
+       );
+
       $form['event'] = array(
         '#type'  => 'textfield',
         '#description' => t('Event'),
@@ -510,8 +511,8 @@ function userpoints_admin_txn() {
         '#size'          => 20,
         '#maxlength'     => 20,
         '#description'   => t('The event type for this transaction. Normally, it is "admin".'),
-        );  
-      
+        );
+
       $form['status'] = array(
         '#title' => t('Approval status'),
         '#type' => 'radios', 
@@ -521,12 +522,12 @@ function userpoints_admin_txn() {
         );
       break;
   }
-      
+
   $form['mode'] = array(
       '#type'  => 'hidden',
       '#default_value' => $mode
       );
-    
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -536,13 +537,11 @@ function userpoints_admin_txn() {
 }
 
 function userpoints_admin_txn_submit($form_id, $form = NULL) {
-  $mode = $form['mode'];
-
   if ($form_id != 'userpoints_admin_txn') {
     return;
   }
-  
-  switch($mode) {
+
+  switch($form['mode']) {
     case 'add':
       userpoints_userpointsapi('points', $form['points'], $form['uid'], 'admin', $form['description']);
       break;

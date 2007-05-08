@@ -11,8 +11,15 @@ do certain actions, such as:
   node types, e.g. page, story, forum, image, ...etc.)
 - posting a comment
 - moderating a comment
+
+Additionally, points can be awarded for actions done by other modules,
+including:
 - voting on a node (requires the nodevote module)
-- inviting a person to register on the site
+- referring a person to the site (requires referral module)
+- a visitor comes to the site via clicking on an affiliate link
+  (requires the affiliates module)
+- voting up or down a node (requires the vote_up_down module)
+- inviting a person to register on the site (requires invite module)
 - invited person actually registers on the site
 - purchasing from your e-commerce store (reward points)
 
@@ -32,6 +39,12 @@ displays the top 5 users who earned points.
 
 This module is useful in providing an incentive for users to participate
 in the site, and be more active.
+
+A transaction log is created for each event. The log is viewable by
+the admin.
+
+Points can be moderated, i.e. approval can be done by the admin at a later
+time.
 
 Initally sponsored by: http://artalyst.com
 
@@ -81,15 +94,62 @@ a non-shippable product, and adjust the multiplier accordingly.
 
 API
 ---
-This modules provides a callable interface for adding or subtracting points
-to a user account, as well as querying a user's account for how much points
-he currently has:
+This modules provides an application programming interface (API), which is
+callable and actionable by other modules.
 
 The functions are:
 
- hook_userpoints($points, $uid) 
+userpoints_userpointsapi('points', $points, $uid, $event, $description)
+  Use this function to award points to a user.
 
- userpoints_get_current_points($uid) 
+  The arguments are:
+
+  $op
+    Must be 'points'.
+
+  $points
+    number of points to add (if positive) or subtract (if negative)
+
+  $uid
+    user ID to award points to.
+
+  $event
+    an identified of the event the points is being awarded for, this
+    is a short word, and will be recorded in the transaction log.
+
+  $description
+    a description of the event. This is optional and is a more verbose
+    version of the event identifier.
+
+hook_userpoints($op, $points, $uid, $event) 
+
+  Use this hook to act upon certain operations. When other modules award
+  points to a user, your hook will be called, among others.
+
+  The arguments are:
+
+  $op: The operation to be acted upon.
+    'setting'
+      Pass a field set and fields that would be displayed in the userpoints
+      settings page. For example, this can be used for your program to ask
+      the admin to set a number of points for certain actions your module
+      performs. The function should return an array object conforming to
+      FormsAPI structure.
+
+    'points before'
+      Calls your module, and others, before the points are processed. You can
+      prevent points from being awarded by returning FALSE.
+
+    'points after'
+      Calls your module, and others, after points are processed. You can take
+      certain actions if you so wish. Return value is ignored.
+
+   The rest of the arguments are the same as the userpoints_userpointsapi()
+   function.
+ 
+$points = userpoints_get_current_points($uid) 
+   You can call this function to know how much points a use has.
+   return value is the number of points.
 
 Bugs/Features/Patches:
 ----------------------
