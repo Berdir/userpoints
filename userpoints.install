@@ -30,6 +30,15 @@ function userpoints_install() {
  }
 }
 
+/**
+* Implementation of hook_uninstall().
+*/
+function userpoints_uninstall() {
+  db_query('DROP TABLE {userpoints}');
+  db_query('DROP TABLE {userpoints_txn}');
+  db_query("DELETE FROM {variable} WHERE name like '%userpoints%'");
+}
+
 function userpoints_update_1() {
   return _system_update_utf8(array('userpoints'));
 }
