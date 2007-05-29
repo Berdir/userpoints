@@ -60,6 +60,7 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
 }
   
 function userpoints_nodeapi(&$node, $op, $teaser, $page) {
+  static $orig_uid;
   $points = variable_get(USERPOINTS_POST . $node->type, 0);
   switch($op) {
     case 'insert':
@@ -70,16 +71,18 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
       $points = -$points;
       userpoints_userpointsapi('points',$points, $node->uid, $node->type);
       break;
+    case 'prepare':
+      $orig_uid = $node->uid;
+      break;
     case 'update':
-      $orig_node = node_load(array('nid' => $node->nid));
-      if ($node->uid != $orig_node->uid) {
+      if ($node->uid != $orig_uid) {
+        // Add to the new node owner
+        userpoints_userpointsapi('points',$points, $node->uid, $node->type);
+
         // subtract from the original node owner
         $points = -$points;
-        userpoints_userpointsapi('points',$points, $orig_node->uid, $node->type);
+        userpoints_userpointsapi('points',$points, $orig_uid, $node->type);
 
-        // Add to the new node owner
-        $points = -$points;
-        userpoints_userpointsapi('points',$points, $node->uid, $node->type);
       }
       break;
   }
@@ -87,6 +90,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
 
 function userpoints_comment($comment, $op) {
   global $user;
+  static $orig_uid;
 
   $points = variable_get(USERPOINTS_POST_COMMENT, 0);
   switch($op) {
@@ -100,6 +104,18 @@ function userpoints_comment($comment, $op) {
     case 'moderate':
       $points = variable_get(USERPOINTS_MODERATE_COMMENT, 0);
       userpoints_userpointsapi('points', $points, $comment->uid, 'moderate comment');
+      break;
+    case 'form':
+      $orig_uid = $comment['uid']['#value'];
+    case 'update':
+      if ($orig_uid != $comment['uid']['#value']) {
+        // Add to the new comment owner
+        userpoints_userpointsapi('points', $points, $comment['uid']['#value'], 'post comment');
+
+        // Subtract from the original comment owner
+        $points = -$points;
+        userpoints_userpointsapi('points', $points, $orig_uid, 'post comment');
+      }
       break;
   }
 }
