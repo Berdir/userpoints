@@ -339,6 +339,9 @@ function userpoints_user($op, &$edit, &$user, $category = '') {
       break;
     case 'view':
       $points = (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
+      if (user_access(USERPOINTS_PERM_ADMIN)) {
+        $points = l($points, 'admin/user/userpoints/add/' .$user->uid, array('title' => t('manage points')));
+      }
       $disp_points[] = array(
         'title' => t('User !points', userpoints_translation()),
         'value' => $points,
@@ -421,7 +424,10 @@ function userpoints_admin_txn() {
 
   $mode = arg(3);
   $txn_id = (int)arg(4);
-
+  if ($txn_id) {
+    $txn_user = user_load(array('uid' => $txn_id));
+  }
+  
   $timestamp = format_date(time(), 'custom', 'Y-m-d H:i O');
 
   if ($mode == 'edit' && $txn_id) {
@@ -430,12 +436,13 @@ function userpoints_admin_txn() {
     $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i O');
   }
 
-  $form['uid'] = array(
+  $form['txn_user'] = array(
     '#type'          => 'textfield',
-    '#title'         => t('User ID'),
-    '#size'          => 10,
-    '#maxlength'     => 10,
-    '#default_value' => $txn->uid,
+    '#title'         => t('User Name'),
+    '#size'          => 30,
+    '#maxlength'     => 60,
+    '#default_value' => $txn_user->name,
+    '#autocomplete_path' => 'user/autocomplete',
     '#description'   => t('Drupal User ID for the user you want the points to affect'),
     );
 
@@ -490,9 +497,9 @@ function userpoints_admin_txn() {
       break;
 
    case 'edit':
-     $form['txn_id'] = array(
+     $form['txn_user'] = array(
        '#type'  => 'hidden',
-       '#value' => $txn->txn_id,
+       '#value' => $txn_user,
        );
 
      $form['approver_uid'] = array(
@@ -541,9 +548,10 @@ function userpoints_admin_txn_submit($form_id, $form = NULL) {
     return;
   }
 
+  $txn_user = user_load(array('name' => $form['txn_user']));
   switch($form['mode']) {
     case 'add':
-      userpoints_userpointsapi('points', $form['points'], $form['uid'], 'admin', $form['description']);
+      userpoints_userpointsapi('points', $form['points'], $txn_user->uid, 'admin', $form['description']);
       break;
       
     case 'edit':
