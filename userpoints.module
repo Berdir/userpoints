@@ -573,8 +573,7 @@ function userpoints_admin_txn_submit($form_id, $form = NULL) {
 
 function userpoints_list_users() {
   $sql = "SELECT p.uid, u.name, p.points
-    FROM {userpoints} p INNER JOIN {users} u USING (uid)
-    GROUP BY p.uid";
+    FROM {userpoints} p INNER JOIN {users} u USING (uid)";
   $sql_cnt = "SELECT COUNT(DISTINCT(uid)) FROM {userpoints}";
   $header = array(
     array('data' => t('User'), 'field' => 'u.name'),
@@ -626,7 +625,6 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
             $title = t('Highest Users');
             $result = db_query_range('SELECT p.uid, u.name, p.points
               FROM {userpoints} p INNER JOIN {users} u USING (uid)
-              GROUP BY p.uid
               ORDER BY p.points DESC', 0, $num);
             while ($data = db_fetch_object($result)) {
               $rows[] =
