@@ -9,46 +9,47 @@ function userpoints_install() {
     case 'mysql':
     case 'mysqli':
       db_query("CREATE TABLE {userpoints} (
-          uid           int(10) NOT NULL default '0',
-          points        int(10) NOT NULL default '0',
-          max_points    int(10) NOT NULL default '0',
-          last_update   int(11) NOT NULL default '0',
-          PRIMARY KEY (uid)
+          uid           INT(10) NOT NULL DEFAULT '0',
+          points        INT(10) NOT NULL DEFAULT '0',
+          max_points    INT(10) NOT NULL DEFAULT '0',
+          last_update   INT(11) NOT NULL DEFAULT '0',
+          PRIMARY KEY (uid),
+          KEY (last_update)
         ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-
      db_query("CREATE TABLE {userpoints_txn} (
-          txn_id        int NOT NULL auto_increment,
-          uid           int(10) NOT NULL default '0',
-          approver_uid  int(10) NOT NULL default '0',
-          points        int(10) NOT NULL default '0',
-          time_stamp    int(11) NOT NULL default '0',
-          event         text,
-          description   text,
-          status        int (1) NOT NULL default '0',
-          PRIMARY KEY (txn_id)
+          txn_id        INT     NOT NULL AUTO_INCREMENT,
+          uid           INT(10) NOT NULL DEFAULT '0',
+          approver_uid  INT(10) NOT NULL DEFAULT '0',
+          points        INT(10) NOT NULL DEFAULT '0',
+          time_stamp    INT(11) NOT NULL DEFAULT '0',
+          status        INT(1) NOT NULL DEFAULT '0',
+          event         VARCHAR(32),
+          description   TEXT,
+          PRIMARY KEY (txn_id),
+          KEY (event),
+          KEY (status)
         ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
       break;
 
     case 'pgsql':
       db_query("CREATE TABLE {userpoints} (
           uid           SERIAL,
-	  points        integer NOT NULL default '0',
-	  max_points    integer NOT NULL default '0',
-	  last_update   integer NOT NULL default '0',
-	  PRIMARY KEY (uid)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-
+	        points        INTEGER NOT NULL default '0',
+	        max_points    INTEGER NOT NULL default '0',
+	        last_update   INTEGER NOT NULL default '0',
+	        PRIMARY KEY (uid)
+        );");
       db_query("CREATE TABLE {userpoints_txn} (
           txn_id        SERIAL,
-	  uid           integer NOT NULL default '0',
-	  approver_uid  interger NOT NULL default '0',
-	  points        integer NOT NULL default '0',
-	  time_stamp    integer NOT NULL default '0',
-	  event         varchar,
-	  description   varchar,
-	  status        integer NOT NULL default '0',
-	  PRIMARY KEY (txn_id)
-	) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+	        uid           INTEGER NOT NULL default '0',
+	        approver_uid  INTEGER NOT NULL default '0',
+	        points        INTEGER NOT NULL default '0',
+	        time_stamp    INTEGER NOT NULL default '0',
+	        status        INTEGER NOT NULL default '0',
+	        event         VARCHAR,
+	        description   VARCHAR,
+	        PRIMARY KEY (txn_id)
+	      );");
       break;
   }
 }
@@ -71,40 +72,10 @@ function userpoints_update_2() {
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
-      $ret[] = update_sql("
-        CREATE TABLE {userpoints_txn} (
-          txn_id        int NOT NULL auto_increment,
-          uid           int(10) NOT NULL default '0',
-          approver_uid  int(10) NOT NULL default '0',
-          points        int(5)  NOT NULL default '0',
-          time_stamp    int(11) NOT NULL default '0',
-          event         text,
-          status        int (1) NOT NULL default '0',
-          PRIMARY KEY (txn_id)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
       // Add the max_points column
-      $ret[] = update_sql("ALTER TABLE {userpoints} ADD max_points int(10) NOT NULL default '0' AFTER points");
+      $ret[] = update_sql("ALTER TABLE {userpoints} ADD max_points INT(10) NOT NULL DEFAULT '0' AFTER points");
       // Make the points column bigger
-      $ret[] = update_sql("ALTER TABLE {userpoints} CHANGE points points int(10) NOT NULL default '0'");
-      break;
-
-    case 'pgsql':
-      $ret[] = update_sql("
-        CREATE TABLE {userpoints_txn} (
-	  txn_id        SERIAL,
-	  uid           integer NOT NULL default '0',
-	  approver_uid  integer NOT NULL default '0',
-	  points        integer  NOT NULL default '0',
-	  time_stamp    integer NOT NULL default '0',
-	  event         VARCHAR,
-	  status        integer NOT NULL default '0',
-	  PRIMARY KEY (txn_id)
-	) /*!40100 DEFAULT CHARACTER SET utf8 */;");// Add the max_points column
-      $ret[] = update_sql("ALTER TABLE {userpoints} ADD max_points integer NOT NULL default '0'");
-      // Make the points column bigger
-      $ret[] = update_sql("ALTER TABLE {userpoints} ALTER points TYPE integer");
-      $ret[] = update_sql("ALTER TABLE {userpoints} ALTER points SET NOT NULL");
-      $ret[] = update_sql("ALTER TABLE {userpoints} ALTER points SET DEFAULT '0'");			    
+      $ret[] = update_sql("ALTER TABLE {userpoints} CHANGE points points INT(10) NOT NULL DEFAULT '0'");
       break;
   }
   return $ret;
@@ -116,12 +87,21 @@ function userpoints_update_3() {
     case 'mysql':
     case 'mysqli':
       // Add the description column
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} ADD description text AFTER event");
+      $ret[] = update_sql("ALTER TABLE {userpoints_txn} ADD description TEXT AFTER event");
       break;
+  }
+  return $ret;
+}
+
+function userpoints_update_4() {
+  $ret = array();
+  switch ($GLOBALS['db_type']) {
     case 'mysql':
+    case 'mysqli':
       // Add the description column
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} ADD description varchar");
-      break;			  
+      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE event VARCHAR(32)");
+      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE status BEFORE event");
+      break;
   }
   return $ret;
 }
