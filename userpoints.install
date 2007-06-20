@@ -99,8 +99,8 @@ function userpoints_update_4() {
     case 'mysql':
     case 'mysqli':
       // Add the description column
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE event VARCHAR(32)");
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE status BEFORE event");
+      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE event event VARCHAR(32)");
+      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE status status INTEGER NOT NULL DEFAULT '0' AFTER time_stamp");
       break;
   }
   return $ret;
