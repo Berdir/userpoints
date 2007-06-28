@@ -505,7 +505,8 @@ function userpoints_admin_txn() {
     '#title'         => t('Reference'),
     '#default_value' => $txn->reference,
     '#size'          => 30,
-    '#maxlength'     => 128,+     '#description'   => t('Enter optional reference for this transaction. This field will be indexed and searchable.'),
+    '#maxlength'     => 128,
+    '#description'   => t('Enter optional reference for this transaction. This field will be indexed and searchable.'),
     ); 
 
   switch($mode) {
