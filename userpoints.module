@@ -651,9 +651,8 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
             $title = t('@user\'s !points', array_merge(array('@user' => $user->name), userpoints_translation()));;
             if ($user->uid) {
               $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
-              $singular = t('!point', userpoints_translation());
-              $plural = t('!points', userpoints_translation());
-              $content = t('You have %p %c', array('%p' => $points, '%c' => format_plural($points, $singular, $plural)));
+              $show_points = format_plural($points, t('!point', userpoints_translation()), t('!points', userpoints_translation()));
+              $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
             }
             else {
               $content = t('!Points are visible to logged in users only',userpoints_translation());
