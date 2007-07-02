@@ -590,7 +590,7 @@ function userpoints_admin_txn_submit($form_id, $form = NULL) {
   $txn_user = user_load(array('name' => $form['txn_user']));
   switch($form['mode']) {
     case 'add':
-      userpoints_userpointsapi('points', $form['points'], $form['uid'], 'admin', $form['description'], $form['reference']);
+      userpoints_userpointsapi('points', $form['points'], $txn_user->uid, 'admin', $form['description'], $form['reference']);
       break;
       
     case 'edit':
