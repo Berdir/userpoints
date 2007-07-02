@@ -207,7 +207,7 @@ function userpoints_admin_settings() {
  *
  * @return number of current points in that user's account
  */
-function userpoints_get_current_points($uid) {
+function userpoints_get_current_points($uid = 0) {
   return (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $uid));
 }
 
@@ -302,7 +302,7 @@ function userpoints_userpointsapi($op, $points = 0, $uid = 0, $event = NULL, $de
   // ***********************
 
   // Calculate the current point
-  $current_points = (int)$points + (int)userpoints_get_current_points($uid);
+  $current_points = (int)$points + userpoints_get_current_points($uid);
 
   // Check if user has earned points
   if ($points > 0) {
@@ -358,16 +358,19 @@ function _userpoints_user_exists($uid) {
   return (int)db_result(db_query('SELECT COUNT(*) FROM {userpoints} WHERE uid = %d', $uid));
 }
 
-function userpoints_user($op, &$edit, &$user, $category = '') {
+function userpoints_user($op, &$edit, &$account, $category = '') {
   switch($op) {
     case 'delete':
-      db_query('DELETE FROM {userpoints} WHERE uid = %d', $user->uid);
-      db_query('DELETE FROM {userpoints_txn} WHERE uid = %d', $user->uid);
+      // The user is being deleted, delete all traces in userpoints and txn tables
+      db_query('DELETE FROM {userpoints} WHERE uid = %d', $account->uid);
+      db_query('DELETE FROM {userpoints_txn} WHERE uid = %d', $account->uid);
       break;
+
     case 'view':
-      $points = (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
+      // Get the points for the user
+      $points = userpoints_get_current_points($account->uid);
       if (user_access(USERPOINTS_PERM_ADMIN)) {
-        $points = l($points, 'admin/user/userpoints/add/' .$user->uid, array('title' => t('manage points')));
+        $points = l($points, 'admin/user/userpoints/add/'. $account->uid, array('title' => t('Manage points')));
       }
       $disp_points[] = array(
         'title' => t('User !points', userpoints_translation()),
