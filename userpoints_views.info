@@ -1,0 +1,5 @@
+; $Id$
+name = Views Integration
+description = Adds userpoints related fields, sorts and filters to views. Benefits from the usernode module being installed, although not required.
+dependencies = userpoints views
+package = Userpoints

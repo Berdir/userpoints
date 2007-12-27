@@ -1,0 +1,460 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_views_tables():
+ * Present fields and filters for user data.
+ */
+function userpoints_views_views_tables() {
+  $tables['userpoints'] = array(
+    'name' => 'userpoints',
+    'provider' => 'internal', // won't show up in external list.
+    'join' => array(
+      'left' => array(
+        'table' => 'node',
+        'field' => 'uid',
+      ),
+      'right' => array(
+        'field' => 'uid',
+      ),
+    ),
+    'fields' => array(
+      'points' => array(
+        'name' => t('Node: Author Points'),
+        'sortable' => TRUE,
+        'option' => 'integer',
+        'handler' => 'views_handler_field_int',
+        'help' => t('Displays the number of userpoints that the author of the node currently has.'),
+      ),
+      'max_points' => array(
+        'name' => t('Node: Author Maximum Points'),
+        'sortable' => TRUE,
+        'option' => 'integer',
+        'handler' => 'views_handler_field_int',
+        'help' => t('Displays the maximum number of userpoints of the author of the node.'),
+      ),
+      'link' => array(
+        'name' => t('Node: Author Link'),
+        'option' => array(
+          '#type' => 'textfield',
+          '#default_value' => t('(details)|myuserpoints/$uid'),
+          '#size' => 20,
+          '#description' => 'title|destination<br/>$uid is a placeholder.',
+        ),
+        'help' => t('Displays a link to something, based on the node author.'),
+        'field' => 'uid',
+        'handler' => 'views_handler_field_userpoints_link_uid',
+      ),
+    ),
+    'sorts' => array(
+      'points' => array(
+        'name' => t('Node: Author Points'),
+        'help' => t("Sort by the node's author current number of userpoints"),
+      ),
+      'max_points' => array(
+        'name' => t('Node: Author Maximum Points'),
+        'help' => t("Sort by the node's author maximum number of userpoints"),
+      ),
+    ),
+    'filters' => array(
+      'points' => array(
+        'name' => t('Node: Author Points'),
+        'value-type' => 'integer',
+        'operator' => 'views_handler_operator_gtlt',
+        'help' => t('Filter node authors based on points.'),
+      ),
+      'tid' => array(
+        'name' => t('Node: Author Points Category'),
+        'help' => t('Filter node authors based on the points categories.'),
+        'operator' => 'views_handler_operator_eqneq',
+        'value' => array(
+          '#type' => 'select',
+          '#options' => 'userpoints_get_categories',
+        ),
+      ),
+    ),
+  );
+  
+  $tables['userpoints_categories'] = array(
+    'name' => 'term_data',
+    'provider' => 'internal', // won't show up in external list.
+    'join' => array(
+      'left' => array(
+        'table' => 'userpoints',
+        'field' => 'tid',
+      ),
+      'right' => array(
+        'field' => 'tid',
+      ),
+    ),
+    'fields' => array(
+      'name' => array(
+        'name' => t('Userpoints: Points Category'),
+        'sortable' => TRUE,
+        'handler' => 'views_handler_field_userpoints_category',
+        'help' => t('Displays the userpoints category of the points.'),
+      ),
+      'link' => array(
+        'name' => t('Userpoints: Category Link'),
+        'option' => array(
+          '#type' => 'textfield',
+          '#default_value' => t('(details)|mycategories/$tid'),
+          '#size' => 20,
+          '#description' => 'title|destination<br/>$tid is a placeholder.',
+        ),
+        'help' => t('Displays a link to something, based on the category.'),
+        'field' => 'tid',
+        'handler' => 'views_handler_field_userpoints_link_tid',
+      ),
+    ),
+  );
+  
+  $tables['userpoints_comments'] = array(
+    'name' => 'userpoints',
+    'provider' => 'internal', // won't show up in external list.
+    'join' => array(
+      'left' => array(
+        'table' => 'comments',
+        'field' => 'uid',
+      ),
+      'right' => array(
+        'field' => 'uid',
+      ),
+    ),
+    'fields' => array(
+      'points' => array(
+        'name' => t('Comment: Author Points'),
+        'sortable' => TRUE,
+        'option' => 'integer',
+        'handler' => 'views_handler_field_int',
+        'help' => t('Displays the number of userpoints that the author of the comment currently has.'),
+      ),
+      'max_points' => array(
+        'name' => t('Comment: Author Maximum Points'),
+        'sortable' => TRUE,
+        'option' => 'integer',
+        'handler' => 'views_handler_field_int',
+        'help' => t('Displays the maximum number of userpoints of the author of the comment.'),
+      ),
+      'link' => array(
+        'name' => t('Comment: Author Link'),
+        'option' => array(
+          '#type' => 'textfield',
+          '#default_value' => t('(details)|myuserpoints/$uid'),
+          '#size' => 20,
+          '#description' => 'title|destination<br/>$uid is a placeholder.',
+        ),
+        'help' => t('Displays a link to something, based on the comment author.'),
+        'field' => 'uid',
+        'handler' => 'views_handler_field_userpoints_link_uid',
+      ),
+    ),
+    'sorts' => array(
+     'points' => array(
+        'name' => t('Comment: Author Points'),
+        'help' => t("Sort by the comment's author current number of userpoints"),
+      ),
+      'max_points' => array(
+        'name' => t('Comment: Author Maximum Points'),
+        'help' => t("Sort by the comment's author maximum number of userpoints"),
+      ),
+    ),
+    'filters' => array(
+      'points' => array(
+        'name' => t('Comment: Author Points'),
+        'value-type' => 'integer',
+        'operator' => 'views_handler_operator_gtlt',
+        'help' => t('Filter comment authors based on points.'),
+      ),
+      'tid' => array(
+        'name' => t('Comment: Author Points Category'),
+        'help' => t('Filter comment authors based on the points categories.'),
+        'operator' => 'views_handler_operator_eqneq',
+        'value' => array(
+          '#type' => 'select',
+          '#options' => 'userpoints_get_categories',
+        ),
+      ),
+    ),
+  );
+  
+  $tables['userpoints_txn'] = array(
+    'provider' => 'internal', // won't show up in external list.
+    'join' => array(
+      'left' => array(
+        'table' => 'userpoints',
+        'field' => 'uid',
+      ),
+      'right' => array(
+        'field' => 'uid',
+      ),
+      'extra' => array(
+        'tid = userpoints.tid' => NULL,
+      ),
+      'type' => 'inner',
+    ),
+    'fields' => array(
+      'points' => array(
+        'name' => t('Userpoints: Transaction Points'),
+        'sortable' => TRUE,
+        'option' => 'integer',
+        'handler' => 'views_handler_field_int',
+        'help' => t('Displays the number of userpoints assigned in the transaction.'),
+      ),
+      'time_stamp' => array(
+        'name' => t('Userpoints: Transaction Time'),
+        'sortable' => TRUE,
+        'handler' => views_handler_field_dates(),
+        'option' => 'string',
+        'help' => t('Displays the date and time of the transaction.'),
+      ),
+      'status' => array(
+        'name' => t('Userpoints: Transaction Status'),
+        'sortable' => TRUE,
+        'handler' => 'views_handler_field_userpoints_txn_status',
+        'help' => t('Displays the status (approved, pending or declined) of the transaction.'),
+      ),
+      'description' => array(
+        'name' => t('Userpoints: Transaction Description'),
+        'sortable' => TRUE,
+        'help' => t('Displays the description given to the transaction.'),
+      ),
+      'operation' => array(
+        'name' => t('Userpoints: Transaction Operation'),
+        'sortable' => TRUE,
+        'help' => t('Displays the operation which caused the transaction.'),
+      ),
+    ),
+    'sorts' => array(
+      'points' => array(
+      'name' => t('Userpoints: Transaction Points'),
+      'help' => t("Sort by the number of userpoints assigned in the transaction"),
+      ),
+      'time_stamp' => array(
+        'name' => t('Userpoints: Transaction Time'),
+        'handler' => 'views_handler_sort_date',
+        'option' => views_handler_sort_date_options(),
+        'help' => t("Sort by the transaction time"),
+      ),
+    ),
+    'filters' => array(
+    ),
+  );
+  
+  return $tables;
+}
+
+/**
+ * Implementation of hook_views_arguments():
+ */
+function userpoints_views_views_arguments() {
+}
+
+/**
+ * Implementation of hook_views_default_views():
+ * Generate a default views: a list of users, and per-user transactions (both require usernode module)
+ */
+function userpoints_views_views_default_views() {
+    $view = new stdClass();
+  $view->name = 'users_points';
+  $view->description = 'Lists users by their points';
+  $view->access = array (
+);
+  $view->view_args_php = '';
+  $view->page = TRUE;
+  $view->page_title = 'Users by Points';
+  $view->page_header = '';
+  $view->page_header_format = '1';
+  $view->page_footer = '';
+  $view->page_footer_format = '1';
+  $view->page_empty = '';
+  $view->page_empty_format = '1';
+  $view->page_type = 'table';
+  $view->url = 'views/users_points';
+  $view->use_pager = TRUE;
+  $view->nodes_per_page = '10';
+  $view->menu = TRUE;
+  $view->menu_title = 'View - Users by Points';
+  $view->menu_tab = FALSE;
+  $view->menu_tab_weight = '0';
+  $view->menu_tab_default = FALSE;
+  $view->menu_tab_default_parent = NULL;
+  $view->menu_tab_default_parent_type = 'tab';
+  $view->menu_parent_tab_weight = '0';
+  $view->menu_parent_title = '';
+  $view->sort = array (
+  );
+  $view->argument = array (
+  );
+  $view->field = array (
+    array (
+      'tablename' => 'usernode_users',
+      'field' => 'name',
+      'label' => 'User',
+      'handler' => 'usernode_views_handler_field_username_link',
+      'sortable' => '1',
+    ),
+    array (
+      'tablename' => 'userpoints',
+      'field' => 'link',
+      'label' => 'Details',
+      'options' => '(details)|myuserpoints/$uid',
+    ),
+    array (
+      'tablename' => 'userpoints_categories',
+      'field' => 'name',
+      'label' => 'Category',
+      'sortable' => '1',
+    ),
+    array (
+      'tablename' => 'userpoints',
+      'field' => 'points',
+      'label' => 'Points',
+      'sortable' => '1',
+      'defaultsort' => 'DESC',
+    ),
+  );
+  $view->filter = array (
+    array (
+      'tablename' => 'userpoints',
+      'field' => 'tid',
+      'operator' => '=',
+      'options' => '',
+      'value' => '0',
+    ),
+  );
+  $view->exposed_filter = array (
+    array (
+      'tablename' => 'userpoints',
+      'field' => 'tid',
+      'label' => 'Filter by category:',
+      'optional' => '1',
+      'is_default' => '0',
+      'operator' => '1',
+      'single' => '1',
+    ),
+  );
+  $view->requires = array(usernode_users, userpoints, userpoints_categories);
+  $views[$view->name] = $view;
+
+  $view = new stdClass();
+  $view->name = 'my_userpoints_txns';
+  $view->description = 'List a user\'s points transactions';
+  $view->access = array (
+);
+  $view->view_args_php = '';
+  $view->page = TRUE;
+  $view->page_title = 'Userpoints Transactions';
+  $view->page_header = '';
+  $view->page_header_format = '1';
+  $view->page_footer = '';
+  $view->page_footer_format = '1';
+  $view->page_empty = '';
+  $view->page_empty_format = '1';
+  $view->page_type = 'table';
+  $view->url = 'views/myuserpoints';
+  $view->use_pager = TRUE;
+  $view->nodes_per_page = '10';
+  $view->sort = array (
+  );
+  $view->argument = array (
+    array (
+      'type' => 'uid',
+      'argdefault' => '4',
+      'title' => 'Points for %1',
+      'options' => '',
+      'wildcard' => '',
+      'wildcard_substitution' => '',
+    ),
+  );
+  $view->field = array (
+    array (
+      'tablename' => 'userpoints_txn',
+      'field' => 'points',
+      'label' => 'Points',
+      'sortable' => '1',
+    ),
+    array (
+      'tablename' => 'userpoints_txn',
+      'field' => 'status',
+      'label' => 'Approved?',
+      'sortable' => '1',
+    ),
+    array (
+      'tablename' => 'userpoints_txn',
+      'field' => 'time_stamp',
+      'label' => 'Date',
+      'handler' => 'views_handler_field_date_small',
+      'sortable' => '1',
+      'defaultsort' => 'DESC',
+    ),
+    array (
+      'tablename' => 'userpoints_txn',
+      'field' => 'operation',
+      'label' => 'Operation',
+      'sortable' => '1',
+    ),
+    array (
+      'tablename' => 'userpoints_categories',
+      'field' => 'name',
+      'label' => 'Category',
+      'sortable' => '1',
+    ),
+    array (
+      'tablename' => 'userpoints_txn',
+      'field' => 'description',
+      'label' => 'Description',
+      'sortable' => '1',
+    ),
+  );
+  $view->filter = array (
+    array (
+      'tablename' => 'node',
+      'field' => 'type',
+      'operator' => 'OR',
+      'options' => '',
+      'value' => array (
+  0 => 'usernode',
+),
+    ),
+  );
+  $view->exposed_filter = array (
+  );
+  $view->requires = array(userpoints_txn, userpoints_categories, node);
+  $views[$view->name] = $view;
+
+
+  return $views;
+}
+
+function views_handler_field_userpoints_category($fieldinfo, $fielddata, $value, $data) {
+  if ($value == NULL || $value == '') {
+    return t('!Uncategorized', userpoints_translation());
+  }
+  return $value;
+}
+
+function views_handler_field_userpoints_link_tid($fieldinfo, $fielddata, $tid, $data) {
+  if ($tid == NULL || $tid == '') {
+    $tid = 0;
+  }
+  $format = $fielddata['options'];
+  $format = str_replace('$tid', $tid, $format);
+  $pieces = explode('|', $format, 2);
+  return l($pieces[0], $pieces[1]);
+}
+
+function views_handler_field_userpoints_link_uid($fieldinfo, $fielddata, $uid, $data) {
+  $format = $fielddata['options'];
+  $format = str_replace('$uid', $uid, $format);
+  $pieces = explode('|', $format, 2);
+  return l($pieces[0], $pieces[1]);
+}
+
+function views_handler_field_userpoints_txn_status($fieldinfo, $fielddata, $value, $data) {
+  static $stati;
+  if (!isset($stati)) {
+    $stati = userpoints_txn_status();
+  }
+  return $stati[$value];
+}
