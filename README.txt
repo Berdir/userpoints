@@ -1,18 +1,35 @@
 $Id$
 
-Copyright 2005 http://2bits.com
+Copyright 2005-2008 http://2bits.com
 
 Description
 -----------
-This module provides the ability for users to gain points when they
-do certain actions, such as:
+The userpoints and userpoints_basic module provides the ability for users to gain
+points with the do certain actions, such as:
 
 - posting a node (different points can be awarded for different
   node types, e.g. page, story, forum, image, ...etc.)
 - posting a comment
 - moderating a comment
 
-Additionally, points can be awarded for actions done by other modules,
+Upon deleting a node or a comment the number of points is subtracted.
+If a node or comment author is changed points are transferred respectively
+
+The number of points for each of the above actions is configurable by
+the site adminsitrator.
+
+A transaction log is created for each event. The log is viewable by
+the admin.
+
+Points can be moderated, i.e. approval can be done by the admin at a later
+time.
+
+A block displays the number of points the user gained. Another block 
+displays the top 5 users who earned points.
+
+----
+Using modules from the project http://drupal.org/project/userpoints_contrib 
+point can be awarded for other actions. 
 including:
 - voting on a node (requires the nodevote module)
 - referring a person to the site (requires referral module)
@@ -24,36 +41,16 @@ including:
 - purchasing from your e-commerce store (reward points)
 
 Using real money, users can purchase points from your ecommerce store
-as well.
-
-Moreover, the points can be used as currency for ecommerce as well,
+as well. Moreover, the points can be used as currency for ecommerce as well,
 as in a form of payment
 
-Upon deleting a node or a comment the number of points is subtracted.
-
-The number of points for each of the above actions is configurable by
-the site adminsitrator.
-
-A block displays the number of points the user gained. Another block 
-displays the top 5 users who earned points.
 
 This module is useful in providing an incentive for users to participate
-in the site, and be more active.
+in the site, and be more active. The module is easily extended through use of 
+the API (see below)
 
-A transaction log is created for each event. The log is viewable by
-the admin.
-
-Points can be moderated, i.e. approval can be done by the admin at a later
-time.
 
 Initally sponsored by: http://artalyst.com
-
-Extended Version
-----------------
-A commercial extended version of this module allows users to join new
-roles with more permissions as they gain points.
-
-Contact the author for details.
 
 Installation
 ------------
@@ -99,28 +96,50 @@ callable and actionable by other modules.
 
 The functions are:
 
-userpoints_userpointsapi('points', $points, $uid, $event, $description)
-  Use this function to award points to a user.
+userpoints_userpointsapi()
 
-  The arguments are:
+  Accepts an integer or an array. 
+  If the parameter is an integer it is assumed to be points 
+  for the currently logged in user (i.e. global $user; $user->uid) 
 
-  $op
-    Must be 'points'.
+  If the parameter is an array the array can contain one or more of the
+  following options. The only required parameters are 'points' or 'txn_id'
+  If a parameter is not set the site settings will used. Setting a parameter 
+  to NULL will cause the entry to be NULL, defaults are only used if the 
+  parameter is not set
 
-  $points
-    number of points to add (if positive) or subtract (if negative)
+  Returns an array with a status (true/false) and a reason (string) if there
+  is an error. example
+  return array('status' => false, 'reasaon' => 'DB transaction failed');
+  
+  'uid'         => (int) User ID 
+  'points'      => (int) # of points to award the user 
+  'txn_id'      => (int) Transaction ID of a current points record. If
+                         present an UPDATE occurs
+  'moderation'  => (boolean) TRUE or FALSE. If NULL site settings are adhered to
+  'description' => (string) fulltext Description presented to the user
+  'expirydate'  => (timestamp) timestamp the date/time when the points will
+                               be expired (depends on cron)
+  'event'       => (string) varchar32 descriptive identifier administrative purposes
+  'reference'   => (string) varchar32 indexed/searchable field on the DB
+  'display'     => (boolean) Whether or not to display the "Points awarded"
+                             message. If null, fall back to USERPOINTS_DISPLAY_MESSAGE
+  'tid'         => (int) Taxonomy ID to place these points into; MUST BE in
+                         the userpoints Vocabulary!
 
-  $uid
-    user ID to award points to.
+  Examples
+    //Add 5 points to the currently logged in user
+    userpoints_userpointsapi(5);  
 
-  $event
-    an identified of the event the points is being awarded for, this
-    is a short word, and will be recorded in the transaction log.
+    //Also add 5 points to the currently logged in user
+    $params = array (
+      'uid' => $user->uid,
+      'points' => 5,
+    );
+    userpoints_userpointsapi($params); 
 
-  $description
-    a description of the event. This is optional and is a more verbose
-    version of the event identifier.
-
+  
+//---Hooks
 hook_userpoints($op, $points, $uid, $event) 
 
   Use this hook to act upon certain operations. When other modules award
@@ -147,9 +166,38 @@ hook_userpoints($op, $points, $uid, $event)
    The rest of the arguments are the same as the userpoints_userpointsapi()
    function.
  
-$points = userpoints_get_current_points($uid) 
-   You can call this function to know how much points a use has.
-   return value is the number of points.
+//---Other useful functions
+
+userpoints_get_current_points($uid = NULL, $tid = NULL);
+  Returns an integer of the sum of the user's point 
+  If a tid is passed in that category's sum is returned otherwise
+  the sites default category is used
+
+userpoints_get_max_points($uid = NULL, $tid = NULL);
+  Returns an integer of the sum of the user's max points achieved
+  If a tid is passed in that category's sum is returned otherwise
+  the sites default category is used
+
+userpoints_get_vid()
+  Returns an integer of the userpoints Vocabulary
+
+userpoints_get_default_tid()
+  Returns an integer for the userpoints default Taxonomy ID
+  Note: this is the default when submitting points so you 
+        DO NOT need to pass this into userpoints_userpointsapi
+
+userpoints_get_categories()
+  Returns an array of the possible categories including
+  the special "Uncategorized" category (id=0). This is a keyed
+  array that works perfectly with FAPI. If you're creating a 
+  settings page wherein a user would select the category to 
+  place points into, this will give you exactly what you need.
+  See userpoints.module admin_settings function for an example.
+
+userpoints_get_default_expiry_date()
+  Returns a UNIX timestamp of the site's default expiration date.
+  If an expiration date (or interval) it will be returned otherwise NULL
+
 
 Bugs/Features/Patches:
 ----------------------
