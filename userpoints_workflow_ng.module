@@ -1,0 +1,51 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Some workflow-ng integration for the user points module
+ */
+
+/**
+ * Implementation of hook_action_info().
+ */
+function userpoints_action_info() {
+  return array(
+    'userpoints_action_grant_points' => array(
+      '#label' => t('Grant points to a user'),
+      '#arguments' => array(
+        'user' => array(
+          '#entity' => 'user',
+          '#label' => t('User'),
+        ),
+      ),
+      '#module' => t('Userpoints'),
+    ),
+  );
+}
+
+/**
+ * Implementation of a worklfow-ng action:  grant points to a user
+ */
+function userpoints_action_grant_points($user, $settings, &$arguments, &$log) {
+  extract( workflow_ng_token_replace_all(array('number'), $settings, $arguments, $log) );
+  userpoints_userpointsapi(array('uid' => $user->uid, 'points' => $number));
+}
+
+/**
+ * Implementation of a worklfow-ng action: disables revision moderation.
+ */
+function userpoints_action_grant_points_form($settings = array(), $argument_info) {
+  $form = array();
+  $form['number'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of points'),
+    '#default_value' => isset($settings['number']) ? $settings['number'] : '',
+  );
+  workflow_ng_token_replacement_help($form, $argument_info);
+  return $form;
+}
+
+function userpoints_action_grant_points_submit($form_id, $form_values) {
+  return workflow_ng_token_get_settings(array('number'), $form_values);
+}
