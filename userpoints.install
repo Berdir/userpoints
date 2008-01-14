@@ -13,7 +13,7 @@ function userpoints_install() {
           points        INT(10) NOT NULL DEFAULT '0',
           max_points    INT(10) NOT NULL DEFAULT '0',
           last_update   INT(11) NOT NULL DEFAULT '0',
-          tid           INT(11) default NULL,
+          tid           INT(11) NOT NULL default '0',
           pid           INT(11) NOT NULL auto_increment,
           PRIMARY KEY (pid),
           KEY (last_update)
@@ -182,6 +182,9 @@ function userpoints_update_8() {
     case 'mysql':
     case 'mysqli':
       $ret[] = update_sql("ALTER TABLE {userpoints_txn} 
+                         CHANGE tid tid INT(11) NOT NULL default '0'
+                          ");
+      $ret[] = update_sql("ALTER TABLE {userpoints} 
                          CHANGE tid tid INT(11) NOT NULL default '0'
                           ");
       break;

@@ -84,6 +84,7 @@ function userpoints_help($section) {
  */
 function userpoints_menu($may_cache) {
   $items = array();
+  global $user;
 
   if ($may_cache) {
     $items[] = array(
@@ -155,16 +156,16 @@ function userpoints_menu($may_cache) {
     );
     $items[] = array(
       'path' => 'userpoints',
-      'title'    => t('Users by !points', userpoints_translation()),
+      'title'    => t('users by !points', userpoints_translation()),
       'callback' => 'userpoints_list_users',
       'access' => user_access(USERPOINTS_PERM_VIEW),
       'type' => MENU_NORMAL_ITEM,
     );
     $items[] = array(
       'path' => 'myuserpoints',
-      'title' => t('My') .' '. t('!Points', userpoints_translation()),
+      'title' => t('My') .' '. t('!points', userpoints_translation()),
       'callback' => 'userpoints_my_userpoints',
-      'access' => user_access(USERPOINTS_PERM_VIEW),
+      'access' => (user_access(USERPOINTS_PERM_VIEW) && $user->uid),
       'type' => MENU_NORMAL_ITEM
     );
   
@@ -1104,7 +1105,7 @@ function userpoints_admin_txn_submit($form_id, $form = NULL) {
 }
 
 /*
-* Provides and administrative Interface for point listing, moderation and adding
+* Provides an administrative Interface for point listing, moderation and adding
 */
 function userpoints_admin_points() {
   $tid = arg(3);
@@ -1175,9 +1176,12 @@ function userpoints_admin_points() {
   return $output;
 }
 
+/*
+* Purpose: List the users and their point totals by all or by category
+* Returns: HTML from the theme function
+*/
 function userpoints_list_users() {
   $tid = arg(1);
-  $cat_count = count(userpoints_get_categories());
 
   $sql = "SELECT p.uid, u.name, p.points, p.tid, t.name as cat 
           FROM {userpoints} p INNER JOIN {users} u USING (uid) 
@@ -1196,7 +1200,6 @@ function userpoints_list_users() {
   else {
     $cat = t('All');
   }
-  drupal_set_title(t($cat) ." ". t("!points", userpoints_translation()));
 
   $sql_cnt = "SELECT COUNT(DISTINCT(uid)) 
               FROM {userpoints} 
@@ -1209,28 +1212,26 @@ function userpoints_list_users() {
     $sql_cnt .= " AND points <> 0";
   }
   $sql .= " GROUP BY p.uid, u.name, p.points";
-
-  $header = array(
-    array('data' => t('User'), 'field' => 'u.name'),
-    array('data' => t('Category'), 'field' => 't.name'),
-    array('data' => t('!Points', userpoints_translation()), 'field' => 'p.points', 'sort' => 'desc'),
-  );
+  $header = theme('userpoints_list_users_header');
   $sql .= tablesort_sql($header);
   $pager_limit = variable_get(USERPOINTS_REPORT_USERCOUNT, 30);
   $result = pager_query($sql, $pager_limit, 0, $sql_cnt, $tid);
   while ($data = db_fetch_object($result)) {
-    if (!$data->cat) {
-      $data->cat = t('!Uncategorized', userpoints_translation());
-    }
-    $rows[] = array(
-      array('data' => theme('username', $data) ."&nbsp;&nbsp;". l("(details)", "myuserpoints/$data->uid")),
-      array('data' => $data->cat, 'align' => 'right'),
-      array('data' => $data->points, 'align' => 'right'),
-    );
+    $rows[] = theme('userpoints_list_users_row', $data);
   }
 
+  drupal_set_title(t($cat) ." ". t("!points", userpoints_translation()));
+  return theme('userpoints_list_users', $rows, $tid, $pager_limit);
+}
+
+/*
+* Purpose: themes the output of users by points page accessible at /userpoints
+*   individual rows are themed with theme_userpoints_list_users_rows
+* Returns: HTML
+*/
+function theme_userpoints_list_users(&$rows, &$tid, &$pager_limit) {
   //If there is only one category there is no sense in display the category filter dropdown
-  if ($cat_count > 1) {
+  if ( count(userpoints_get_categories())  > 1) {
     $output = drupal_get_form('userpoints_filter_cat_select', 'userpoints/', arg(3));
     $output .= theme('table', $header, $rows);
     $output .= theme('pager', NULL, $pager_limit, 0);
@@ -1239,10 +1240,39 @@ function userpoints_list_users() {
     $output = theme('table', $header, $rows);
     $output .= theme('pager', NULL, $pager_limit, 0);
   }
-
-
   return $output;
 }
+/*
+* Purpose: themes the header of the table on the "user by points" page accessible at /userpoints
+* Returns: An array suitable for use with tablesort_sql
+*/
+function theme_userpoints_list_users_header(){
+  return array(
+    array('data' => t('User'), 'field' => 'u.name'),
+    array('data' => t('Category'), 'field' => 't.name'),
+    array('data' => t('!Points', userpoints_translation()), 'field' => 'p.points', 'sort' => 'desc'),
+  );
+}
+
+/*
+* Purpose: themes the output of a single row of the "user by points" page at /userpoints
+* Returns: array for a single row suitable for inclusion with theme_table
+*/
+function theme_userpoints_list_users_row(&$row) {
+  global $user;
+  if (!$row->cat) {
+    $row->cat = t('!Uncategorized', userpoints_translation());
+  }
+  if ($user->uid == $row->uid) {
+    $details = "&nbsp;&nbsp;". l("(details)", "myuserpoints");
+  }
+  return array (
+    array('data' => theme('username', $row) . $details),
+    array('data' => $row->cat, 'align' => 'right'),
+    array('data' => $row->points, 'align' => 'right'),
+  );
+}
+
 /*
 * Purpose: Provides a dropdown to filter by category
 */
