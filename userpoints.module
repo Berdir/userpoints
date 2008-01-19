@@ -515,7 +515,7 @@ function userpoints_userpointsapi($params) {
       // Do not process the points
       return array (
         'status' => false,
-        'reason' => '$key returned false from the hook_userpoints points before call',
+        'reason' => t('%key returned false from the hook_userpoints points before call', array('%key' => $key)),
       );
     }
   }
@@ -681,7 +681,7 @@ function _userpoints_transaction(&$params) {
       _userpoints_update_cache($params);
     }
   }
-  return $params['status'];
+  return TRUE;
 } //function userpoints_transaction
 
 /*
