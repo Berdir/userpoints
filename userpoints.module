@@ -1221,7 +1221,7 @@ function userpoints_list_users() {
   }
 
   drupal_set_title(t($cat) ." ". t("!points", userpoints_translation()));
-  return theme('userpoints_list_users', $rows, $tid, $pager_limit);
+  return theme('userpoints_list_users', $header, $rows, $tid, $pager_limit);
 }
 
 /*
@@ -1229,7 +1229,7 @@ function userpoints_list_users() {
 *   individual rows are themed with theme_userpoints_list_users_rows
 * Returns: HTML
 */
-function theme_userpoints_list_users(&$rows, &$tid, &$pager_limit) {
+function theme_userpoints_list_users($header, &$rows, &$tid, &$pager_limit) {
   //If there is only one category there is no sense in display the category filter dropdown
   if ( count(userpoints_get_categories())  > 1) {
     $output = drupal_get_form('userpoints_filter_cat_select', 'userpoints/', $tid);
