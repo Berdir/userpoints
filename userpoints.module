@@ -866,29 +866,53 @@ function userpoints_admin_manage() {
 * Purpose: Approves moderated points
 */
 function userpoints_admin_approve() {
-  global $user;
-  $op = arg(3);
+  $operation = arg(3);
   $txn_id = (int)arg(4);
-  if ($txn_id) {
-    switch ($op) {
-      case 'approve':
-        $status = USERPOINTS_TXN_STATUS_APPROVED;
-        break;
-      case 'decline':
-        $status = USERPOINTS_TXN_STATUS_DECLINED;
-        break;
-      default :
-        return false; 
-    } //switch
-    // Call the API with the txn_id and the correct status
-    $params = array(
-                'status' => $status,
-                'txn_id' => $txn_id,
-                'approver_uid' => $user->uid,
-                );
-    userpoints_userpointsapi($params);
+  return drupal_get_form('userpoints_confirm_approve', $operation, $txn_id);
+}
+
+function userpoints_confirm_approve($operation, $txn_id) {
+  $form = array(
+    'operation' => array(
+      '#type' => 'value',
+      '#value' => $operation,
+    ),
+    'txn_id' => array(
+      '#type' => 'value',
+      '#value' => $txn_id,
+    ),
+  );
+
+  return confirm_form(
+    $form,
+    t('Are you sure you want to @op txn @txn_id', array('@op' => $operation, '@txn_id' => $txn_id)),
+    'admin/user/userpoints/moderate'
+    );  
+}
+       
+function userpoints_confirm_approve_submit($form_id, $form_values) {
+  global $user;
+
+  switch ($form_values['operation']) {
+    case 'approve':
+      $status = USERPOINTS_TXN_STATUS_APPROVED;
+      break;
+    case 'decline':
+      $status = USERPOINTS_TXN_STATUS_DECLINED;
+      break;
+    default :
+      return false; 
   }
-  drupal_goto('admin/user/userpoints');
+
+  $params = array(
+    'txn_id'       => $form_values['txn_id'],
+    'approver_uid' => $user->uid,
+    'status'       => $status,
+  );
+
+  userpoints_userpointsapi($params);
+
+  drupal_goto('admin/user/userpoints/moderate');
 }
 
 function userpoints_admin_txn() {
