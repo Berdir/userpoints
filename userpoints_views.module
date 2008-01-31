@@ -258,8 +258,7 @@ function userpoints_views_views_default_views() {
     $view = new stdClass();
   $view->name = 'users_points';
   $view->description = 'Lists users by their points';
-  $view->access = array (
-);
+  $view->access = array();
   $view->view_args_php = '';
   $view->page = TRUE;
   $view->page_title = 'Users by Points';
@@ -282,31 +281,29 @@ function userpoints_views_views_default_views() {
   $view->menu_tab_default_parent_type = 'tab';
   $view->menu_parent_tab_weight = '0';
   $view->menu_parent_title = '';
-  $view->sort = array (
-  );
-  $view->argument = array (
-  );
-  $view->field = array (
-    array (
+  $view->sort = array();
+  $view->argument = array();
+  $view->field = array(
+    array(
       'tablename' => 'usernode_users',
       'field' => 'name',
       'label' => 'User',
       'handler' => 'usernode_views_handler_field_username_link',
       'sortable' => '1',
     ),
-    array (
+    array(
       'tablename' => 'userpoints',
       'field' => 'link',
       'label' => 'Details',
       'options' => '(details)|myuserpoints/$uid',
     ),
-    array (
+    array(
       'tablename' => 'userpoints_categories',
       'field' => 'name',
       'label' => 'Category',
       'sortable' => '1',
     ),
-    array (
+    array(
       'tablename' => 'userpoints',
       'field' => 'points',
       'label' => 'Points',
@@ -314,8 +311,8 @@ function userpoints_views_views_default_views() {
       'defaultsort' => 'DESC',
     ),
   );
-  $view->filter = array (
-    array (
+  $view->filter = array(
+    array(
       'tablename' => 'userpoints',
       'field' => 'tid',
       'operator' => '=',
@@ -323,8 +320,8 @@ function userpoints_views_views_default_views() {
       'value' => '0',
     ),
   );
-  $view->exposed_filter = array (
-    array (
+  $view->exposed_filter = array(
+    array(
       'tablename' => 'userpoints',
       'field' => 'tid',
       'label' => 'Filter by category:',
@@ -340,8 +337,7 @@ function userpoints_views_views_default_views() {
   $view = new stdClass();
   $view->name = 'my_userpoints_txns';
   $view->description = 'List a user\'s points transactions';
-  $view->access = array (
-);
+  $view->access = array();
   $view->view_args_php = '';
   $view->page = TRUE;
   $view->page_title = 'Userpoints Transactions';
@@ -355,10 +351,9 @@ function userpoints_views_views_default_views() {
   $view->url = 'views/myuserpoints';
   $view->use_pager = TRUE;
   $view->nodes_per_page = '10';
-  $view->sort = array (
-  );
-  $view->argument = array (
-    array (
+  $view->sort = array();
+  $view->argument = array(
+    array(
       'type' => 'uid',
       'argdefault' => '4',
       'title' => 'Points for %1',
@@ -367,20 +362,20 @@ function userpoints_views_views_default_views() {
       'wildcard_substitution' => '',
     ),
   );
-  $view->field = array (
-    array (
+  $view->field = array(
+    array(
       'tablename' => 'userpoints_txn',
       'field' => 'points',
       'label' => 'Points',
       'sortable' => '1',
     ),
-    array (
+    array(
       'tablename' => 'userpoints_txn',
       'field' => 'status',
       'label' => 'Approved?',
       'sortable' => '1',
     ),
-    array (
+    array(
       'tablename' => 'userpoints_txn',
       'field' => 'time_stamp',
       'label' => 'Date',
@@ -388,41 +383,39 @@ function userpoints_views_views_default_views() {
       'sortable' => '1',
       'defaultsort' => 'DESC',
     ),
-    array (
+    array(
       'tablename' => 'userpoints_txn',
       'field' => 'operation',
       'label' => 'Operation',
       'sortable' => '1',
     ),
-    array (
+    array(
       'tablename' => 'userpoints_categories',
       'field' => 'name',
       'label' => 'Category',
       'sortable' => '1',
     ),
-    array (
+    array(
       'tablename' => 'userpoints_txn',
       'field' => 'description',
       'label' => 'Description',
       'sortable' => '1',
     ),
   );
-  $view->filter = array (
-    array (
+  $view->filter = array(
+    array(
       'tablename' => 'node',
       'field' => 'type',
       'operator' => 'OR',
       'options' => '',
-      'value' => array (
-  0 => 'usernode',
-),
+      'value' => array(
+        0 => 'usernode',
+      ),
     ),
   );
-  $view->exposed_filter = array (
-  );
+  $view->exposed_filter = array();
   $view->requires = array(userpoints_txn, userpoints_categories, node);
   $views[$view->name] = $view;
-
 
   return $views;
 }

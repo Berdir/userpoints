@@ -20,7 +20,7 @@ function userpoints_basic_help($section) {
 }
 
 function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
-  switch($op) {
+  switch ($op) {
     case 'setting':
       $group = 'basic';
       $form[$group] = array(
@@ -30,11 +30,11 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
         '#title'       => t('!Points for basic events', userpoints_translation()),
       );
       
-      foreach(node_get_types() as $type => $name) {
-        $form[$group][USERPOINTS_POST. $type] = array(
+      foreach (node_get_types() as $type => $name) {
+        $form[$group][USERPOINTS_POST . $type] = array(
           '#type'          => 'textfield',
           '#title'         => t('!Points for posting a !node-name', array_merge(userpoints_translation(), array('!node-name' => $name->name))),
-          '#default_value' => variable_get(USERPOINTS_POST. $type, '0'),
+          '#default_value' => variable_get(USERPOINTS_POST . $type, '0'),
           '#size'          => 5,
           '#maxlength'     => 5,
           );
@@ -74,8 +74,7 @@ function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {
                              <i>All !points accrued by version 3 will move ownership automatically this setting only affects !points accrued with v2</i>
                              <br />
                              3) You have read <a href="http://drupal.org/node/183520">Article 183520</a> on drupal.org and 
-                                understand that there could be unusual issues with ownership moves
-                            ',userpoints_translation()),
+                                understand that there could be unusual issues with ownership moves', userpoints_translation()),
       );
       $form[$group][USERPOINTS_USE_V2BUG] = array(
         '#type'          => 'checkbox',
@@ -92,7 +91,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
   //static up_orig_uid please read drupal.org/node/183520 
   static $up_orig_uid;
   $points = variable_get(USERPOINTS_POST . $node->type, 0);
-  switch($op) {
+  switch ($op) {
     case 'insert':
       $params = array(
         'points' => $points,
@@ -126,7 +125,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
               ORDER BY time_stamp DESC
               LIMIT 1
               ";
-      $last_owner = db_fetch_object(db_query($sql, $node->nid, 'node','insert','Ownership gain'));
+      $last_owner = db_fetch_object(db_query($sql, $node->nid, 'node', 'insert', 'Ownership gain'));
       
       //Check the UID of the original to this user, if different add/substract points
       if ($node->uid != $last_owner->uid && is_numeric($last_owner->uid) ) {
@@ -155,7 +154,7 @@ function userpoints_nodeapi(&$node, $op, $teaser, $page) {
         //If the user wants to use the V2BUG we'll use it..
         //please read drupal.org/node/183520
         if (variable_get(USERPOINTS_USE_V2BUG, false)) {
-          if ($node->uid != $up_orig_uid){
+          if ($node->uid != $up_orig_uid) {
             // Add to the new node owner
             $params = array(
               'points' => $points,
@@ -187,7 +186,7 @@ function userpoints_comment($comment, $op) {
   static $up_orig_com_uid;
 
   $points = variable_get(USERPOINTS_POST_COMMENT, 0);
-  switch($op) {
+  switch ($op) {
     case 'insert':
       $params = array(
         'points' => $points,
@@ -234,7 +233,7 @@ function userpoints_comment($comment, $op) {
               ";
       $cid = $comment['cid'];
       $new_uid = $comment['uid'];
-      $last_owner = db_fetch_object(db_query($sql, $cid, 'comment','insert','Ownership gain'));
+      $last_owner = db_fetch_object(db_query($sql, $cid, 'comment', 'insert', 'Ownership gain'));
 
       //Check the UID of the original to this user, if different add/substract points
       if ($new_uid != $last_owner->uid && is_numeric($last_owner->uid) ) {

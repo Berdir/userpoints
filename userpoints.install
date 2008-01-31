@@ -18,7 +18,7 @@ function userpoints_install() {
           PRIMARY KEY (pid),
           KEY (last_update)
         ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-     db_query("CREATE TABLE {userpoints_txn} (
+      db_query("CREATE TABLE {userpoints_txn} (
           txn_id        INT     NOT NULL AUTO_INCREMENT,
           uid           INT(10) NOT NULL DEFAULT '0',
           approver_uid  INT(10) NOT NULL DEFAULT '0',
@@ -68,8 +68,8 @@ function userpoints_install() {
 }
 
 /**
-* Implementation of hook_uninstall().
-*/
+ * Implementation of hook_uninstall().
+ */
 function userpoints_uninstall() {
 
   $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE module='userpoints'"));
