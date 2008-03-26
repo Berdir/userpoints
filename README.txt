@@ -198,6 +198,56 @@ userpoints_get_default_expiry_date()
   Returns a UNIX timestamp of the site's default expiration date.
   If an expiration date (or interval) it will be returned otherwise NULL
 
+XML-RPC
+-------
+
+Using the userpoints_services module, and the services modules, you 
+can allow external applications to query and update points on your
+site.
+
+Please refer to the services module documentation for further information.
+
+Userpoints provides the follwing XML-RPC calls:
+
+userpoints.get 
+
+  string api_key (required)
+    A valid API key.
+  int uid (required)
+    A valid Drupal User ID.
+  int tid (optional)
+    An optional Term ID for the category.
+
+Example:
+
+  $result = xmlrpc($server_url, 'userpoints.get', $key, $uid, $tid);
+  // $result is an array
+  // 'points' => 123
+
+userpoints.points
+
+  string api_key (required)
+    A valid API key.
+  int uid (required)
+    A valid Drupal User ID.
+  int points (required)
+    Number of points to add/subtract.
+  int tid (optional)
+    An optional Term ID for the category.
+  string event (optional)
+    An optional event ID for this transaction.
+  string description (optional)
+    An optional description of this transaction.
+
+Example:
+
+  $result = xmlrpc($server_url, 'userpoints.points', $key, $uid, $points, $tid, $event, $description);
+  // $result is an array
+  // 'status'
+  //   1 => Success
+  //   0 => Fail
+  // 'reason'
+  //   Textual reason for failure, if status is 0
 
 Bugs/Features/Patches:
 ----------------------
@@ -214,3 +264,4 @@ a thank you note, then use the Feedback/Contact page at the URL above.
 
 The author can also be contacted for paid customizations of this
 and other modules.
+

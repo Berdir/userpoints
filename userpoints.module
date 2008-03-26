@@ -36,7 +36,6 @@ define('USERPOINTS_CATEGORY_NAME', 'Userpoints');
 define('USERPOINTS_CATEGORY_DEFAULT_VID', 'userpoints_category_default_vid');
 define('USERPOINTS_CATEGORY_DEFAULT_TID', 'userpoints_category_default_tid');
 
-
 /**
  * Purpose: Returns an array of common translation placeholders
  */
@@ -82,96 +81,96 @@ function userpoints_help($section) {
 /**
  * Implementation of hook_menu().
  */
-function userpoints_menu($may_cache) {
+function userpoints_menu() {
   $items = array();
-  global $user;
-
-  if ($may_cache) {
-    $items[] = array(
-      'path'     => 'admin/settings/userpoints',
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('userpoints_admin_settings'),
-      'title'    => t('!Points settings', userpoints_translation()),
-      'description' => t('Configure userpoints settings'),
-      'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_NORMAL_ITEM,
-    );
-
-    $items[] = array(
-      'path'     => 'admin/user/userpoints',
-      'callback' => 'userpoints_admin_points',
-      'title'    => t('!Points', userpoints_translation()),
-      'description' => t('Manage !points', userpoints_translation()),
-      'access'   => user_access(USERPOINTS_PERM_ADMIN),
-    );
-    $items[] = array(
-      'path'     => 'admin/user/userpoints/list',
-      'callback' => 'userpoints_admin_points',
-      'title'    => t('List'),
-      'description' => t('List users by !points', userpoints_translation()),
-      'access'   => user_access(USERPOINTS_PERM_VIEW),
-      'type'     => MENU_DEFAULT_LOCAL_TASK,
-      'weight'   => -2,
-    );
-    $items[] = array(
-      'path'     => 'admin/user/userpoints/moderate',
-      'callback' => 'userpoints_admin_manage',
-      'title'    => t('Moderation'),
-      'description' => t('Review !points in moderation', userpoints_translation()),
-      'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_LOCAL_TASK,
-      'weight'   => -1,
-    );
-    $items[] = array(
-      'path'     => 'admin/user/userpoints/add',
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('userpoints_admin_txn'),
-      'title'    => t('Add'),
-      'description' => t('Admin add/delete userpoints'),
-      'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_LOCAL_TASK,
-      'weight'   => 0,
-      );
-    
-    $items[] = array(
-      'path'     => 'admin/user/userpoints/edit',
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('userpoints_admin_txn'),
-      'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_CALLBACK,
-      );
+  $items['admin/settings/userpoints'] = array(
+    'title' => '!Points settings',
+    'title arguments' => userpoints_translation(),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('userpoints_admin_settings'),
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
+    'type' => MENU_NORMAL_ITEM
+  );
+  $items['admin/user/userpoints'] = array(
+    'title' => '!Points',
+    'title arguments' => userpoints_translation(),
+    'description' => 'Manage !points',
+    'page callback' => 'userpoints_admin_points',
+    'access arguments' => array(USERPOINTS_PERM_ADMIN)
+  );
+  $items['admin/user/userpoints/list'] = array(
+    'title' => 'List',
+    'title arguments' => userpoints_translation(),
+    'description' => 'List users by points',
+    'access arguments' => array(USERPOINTS_PERM_VIEW),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -2,
+  );
+  $items['admin/user/userpoints/moderate'] = array(
+    'title' => 'Moderation',
+    'title arguments' => userpoints_translation(),
+    'description' => 'Review points in moderation',
+    'page callback' => 'userpoints_admin_points',
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -1,
+  );
+  $items['admin/user/userpoints/add'] = array(
+    'title' => 'Add',
+    'description' => 'Admin add/delete userpoints',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('userpoints_admin_txn'),
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 0,
+  );
+  $items['admin/user/userpoints/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('userpoints_admin_txn'),
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
+    'type' => MENU_CALLBACK
+  );
   
-    $items[] = array(
-      'path'     => 'admin/user/userpoints/approve',
-      'callback' => 'userpoints_admin_approve',
-      'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_CALLBACK,
-    );
+  $items['admin/user/userpoints/approve'] = array(
+    'title' => 'Approve Userpoints',
+    'page callback' => 'userpoints_admin_approve',
+    'access arguments' => user_access(USERPOINTS_PERM_ADMIN),
+    'type' => MENU_CALLBACK
+  );
+  $items['admin/user/userpoints/decline'] = array(
+    'title' => 'Approve Userpoints',
+    'page callback' => 'userpoints_admin_approve',
+    'access arguments' => user_access(USERPOINTS_PERM_ADMIN),
+    'type' => MENU_CALLBACK
+  );
   
-    $items[] = array(
-      'path'     => 'admin/user/userpoints/decline',
-      'callback' => 'userpoints_admin_approve',
-      'access'   => user_access(USERPOINTS_PERM_ADMIN),
-      'type'     => MENU_CALLBACK,
-    );
-    $items[] = array(
-      'path' => 'userpoints',
-      'title'    => t('Users by !points', userpoints_translation()),
-      'callback' => 'userpoints_list_users',
-      'access' => user_access(USERPOINTS_PERM_VIEW),
-      'type' => MENU_NORMAL_ITEM,
-    );
-    $items[] = array(
-      'path' => 'myuserpoints',
-      'title' => t('My') .' '. t('!points', userpoints_translation()),
-      'callback' => 'userpoints_my_userpoints',
-      'access' => (user_access(USERPOINTS_PERM_VIEW) && $user->uid),
-      'type' => MENU_NORMAL_ITEM
-    );
+  $items['userpoints'] = array(
+    'title' => 'Users by !points',
+    'title arguments' => userpoints_translation(),
+    'page callback' => 'userpoints_list_users',
+    'access' => user_access(USERPOINTS_PERM_VIEW),
+    'type' => MENU_NORMAL_ITEM,
+  );
   
-  }
-  
+  $items['myuserpoints'] = array(
+    'title' => 'My !points',
+    'title arguments' => userpoints_translation(),
+    'page callback' => 'userpoints_my_userpoints',
+    'access callback' => 'userpoints_access_my_points',
+    'type' => MENU_NORMAL_ITEM
+  );
   return $items;
+}
+
+/**
+ * Checks if user can access their points - used via hook_menu().
+ *
+ * @return true if user has permissions to view userpoints and if the user is logged in
+ */
+function userpoints_access_my_points() {
+  global $user;
+  return (user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in());
 }
 
 /**
@@ -179,6 +178,36 @@ function userpoints_menu($may_cache) {
  */
 function userpoints_perm() {
   return array(USERPOINTS_PERM_VIEW, USERPOINTS_PERM_ADMIN);
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function userpoints_theme() {
+  $themes = array();
+  $themes['userpoints_list_users'] = array(
+    'arguments' => array(
+      'header',
+      'rows',
+      'tid',
+      'pager_limit',
+    ),
+  );
+  $themes['userpoints_list_users_header'] = array(
+  );
+  $themes['userpoints_list_users_row'] = array(
+    'arguments' => array(
+      'row'
+    ),
+  );
+  $themes['userpoints_my_userpoints'] = array(
+    'arguments' => array(
+      'args',
+      'header',
+      'rows',
+    ),
+  );
+  return $themes;
 }
 
 /**
@@ -934,10 +963,12 @@ function userpoints_confirm_approve($operation, $txn_id) {
     );  
 }
        
-function userpoints_confirm_approve_submit($form_id, $form_values) {
+function userpoints_confirm_approve_submit($form, &$form_state) {
   global $user;
+  
+  $form_values = $form_state['values'];
 
-  switch ($form_values['operation']) {
+  switch ($form_state['clicked_button']['#value']) {
     case 'approve':
       $status = USERPOINTS_TXN_STATUS_APPROVED;
       break;
@@ -956,10 +987,10 @@ function userpoints_confirm_approve_submit($form_id, $form_values) {
 
   userpoints_userpointsapi($params);
 
-  drupal_goto('admin/user/userpoints/moderate');
+  $form_state['redirect'] = 'admin/user/userpoints/moderate';
 }
 
-function userpoints_admin_txn() {
+function userpoints_admin_txn($form_state) {
   global $user;
 
   $mode = arg(3);
@@ -1133,49 +1164,51 @@ function userpoints_admin_txn() {
   return $form;
 }
 
-function userpoints_admin_txn_submit($form_id, $form = NULL) {
-  if ($form_id != 'userpoints_admin_txn') {
+function userpoints_admin_txn_submit($form, &$form_state) {
+  if ($form['form_id']['#value'] != 'userpoints_admin_txn') {
     return;
   }
 
-  $txn_user = user_load(array('name' => $form['txn_user']));
-  switch ($form['mode']) {
+  $form_values = $form_state['values'];
+
+  $txn_user = user_load(array('name' => $form_values['txn_user']));
+  switch ($form_values['mode']) {
     case 'add':
       $params = array(
-                  'points' => $form['points'],
+                  'points' => $form_values['points'],
                   'uid' => $txn_user->uid,
                   'operation' => 'admin',
-                  'description' => $form['description'],
-                  'reference' => $form['reference'],
-                  'tid' => $form['tid'],
+                  'description' => $form_values['description'],
+                  'reference' => $form_values['reference'],
+                  'tid' => $form_values['tid'],
                 );
-      if ($form['expirydate']) {
+      if ($form_values['expirydate']) {
         //Check for the existence of an expirydate 
-        $params['expirydate'] = strtotime($form['expirydate']);
+        $params['expirydate'] = strtotime($form_values['expirydate']);
       }
       userpoints_userpointsapi($params);
       break;
       
     case 'edit':
-      if ($form['expirydate']) {
-        $expirydate = strtotime($form['expirydate']);
+      if ($form_values['expirydate']) {
+        $expirydate = strtotime($$form_values['expirydate']);
       }
       $params = array(
-        'uid' => $form['txn_uid'],
-        'approver_id' => $form['approver_uid'],
-        'points' => $form['points'],
-        'time_stamp' => strtotime($form['time_stamp']),
-        'operation' => $form['operation'],
-        'description' => $form['description'],
-        'reference' => $form['reference'],
-        'status' => $form['status'],
+        'uid' => $form_values['txn_uid'],
+        'approver_id' => $form_values['approver_uid'],
+        'points' => $form_values['points'],
+        'time_stamp' => strtotime($form_values['time_stamp']),
+        'operation' => $form_values['operation'],
+        'description' => $form_values['description'],
+        'reference' => $form_values['reference'],
+        'status' => $form_values['status'],
         'expirydate' => $expirydate,
-        'txn_id' => $form['txn_id']
+        'txn_id' => $form_values['txn_id']
       );
       userpoints_userpointsapi($params);
   }
   
-  drupal_goto('admin/user/userpoints');
+  $form_state['redirect'] = 'admin/user/userpoints';
 }
 
 /*
@@ -1604,58 +1637,59 @@ function userpoints_my_userpoints() {
   $pager_limit = variable_get(USERPOINTS_REPORT_LIMIT, 10);
   $result = pager_query($sql, $pager_limit, 0, NULL, $uid);
   $stati = userpoints_txn_status();
-  if (db_num_rows($result) > 0) {
-    while ($row = db_fetch_object($result)) {
-      $status = $stati[$row->status];
-      if (!$row->cat) { 
-        $row->cat = t('!Uncategorized', userpoints_translation());
-      }
-      if ($row->description) {
-        $description = $row->description;
-      }
-      else {
-        $description = t('None');
-      }
-      $operation = module_invoke_all('userpoints', 'entity_type', $row);
+  
+  $num_rows = 0;
+  while ($row = db_fetch_object($result)) {
+    $num_rows++;
+    $status = $stati[$row->status];
+    if (!$row->cat) { 
+      $row->cat = t('!Uncategorized', userpoints_translation());
+    }
+    if ($row->description) {
+      $description = $row->description;
+    }
+    else {
+      $description = t('None');
+    }
+    $operation = module_invoke_all('userpoints', 'entity_type', $row);
 
-      if (!$operation) {
-        switch ($row->entity_type) {
-          case 'node' :
-            $node = node_load($row->entity_id);
-            if ($node) {
-              $operation = l($row->operation, 'node/'. $node->nid, array('title' => $node->title));
+    if (!$operation) {
+      switch ($row->entity_type) {
+        case 'node' :
+          $node = node_load($row->entity_id);
+          if ($node) {
+            $operation = l($row->operation, 'node/'. $node->nid, array('title' => $node->title));
+          }
+          else {
+            $operation = $row->operation;
+          }
+          break;
+        case 'comment' :
+          if (module_exists('comment')) {
+            //We have to load the comment to get the nid for the comment
+            $comment = _comment_load($row->entity_id);
+            if ($comment) {
+              $operation = l($row->operation, 'node/'. $comment->nid, array('title' => $comment->subject), NULL, 'comment-'. $comment->cid);
             }
             else {
               $operation = $row->operation;
             }
-            break;
-          case 'comment' :
-            if (module_exists('comment')) {
-              //We have to load the comment to get the nid for the comment
-              $comment = _comment_load($row->entity_id);
-              if ($comment) {
-                $operation = l($row->operation, 'node/'. $comment->nid, array('title' => $comment->subject), NULL, 'comment-'. $comment->cid);
-              }
-              else {
-                $operation = $row->operation;
-              }
-            }
-            break;
-          default:
-            $operation = $row->operation;
-        }
+          }
+          break;
+        default:
+          $operation = $row->operation;
       }
-      $rows[] = array(
-          array('data' => $row->points, 'align' => 'center'),
-          array('data' => $status, 'align' => 'center'),
-          array('data' => format_date($row->time_stamp, 'small'), 'align' => 'center'),
-          array('data' => $operation),
-          array('data' => $row->cat),
-          array('data' => $description),
-      );
     }
+    $rows[] = array(
+        array('data' => $row->points, 'align' => 'center'),
+        array('data' => $status, 'align' => 'center'),
+        array('data' => format_date($row->time_stamp, 'small'), 'align' => 'center'),
+        array('data' => $operation),
+        array('data' => $row->cat),
+        array('data' => $description),
+    );
   }
-  else {
+  if ($num_rows <= 0) {
     $rows[] = array(
           array('data' => t('No !Points earned', userpoints_translation()), 'colspan' => 5, 'align' => 'center')
     );
@@ -1672,7 +1706,8 @@ function userpoints_my_userpoints() {
 function userpoints_get_vid() {
   //code lovingly inspired by the image.module w/ code by drewish
   $vid = variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '');
-  if (empty($vid) || !taxonomy_get_vocabulary($vid)) {
+  var_dump($vid);
+  if (empty($vid) || !taxonomy_vocabulary_load($vid)) {
     $sql = "SELECT vid FROM {vocabulary} WHERE module='userpoints'";
     $vid = db_result(db_query($sql));
     if (!$vid) {
@@ -1702,15 +1737,16 @@ function userpoints_get_vid() {
  * Purposes: returns an array of possible categories, suitable for inclusion in FAPI
  */
 function userpoints_get_categories() {
-  $vid = userpoints_get_vid();
   //Create the "Uncategorized" category
   $options = array();
   $options[0] = t('!Uncategorized', userpoints_translation());
-
-  if ($vid) {
-    $tree = taxonomy_get_tree($vid, 0, -1, 1);
-    foreach ($tree as $term) {
-      $options[$term->tid] = $term->name;  
+  if (module_exists('taxonomy')) {
+    $vid = userpoints_get_vid();
+    if ($vid) {
+      $tree = taxonomy_get_tree($vid, 0, -1, 1);
+      foreach ($tree as $term) {
+        $options[$term->tid] = $term->name;  
+      }
     }
   }
   return $options;

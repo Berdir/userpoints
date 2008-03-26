@@ -1,6 +1,7 @@
 ; $Id$
 name = Userpoints Workflow-NG integration
 description = Provides integration of Userpoints with Workflow-NG
-dependencies = userpoints workflow_ng
+dependencies[] = userpoints 
+dependencies[] = workflow_ng
 package = Userpoints
-
+core = 6.x

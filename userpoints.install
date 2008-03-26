@@ -2,84 +2,174 @@
 // $Id$
 
 /**
+ * Implementation of hook_schema().
+ */
+function userpoints_schema() {
+  $schema = array();
+  $schema['userpoints'] = array(
+    'description' => 'Holds the user points',
+    'fields' => array(
+      'pid' => array(
+        'description' => t('User ID'),
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => t('User ID'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'points' => array(
+        'description' => t('Current Points'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'max_points' => array(
+        'description' => t('Out of a maximum points'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'last_update' => array(
+        'description' => t('Timestamp'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'tid' => array(
+        'description' => t('Category ID'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('pid'),
+    'indexes' => array(
+      'last_update' => array('last_update'),
+    ),
+  );
+  
+  $schema['userpoints_txn'] = array(
+    'description' => t('Userpoints Transactions'),
+    'fields' => array(
+      'txn_id' => array(
+        'description' => t('Transaction ID'),
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => t('User ID'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'approver_uid' => array(
+        'description' => t('Approving User ID'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'points' => array(
+        'description' => t('Points'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'time_stamp' => array(
+        'description' => t('Timestamp'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => t('Status'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'description' => array(
+        'description' => t('Description'),
+        'type' => 'text',
+      ),
+      'reference' => array(
+        'description' => t('Reserved for module specific use'),
+        'type' => 'varchar',
+        'length' => 128,
+      ),
+      'expirydate' => array(
+        'description' => t('Expirydate'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'expired' => array(
+        'description' => t('User ID'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'parent_txn_id' => array(
+        'description' => t('Parent Transaction ID'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'tid' => array(
+        'description' => t('Category ID'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_id' => array(
+        'description' => t('ID of an entity in the Database'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_type' => array(
+        'description' => t('Type of entity'),
+        'type' => 'varchar',
+        'length' => 32,
+      ),
+      'operation' => array(
+        'description' => t('Operation being carried out'),
+        'type' => 'varchar',
+        'length' => 32,
+      ),
+      
+    ),
+    'primary key' => array('txn_id'),
+    'indexes' => array(
+      'operation' => array('operation'),
+      'reference' => array('reference'),
+      'status' => array('status'),
+    )
+  );
+  return $schema;
+}
+
+/**
  * Install the initial schema.
  */
 function userpoints_install() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {userpoints} (
-          uid           INT(10) NOT NULL DEFAULT '0',
-          points        INT(10) NOT NULL DEFAULT '0',
-          max_points    INT(10) NOT NULL DEFAULT '0',
-          last_update   INT(11) NOT NULL DEFAULT '0',
-          tid           INT(11) NOT NULL default '0',
-          pid           INT(11) NOT NULL auto_increment,
-          PRIMARY KEY (pid),
-          KEY (last_update)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      db_query("CREATE TABLE {userpoints_txn} (
-          txn_id        INT     NOT NULL AUTO_INCREMENT,
-          uid           INT(10) NOT NULL DEFAULT '0',
-          approver_uid  INT(10) NOT NULL DEFAULT '0',
-          points        INT(10) NOT NULL DEFAULT '0',
-          time_stamp    INT(11) NOT NULL DEFAULT '0',
-          status        INT(1) NOT NULL DEFAULT '0',
-          description   TEXT,
-          reference     varchar(128),
-          expirydate    int(11) NULL default '0',
-          expired       tinyint (1) NOT NULL default '0',
-          parent_txn_id int(11) NOT NULL default '0',
-          tid           INT(11) NOT NULL default '0',
-          entity_id     INT(11) default NULL, 
-          entity_type   varchar(32) default NULL, 
-          operation         VARCHAR(32),
-          PRIMARY KEY (txn_id),
-          KEY (operation),
-          KEY (reference),
-          KEY (status)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
-
-    case 'pgsql':
-      db_query("CREATE TABLE {userpoints} (
-          uid           SERIAL,
-	        points        INTEGER NOT NULL default '0',
-	        max_points    INTEGER NOT NULL default '0',
-	        last_update   INTEGER NOT NULL default '0',
-	        PRIMARY KEY (uid)
-        );");
-      db_query("CREATE TABLE {userpoints_txn} (
-          txn_id        SERIAL,
-	        uid           INTEGER NOT NULL default '0',
-	        approver_uid  INTEGER NOT NULL default '0',
-	        points        INTEGER NOT NULL default '0',
-	        time_stamp    INTEGER NOT NULL default '0',
-	        status        INTEGER NOT NULL default '0',
-	        event         VARCHAR,
-	        description   VARCHAR,
-          expirydate    INTEGER NOT NULL default '0',
-          expired       BOOLEAN, 
-          parent_txn_id INTEGER NOT NULL default '0'
-	        PRIMARY KEY (txn_id)
-	      );");
-      break;
-  }
+  drupal_install_schema('userpoints');
 }
 
 /**
  * Implementation of hook_uninstall().
  */
 function userpoints_uninstall() {
-
+  drupal_uninstall_schema('userpoints');
+  db_query("DELETE FROM {variable} WHERE name like '%userpoints%'");
+  
   $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE module='userpoints'"));
   if ($vid) {
     taxonomy_del_vocabulary($vid);
   }
-
-  db_query('DROP TABLE {userpoints}');
-  db_query('DROP TABLE {userpoints_txn}');
-  db_query("DELETE FROM {variable} WHERE name like '%userpoints%'");
 }
 
 function userpoints_update_1() {
@@ -88,106 +178,55 @@ function userpoints_update_1() {
 
 function userpoints_update_2() {
   $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      // Add the max_points column
-      $ret[] = update_sql("ALTER TABLE {userpoints} ADD max_points INT(10) NOT NULL DEFAULT '0' AFTER points");
-      // Make the points column bigger
-      $ret[] = update_sql("ALTER TABLE {userpoints} CHANGE points points INT(10) NOT NULL DEFAULT '0'");
-      break;
-  }
+  db_add_field($ret, 'userpoints', 'max_points', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'lenght' => 10));
+  db_change_field($ret, 'userpoints', 'points', 'points', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'lenght' => 10));
   return $ret;
 }
 
 function userpoints_update_3() {
   $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      // Add the description column
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} ADD description TEXT AFTER event");
-      break;
-  }
+  db_add_field($ret, 'userpoints_txn', 'description', array('type' => 'text'));
   return $ret;
 }
 
 function userpoints_update_4() {
   $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      // Add the description column
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE event event VARCHAR(32)");
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} CHANGE status status INTEGER NOT NULL DEFAULT '0' AFTER time_stamp");
-      break;
-  }
+  db_change_field($ret, 'userpoints_txn', 'event', 'event', array('type' => 'varchar', 'lenght' => 32 ));
+  db_change_field($ret, 'userpoints_txn', 'status', 'status', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0 ));
   return $ret;
 }
 
 function userpoints_update_5() {
   $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      // Add the reference column and its index
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} ADD COLUMN reference VARCHAR(128) AFTER description");
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} ADD INDEX reference (reference )");
-      break;
-  }
+  db_add_field($ret, 'userpoints_txn', 'reference', array('type' => 'varchar', 'lenght' => 128));
+  db_add_index($ret, 'userpoints_txn', 'reference', array('reference'));
   return $ret;
 }
 
 function userpoints_update_6() {
   $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} 
-                         ADD expirydate INT(11) NOT NULL AFTER reference,
-                         ADD expired TINYINT(1) NOT NULL AFTER expirydate,
-                         ADD parent_txn_id INT NOT NULL AFTER expired,
-                         ADD tid INT NULL AFTER parent_txn_id
-                          ");
-      $ret[] = update_sql("ALTER TABLE {userpoints}
-                          DROP PRIMARY KEY
-                          ");
-      $ret[] = update_sql("ALTER TABLE {userpoints}
-                          ADD tid INT NULL AFTER last_update,
-                          ADD pid INT NOT NULL AUTO_INCREMENT PRIMARY KEY
-                          ");
-      break;
-  }
+  db_add_field($ret, 'userpoints_txn', 'expirydate', array('type' => 'int', 'lenght' => 11, 'not null' => true));
+  db_add_field($ret, 'userpoints_txn', 'expired', array('type' => 'int', 'lenght' => 1, 'not null' => true, 'size' => 'tiny'));
+  db_add_field($ret, 'userpoints_txn', 'parent_txn_id', array('type' => 'int'));
+  db_add_field($ret, 'userpoints_txn', 'tid', array('type' => 'int'));
+
+  db_drop_primary_key($ret, 'userpoints');
+
+  db_add_field($ret, 'userpoints', 'tid', array('type' => 'int'));
+  db_add_field($ret, 'userpoints', 'pid', array('type' => 'serial', 'not null' => true));
+  db_add_primary_key($ret, 'userpoints', 'pid');
   return $ret;
 }
 function userpoints_update_7() {
   $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} 
-                         ADD entity_id INT(11) NULL AFTER tid,
-                         ADD entity_type VARCHAR(32) NULL AFTER entity_id
-                          ");
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn}
-			 CHANGE event operation VARCHAR(32) 
-                          ");
-      break;
-  }
+  db_add_field($ret, 'userpoints_txn', 'entity_id', array('type' => 'int', 'lenght' => 11, 'not null' => true));
+  db_add_field($ret, 'userpoints_txn', 'entity_type', array('type' => 'varchar', 'lenght' => 32));
+  db_change_field($ret, 'userpoints_txn', 'event', 'operation', array('type' => 'varchar'));
   return $ret;
 }
 function userpoints_update_8() {
   $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {userpoints_txn} 
-                         CHANGE tid tid INT(11) NOT NULL default '0'
-                          ");
-      $ret[] = update_sql("ALTER TABLE {userpoints} 
-                         CHANGE tid tid INT(11) NOT NULL default '0'
-                          ");
-      break;
-  }
+  db_change_field($ret, 'userpoints_txn', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'lenght' => 11));
+  db_change_field($ret, 'userpoints', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'lenght' => 11));
   return $ret;
 }
