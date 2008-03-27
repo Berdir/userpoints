@@ -94,14 +94,14 @@ function userpoints_menu() {
   $items['admin/user/userpoints'] = array(
     'title' => '!Points',
     'title arguments' => userpoints_translation(),
-    'description' => 'Manage !points',
+    'description' => strtr('Manage !points', userpoints_translation()),
     'page callback' => 'userpoints_admin_points',
     'access arguments' => array(USERPOINTS_PERM_ADMIN)
   );
   $items['admin/user/userpoints/list'] = array(
     'title' => 'List',
     'title arguments' => userpoints_translation(),
-    'description' => 'List users by points',
+    'description' => strtr('List users by !points', userpoints_translation()),
     'access arguments' => array(USERPOINTS_PERM_VIEW),
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -2,
@@ -109,8 +109,8 @@ function userpoints_menu() {
   $items['admin/user/userpoints/moderate'] = array(
     'title' => 'Moderation',
     'title arguments' => userpoints_translation(),
-    'description' => 'Review points in moderation',
-    'page callback' => 'userpoints_admin_points',
+    'description' => strtr('Review !points in moderation', userpoints_translation()),
+    'page callback' => 'userpoints_admin_manage',
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
     'type' => MENU_LOCAL_TASK,
     'weight' => -1,
@@ -135,13 +135,13 @@ function userpoints_menu() {
   $items['admin/user/userpoints/approve'] = array(
     'title' => 'Approve Userpoints',
     'page callback' => 'userpoints_admin_approve',
-    'access arguments' => user_access(USERPOINTS_PERM_ADMIN),
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
     'type' => MENU_CALLBACK
   );
   $items['admin/user/userpoints/decline'] = array(
     'title' => 'Approve Userpoints',
     'page callback' => 'userpoints_admin_approve',
-    'access arguments' => user_access(USERPOINTS_PERM_ADMIN),
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
     'type' => MENU_CALLBACK
   );
   
@@ -149,7 +149,7 @@ function userpoints_menu() {
     'title' => 'Users by !points',
     'title arguments' => userpoints_translation(),
     'page callback' => 'userpoints_list_users',
-    'access' => user_access(USERPOINTS_PERM_VIEW),
+    'access arguments' => array(USERPOINTS_PERM_VIEW),
     'type' => MENU_NORMAL_ITEM,
   );
   
@@ -944,7 +944,7 @@ function userpoints_admin_approve() {
   return drupal_get_form('userpoints_confirm_approve', $operation, $txn_id);
 }
 
-function userpoints_confirm_approve($operation, $txn_id) {
+function userpoints_confirm_approve($form_state, $operation, $txn_id) {
   $form = array(
     'operation' => array(
       '#type' => 'value',
@@ -968,7 +968,7 @@ function userpoints_confirm_approve_submit($form, &$form_state) {
   
   $form_values = $form_state['values'];
 
-  switch ($form_state['clicked_button']['#value']) {
+  switch ($form_values['operation']) {
     case 'approve':
       $status = USERPOINTS_TXN_STATUS_APPROVED;
       break;
@@ -1385,7 +1385,7 @@ function theme_userpoints_list_users_row(&$row) {
 /*
  * Purpose: Provides a dropdown to filter by category
  */
-function userpoints_filter_cat_select($path, $tid) {
+function userpoints_filter_cat_select($form_state, $path, $tid) {
   $current_cat = url($path . $tid);
   $form = array();
   $formname = 'catselect';
@@ -1706,7 +1706,6 @@ function userpoints_my_userpoints() {
 function userpoints_get_vid() {
   //code lovingly inspired by the image.module w/ code by drewish
   $vid = variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '');
-  var_dump($vid);
   if (empty($vid) || !taxonomy_vocabulary_load($vid)) {
     $sql = "SELECT vid FROM {vocabulary} WHERE module='userpoints'";
     $vid = db_result(db_query($sql));
