@@ -1,0 +1,5 @@
+; $Id$
+name = Userpoints Service
+description = Exposes userpoints functionality via XML-RPC
+package = Userpoints
+dependencies = userpoints services
