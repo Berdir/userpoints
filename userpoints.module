@@ -184,30 +184,29 @@ function userpoints_perm() {
  * Implementation of hook_theme().
  */
 function userpoints_theme() {
-  $themes = array();
-  $themes['userpoints_list_users'] = array(
-    'arguments' => array(
-      'header',
-      'rows',
-      'tid',
-      'pager_limit',
+  return array(
+    'userpoints_list_users' => array(
+      'arguments' => array(
+        'header' => NULL,
+        'rows' => NULL,
+        'tid' => NULL,
+        'pager_limit' => NULL,
+      )
+    ),
+    'userpoints_list_users_header' => array('arguments' => array()),
+    'userpoints_list_users_row' => array(
+      'arguments' => array(
+        'row' => NULL,
+      )
+    ),
+    'userpoints_list_my_userpoints' => array(
+      'arguments' => array(
+        'args' => NULL,
+        'header' => NULL,
+        'rows' => NULL,
+      ),
     ),
   );
-  $themes['userpoints_list_users_header'] = array(
-  );
-  $themes['userpoints_list_users_row'] = array(
-    'arguments' => array(
-      'row'
-    ),
-  );
-  $themes['userpoints_my_userpoints'] = array(
-    'arguments' => array(
-      'args',
-      'header',
-      'rows',
-    ),
-  );
-  return $themes;
 }
 
 /**
@@ -1334,13 +1333,15 @@ function userpoints_list_users() {
 }
 
 /*
- * Purpose: themes the output of users by points page accessible at /userpoints
- *   individual rows are themed with theme_userpoints_list_users_rows
- * Returns: HTML
+ * Themes the output of users by points page accessible at /userpoints
+ * individual rows are themed with theme_userpoints_list_users_rows
+ * 
+ * @return
+ *   HTML of the table and a pager
  */
 function theme_userpoints_list_users($header, &$rows, &$tid, &$pager_limit) {
-  //If there is only one category there is no sense in display the category filter dropdown
-  if ( count(userpoints_get_categories())  > 1) {
+  // If there is only one category, there is no sense in display the category filter dropdown
+  if (count(userpoints_get_categories()) > 1) {
     $output = drupal_get_form('userpoints_filter_cat_select', 'userpoints/', $tid);
     $output .= theme('table', $header, $rows);
     $output .= theme('pager', NULL, $pager_limit, 0);
@@ -1352,8 +1353,10 @@ function theme_userpoints_list_users($header, &$rows, &$tid, &$pager_limit) {
   return $output;
 }
 /*
- * Purpose: themes the header of the table on the "user by points" page accessible at /userpoints
- * Returns: An array suitable for use with tablesort_sql
+ * Themes the header of the table on the "user by points" page accessible at /userpoints
+ * 
+ * @return
+ *   An array suitable for use with tablesort_sql
  */
 function theme_userpoints_list_users_header() {
   return array(
@@ -1364,8 +1367,9 @@ function theme_userpoints_list_users_header() {
 }
 
 /*
- * Purpose: themes the output of a single row of the "user by points" page at /userpoints
- * Returns: array for a single row suitable for inclusion with theme_table
+ * Themes the output of a single row of the "user by points" page at /userpoints
+ * @return
+ *   Array for a single row, suitable for inclusion with theme_table
  */
 function theme_userpoints_list_users_row(&$row) {
   global $user;
