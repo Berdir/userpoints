@@ -156,7 +156,7 @@ function userpoints_menu() {
   $items['myuserpoints'] = array(
     'title' => 'My !points',
     'title arguments' => userpoints_translation(),
-    'page callback' => 'userpoints_my_userpoints',
+    'page callback' => 'userpoints_list_my_userpoints',
     'access callback' => 'userpoints_access_my_points',
     'type' => MENU_NORMAL_ITEM
   );
@@ -1574,7 +1574,7 @@ function userpoints_cron() {
  * Purpose: Displays a detailed transaction report for an individual user
  * no URL argument returns current user otherwise accepts uid. 
  */
-function userpoints_my_userpoints() {
+function userpoints_list_my_userpoints() {
   $overall_total = 0;
   $unapproved_total = 0;
   $approved_total = 0;
@@ -1641,7 +1641,6 @@ function userpoints_my_userpoints() {
   $pager_limit = variable_get(USERPOINTS_REPORT_LIMIT, 10);
   $result = pager_query($sql, $pager_limit, 0, NULL, $uid);
   $stati = userpoints_txn_status();
-  
   $num_rows = 0;
   while ($row = db_fetch_object($result)) {
     $num_rows++;
@@ -1699,8 +1698,7 @@ function userpoints_my_userpoints() {
     );
   }
 
-
-  return theme('userpoints_my_userpoints', $args, $header, $rows);
+  return theme('userpoints_list_my_userpoints', $args, $header, $rows);
 }
 
 /*
@@ -1765,7 +1763,7 @@ function userpoints_get_default_tid() {
 /*
  * Purpose: Allow my_userpoints to be themeable
  */
-function theme_userpoints_my_userpoints($args, $header, $rows) {
+function theme_userpoints_list_my_userpoints($args, $header, $rows) {
   $pager_limit = variable_get(USERPOINTS_REPORT_LIMIT, 10);
   $output  = theme('table', $header, $rows);
   $output .= "<p>";
