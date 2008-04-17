@@ -67,8 +67,8 @@ function userpoints_txn_status() {
 /**
  * Implementation of hook_help().
  */
-function userpoints_help($section) {
-  switch ($section) {
+function userpoints_help($path, $arg) {
+  switch ($path) {
     case 'admin/settings/userpoints':
       $output = t('Configure userpoints moderation and branding translation', userpoints_translation());
       break;
@@ -965,9 +965,7 @@ function userpoints_confirm_approve($form_state, $operation, $txn_id) {
 function userpoints_confirm_approve_submit($form, &$form_state) {
   global $user;
   
-  $form_values = $form_state['values'];
-
-  switch ($form_values['operation']) {
+  switch ($form_state['values']['operation']) {
     case 'approve':
       $status = USERPOINTS_TXN_STATUS_APPROVED;
       break;
@@ -979,7 +977,7 @@ function userpoints_confirm_approve_submit($form, &$form_state) {
   }
 
   $params = array(
-    'txn_id'       => $form_values['txn_id'],
+    'txn_id'       => $form_state['values']['txn_id'],
     'approver_uid' => $user->uid,
     'status'       => $status,
   );
@@ -1164,45 +1162,43 @@ function userpoints_admin_txn($form_state) {
 }
 
 function userpoints_admin_txn_submit($form, &$form_state) {
-  if ($form['form_id']['#value'] != 'userpoints_admin_txn') {
+  if ($form_state['values']['form_id'] != 'userpoints_admin_txn') {
     return;
   }
 
-  $form_values = $form_state['values'];
-
-  $txn_user = user_load(array('name' => $form_values['txn_user']));
-  switch ($form_values['mode']) {
+  $txn_user = user_load(array('name' => $form_state['values']['txn_user']));
+  switch ($form_state['values']['mode']) {
     case 'add':
       $params = array(
-                  'points' => $form_values['points'],
+                  'points' => $form_state['values']['points'],
                   'uid' => $txn_user->uid,
                   'operation' => 'admin',
-                  'description' => $form_values['description'],
-                  'reference' => $form_values['reference'],
-                  'tid' => $form_values['tid'],
+                  'description' => $form_state['values']['description'],
+                  'reference' => $form_state['values']['reference'],
+                  'tid' => $form_state['values']['tid'],
                 );
-      if ($form_values['expirydate']) {
+      if ($form_state['values']['expirydate']) {
         //Check for the existence of an expirydate 
-        $params['expirydate'] = strtotime($form_values['expirydate']);
+        $params['expirydate'] = strtotime($form_state['values']['expirydate']);
       }
       userpoints_userpointsapi($params);
       break;
       
     case 'edit':
-      if ($form_values['expirydate']) {
-        $expirydate = strtotime($$form_values['expirydate']);
+      if ($form_state['values']['expirydate']) {
+        $expirydate = strtotime($form_state['values']['expirydate']);
       }
       $params = array(
-        'uid' => $form_values['txn_uid'],
-        'approver_id' => $form_values['approver_uid'],
-        'points' => $form_values['points'],
-        'time_stamp' => strtotime($form_values['time_stamp']),
-        'operation' => $form_values['operation'],
-        'description' => $form_values['description'],
-        'reference' => $form_values['reference'],
-        'status' => $form_values['status'],
+        'uid' => $form_state['values']['txn_uid'],
+        'approver_id' => $form_state['values']['approver_uid'],
+        'points' => $form_state['values']['points'],
+        'time_stamp' => strtotime($form_state['values']['time_stamp']),
+        'operation' => $form_state['values']['operation'],
+        'description' => $form_state['values']['description'],
+        'reference' => $form_state['values']['reference'],
+        'status' => $form_state['values']['status'],
         'expirydate' => $expirydate,
-        'txn_id' => $form_values['txn_id']
+        'txn_id' => $form_state['values']['txn_id']
       );
       userpoints_userpointsapi($params);
   }
@@ -1729,7 +1725,7 @@ function userpoints_get_vid() {
     variable_set(USERPOINTS_CATEGORY_DEFAULT_VID, $vid);
   }
   if (!is_numeric($vid)) {
-    watchdog('userpoints', t('userpoints module was unable to select or create a vocabulary. Points will be uncategorized'), WATCHDOG_ERROR);
+    watchdog('userpoints', 'userpoints module was unable to select or create a vocabulary. Points will be uncategorized', array(), WATCHDOG_ERROR);
   }
   return $vid;
 }

@@ -10,8 +10,8 @@ define('USERPOINTS_MODERATE_COMMENT',    'userpoints_moderate_comment');
 //define a variable to trigger the use of the v2bug please read drupal.org/node/183520
 define('USERPOINTS_USE_V2BUG',    'userpoints_use_v2bug');
 
-function userpoints_basic_help($section) {
-  switch ($section) {
+function userpoints_basic_help($path, $arg) {
+  switch ($path) {
     case 'admin/settings/userpoints_basic':
       $output = t('<strong>UP:</strong> Some basic interfaces for userpoints, such as posting nodes, comments, ...etc.');
       break;

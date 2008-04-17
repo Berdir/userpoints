@@ -46,6 +46,6 @@ function userpoints_action_grant_points_form($settings = array(), $argument_info
   return $form;
 }
 
-function userpoints_action_grant_points_submit($form_id, $form_values) {
-  return workflow_ng_token_get_settings(array('number'), $form_values);
+function userpoints_action_grant_points_submit($form, &$form_state) {
+  return workflow_ng_token_get_settings(array('number'), $form_state['values']);
 }
