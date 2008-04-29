@@ -806,6 +806,10 @@ function _userpoints_user_exists($uid, $tid = NULL) {
   }
 }
 
+/*
+ * Implementation of hook_user()
+ *
+ */
 function userpoints_user($op, &$edit, &$account, $category = '') {
   switch ($op) {
     case 'delete':
@@ -816,16 +820,22 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
 
     case 'view':
       // Get the points for the user
-      $points = userpoints_get_current_points($account->uid);
+      $points = userpoints_get_current_points($account->uid, 'all');
+      $details = l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
       if (user_access(USERPOINTS_PERM_ADMIN)) {
-        $points = l($points, 'admin/user/userpoints/add/'. $account->uid, array('title' => t('Manage points')));
+        $details .= ', '. l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substrat points from this user'))));
       }
       if (user_access(USERPOINTS_PERM_VIEW)) {
-        $disp_points[] = array(
-          'title' => t('User !points', userpoints_translation()),
-          'value' => $points,
-          );
-        return array(t('!Points', userpoints_translation()) => $disp_points);
+        $account->content['userpoints'] = array(
+          '#type' => 'user_profile_category',
+          '#title' => t('User !points', userpoints_translation()),
+		);
+		$account->content['userpoints']['points'] = array(
+		  '#type' => 'user_profile_item',
+		  '#title' => t('!Points', userpoints_translation()),
+		  '#value' => $points . ' - ' . $details,
+		);
+		
       }
       break;
   }
