@@ -819,13 +819,18 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
       break;
 
     case 'view':
-      // Get the points for the user
-      $points = userpoints_get_current_points($account->uid, 'all');
-      $details = l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
-      if (user_access(USERPOINTS_PERM_ADMIN)) {
-        $details .= ', '. l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substrat points from this user'))));
-      }
       if (user_access(USERPOINTS_PERM_VIEW)) {
+        $details = '';
+        if (userpoints_access_my_points()) {
+		  $details .= l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
+	    }
+        if (user_access(USERPOINTS_PERM_ADMIN)) {
+          $details .= ', '. l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substrat points from this user'))));
+        }
+
+        // Get the uncategorized points for the user
+        $points = userpoints_get_current_points($account->uid);
+
         $account->content['userpoints'] = array(
           '#type' => 'user_profile_category',
           '#title' => t('User !points', userpoints_translation()),
@@ -833,7 +838,7 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
 		$account->content['userpoints']['points'] = array(
 		  '#type' => 'user_profile_item',
 		  '#title' => t('!Points', userpoints_translation()),
-		  '#value' => $points . ' - ' . $details,
+		  '#value' => $details ? $points .' - '. $details : $points,
 		);
 		
       }
