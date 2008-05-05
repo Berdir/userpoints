@@ -896,7 +896,7 @@ function userpoints_admin_manage() {
           case 'node' :
             $node = node_load($data->entity_id);
             if ($node) {
-              $operation = l($data->operation, 'node/'. $node->nid, array('title' => $node->title));
+              $operation = l($data->operation, 'node/'. $node->nid, array('attributes' => array('title' => $node->title)));
             }
             else {
               $operation = $data->operation;
@@ -907,7 +907,7 @@ function userpoints_admin_manage() {
               //We have to load the comment to get the nid for the comment
               $comment = _comment_load($data->entity_id);
               if ($comment) {
-                $operation = l($data->operation, 'node/'. $comment->nid, array('title' => $comment->subject), NULL, 'comment-'. $comment->cid);
+                $operation = l($data->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject, NULL, 'comment-'. $comment->cid)));
               }
               else {
                 $operation = $data->operation;
@@ -1448,7 +1448,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
           $title = t('@user\'s !points', array_merge(array('@user' => $user->name), userpoints_translation()));;
           if ($user->uid) {
             $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
-            $show_points = format_plural($points, t('!point', userpoints_translation()), t('!points', userpoints_translation()));
+            $show_points = format_plural($points, '!point', '!points', userpoints_translation());
             $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
           }
           else {
@@ -1480,7 +1480,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
             }
           $header = array(t('User'), t('!Points', userpoints_translation()));
           $content = theme('table', $header, $rows);
-          $content .= '<div class="more-link">'. l(t('more'), 'userpoints/'. $delta, array('title' => t('All users by !points', userpoints_translation()))) .'</div>';
+          $content .= '<div class="more-link">'. l(t('more'), 'userpoints/'. $delta, array('attributes' => array('title' => t('All users by !points', userpoints_translation())))) .'</div>';
         } //if $delta
 
         $block['subject'] = $title;
@@ -1672,7 +1672,7 @@ function userpoints_list_my_userpoints() {
         case 'node' :
           $node = node_load($row->entity_id);
           if ($node) {
-            $operation = l($row->operation, 'node/'. $node->nid, array('title' => $node->title));
+            $operation = l($row->operation, 'node/'. $node->nid, array('attributes' => array('title' => $node->title)));
           }
           else {
             $operation = $row->operation;
@@ -1683,7 +1683,7 @@ function userpoints_list_my_userpoints() {
             //We have to load the comment to get the nid for the comment
             $comment = _comment_load($row->entity_id);
             if ($comment) {
-              $operation = l($row->operation, 'node/'. $comment->nid, array('title' => $comment->subject), NULL, 'comment-'. $comment->cid);
+              $operation = l($row->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject, 'fragment' => 'comment-'. $comment->cid)));
             }
             else {
               $operation = $row->operation;
