@@ -48,6 +48,7 @@ function userpoints_schema() {
     'primary key' => array('pid'),
     'indexes' => array(
       'last_update' => array('last_update'),
+      'uid_tid' => array('uid', 'tid'),
     ),
   );
   
@@ -228,5 +229,11 @@ function userpoints_update_8() {
   $ret = array();
   db_change_field($ret, 'userpoints_txn', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'lenght' => 11));
   db_change_field($ret, 'userpoints', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'lenght' => 11));
+  return $ret;
+}
+
+function userpoints_update_6009() {
+  $ret = array();
+  db_add_index($ret, 'userpoints', 'uid_tid', array('uid', 'tid'));
   return $ret;
 }
