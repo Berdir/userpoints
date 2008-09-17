@@ -1793,3 +1793,12 @@ function theme_userpoints_list_my_userpoints($args, $header, $rows) {
 
   return $output;
 }
+
+/**
+ *  Implement hook_views_api().
+ */
+function userpoints_views_api() {
+  return array(
+    'api' => 2.0,
+  );
+}
