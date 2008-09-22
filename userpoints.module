@@ -135,13 +135,13 @@ function userpoints_menu() {
   $items['admin/user/userpoints/approve'] = array(
     'title' => 'Approve Userpoints',
     'page callback' => 'userpoints_admin_approve',
-    'access arguments' => user_access(USERPOINTS_PERM_ADMIN),
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
     'type' => MENU_CALLBACK
   );
   $items['admin/user/userpoints/decline'] = array(
     'title' => 'Approve Userpoints',
     'page callback' => 'userpoints_admin_approve',
-    'access arguments' => user_access(USERPOINTS_PERM_ADMIN),
+    'access arguments' => array(USERPOINTS_PERM_ADMIN),
     'type' => MENU_CALLBACK
   );
   
@@ -149,7 +149,7 @@ function userpoints_menu() {
     'title' => 'Users by !points',
     'title arguments' => userpoints_translation(),
     'page callback' => 'userpoints_list_users',
-    'access' => user_access(USERPOINTS_PERM_VIEW),
+    'access' => array(USERPOINTS_PERM_VIEW),
     'type' => MENU_NORMAL_ITEM,
   );
   
