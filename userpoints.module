@@ -537,6 +537,13 @@ function userpoints_userpointsapi($params) {
 
   // Load the user object that will be awarded the points
   $account = user_load(array('uid' => $params['uid']));
+  if ($account == false) {
+    return array(
+      'status' => false,
+      'reason' => 'invalid uid or user account could not be loaded
+                  ',
+    );
+  }
   
   // Call the _userpoints hook, and stop if one of them returns FALSE
   $rc = module_invoke_all('userpoints', 'points before', $params['points'], $account->uid, $params['event']);
