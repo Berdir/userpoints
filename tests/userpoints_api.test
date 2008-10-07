@@ -1,0 +1,151 @@
+<?php
+
+class UserpointsTestCase extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Userpoints API '),
+      'description' => t('Tests the core API for proper inserts & updates to the database tables, 
+			  moderation, expiration, as well as permission checks'),
+      'group' => t('Userpoints'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('userpoints');
+    // Create and login user
+    $admin_user = $this->drupalCreateUser(array('admin userpoints'));
+    $this->drupalLogin($admin_user);
+    $non_admin_user = $this->drupalCreateUser();
+    $this->drupalLogin($non_admin_user);
+  }
+
+
+  /**
+   *
+   */
+  function testBasicCall() {
+    global $user;
+    $points = (int) rand();
+ 
+    $sql = "SELECT points from {userpoints_txn} WHERE uid = %d AND points = %d";
+    $return = userpoints_userpointsapi($points);
+    $this->assertTrue($return['status'] == TRUE , t('API responded with successful grant of points'));
+
+    $db_points = (int) db_result(db_query($sql, $user->uid, $points));
+    $this->assertTrue($db_points === $points, t('Successfully verified points in the txn table'));
+
+      //Check that the transaction table and the summary table match
+    $sql = "SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d";
+    $txn_points = (int) db_result(db_query($sql, $user->uid));
+
+    $sql = "SELECT SUM(points) from {userpoints} WHERE uid = %d";
+    $up_points = (int) db_result(db_query($sql, $user->uid));
+    $this->assertTrue($txn_points === $up_points, t('Sum of transactions match total points for user'));
+  } 
+
+  /**
+   *
+   */
+
+  function testParamsArrayCall() {
+    global $user;
+    $points = rand(); 
+   
+    $sql = "SELECT points from {userpoints_txn} WHERE uid = %d AND points = %d";
+
+      //Assert that the use of a params array with simply points in it works. 
+    $params = array(
+	  'points' => $points,
+    );
+ 
+    $this->assertTrue(userpoints_userpointsapi($params) == TRUE, 
+		     t('API call using a params array responded with successful grant of points')
+		     );
+
+      //Check the Database to make sure the points made it there 
+    $db_points = db_result(db_query($sql, $user->uid, $points));
+    $this->assertTrue($db_points == $points, t('Successfully verified points in the txn table'));
+
+      //Test to ensure that calling it with no points returns false indicating an error
+    $params = array(
+	  'points' => '',
+	);
+
+    $return = userpoints_userpointsapi($params);
+    $this->assertTrue($return['status'] == FALSE, 
+                      t('API successfully prevented null points from being added'));
+
+    $params = array(
+	  'points' => 'abcd',
+    );
+    $return = userpoints_userpointsapi($params);
+    $this->assertTrue($return['status'] == FALSE, 
+		      t('API successfully prevented non-numeric points from being added')
+		     );
+
+  }
+ 
+ /**
+   *
+   */
+  function testModeration() {
+	
+  }
+  /**
+   *
+   */
+  function testExpiration() {
+	
+  }
+  /**
+   *
+   */
+  function testPermissions() {
+	
+  }
+
+  /**
+   *
+   */
+  function testGetCurrentPoints() {
+	
+  }
+  /**
+   *
+   */
+  function testGetMaxPoints() {
+	
+  }
+  /**
+   *
+   */
+  function testGetDefaultExpiryDate() {
+	
+  }
+  /**
+   *
+   */
+  function testGetDefaultTid() {
+	
+  }
+  /**
+   *
+   */
+  function testGetDefaultVid() {
+	
+  }
+
+  /**
+   *
+   */
+  function testGetCategories() {
+	
+  }
+}
+
