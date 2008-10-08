@@ -35,7 +35,10 @@ class UserpointsTestCase extends DrupalWebTestCase {
   function testBasicCall() {
     global $user;
     $points = (int) rand(1, 500);
-    $sumpoints = $points;  
+    $sumpoints = $points;
+
+    //NOTE: increment max points with all positive point changes, tests userpoints_get_max_points 
+    $maxpoints = $points;
 
     //Test the a basic API call
     $return = userpoints_userpointsapi($points);
@@ -58,41 +61,50 @@ class UserpointsTestCase extends DrupalWebTestCase {
     $sumpoints = $sumpoints + $points; 
     userpoints_userpointsapi($points); 
    
-    //Check the database to ensure the negative point were properly saved
+    //Check the database to ensure the negative point value was properly saved
     $sql = "SELECT points from {userpoints_txn} WHERE uid = %d AND points = %d";
     $db_points = (int) db_result(db_query($sql, $user->uid, $points));
     $this->assertTrue($db_points === $points, t('Successfully verified negative points in the txn table'));
 
 
     //Now test to make sure the transaction and and caching table stay in sync. 
+    //Also test userpoints_get_max_points and userpoints_get_current_points
     for($i = 0; $i <= rand(1,50); $i++) {
       $points = rand(1, 500); 
       if (rand() & 1) {
         $points = - $points; 
       }
+	    
+	  if ($points > 0) { 
+	    $maxpoints = $maxpoints + $points;	
+	  }
       $sumpoints = $sumpoints + $points;
       userpoints_userpointsapi($points);       
     } 
+
 
     //Check the summary table to make sure everything is still kosher. 
     $sql = "SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d";
     $txn_points = (int) db_result(db_query($sql, $user->uid));
    
-    drupal_set_message("TXN POINTS = $txn_points");
     $sql = "SELECT SUM(points) from {userpoints} WHERE uid = %d";
     $up_points = (int) db_result(db_query($sql, $user->uid));
-
-    drupal_set_message("UP POINTS = $up_points");
 
     $this->assertTrue($txn_points === $up_points, t('Sum of transactions matches the caching table'));    
     $this->assertTrue($up_points === $sumpoints, 
                        t('Caching table matches testing code after !recs point records totaling !points points', 
                           array('!recs' => $i, '!points' => $sumpoints ))
                      );        
+    $this->assertTrue($sumpoints == userpoints_get_current_points(), 
+					  t("userpoints_get_current_points() returned correct point value")
+					 );
+    $this->assertTrue($maxpoints == userpoints_get_max_points(), 
+					  t("userpoints_get_max_points() returned correct point value")
+					 );
+
 
     //Remove all point entries to allow other tests to have a clean slate
-    db_query("TRUNCATE table {userpoints}");
-    db_query("TRUNCATE table {userpoints_txn}");
+	//removeallpoints();
   } 
 
 
@@ -166,10 +178,36 @@ class UserpointsTestCase extends DrupalWebTestCase {
 		     t('Successfully blocked points given to a non-existent user')
 		     );
 
+    //attempt to award points to a non-existent term
+    $maxtid = "SELECT tid from {term_data} ORDER BY tid DESC LIMIT 1";
+    $nontid =  db_result(db_query($sql)) +1;
+    $params = array(
+	  'points' => $points,
+	  'uid' => $nontid,
+    );
 
+    $ret = userpoints_userpointsapi($params);
+    $this->assertTrue($ret['status'] == FALSE, 
+		     t('Successfully blocked points given to a non-existent tid')
+		     );
+
+    //Test various aspects of the API to ensure the DB is being updated successfully 
+   $points = rand(1,500);
+   $description = $this->randomName();
+   $operation = $this->randomName();
+   $params = array(
+     'points' => $points,
+     'description' => $description,
+     'operation' => $operation
+   );
+
+   $ret = userpoints_userpointsapi($params);
+   $sql =  "SELECT description, operation, reference FROM {userpoints_txn} WHERE description = '%s' AND operation = '%s'";
+   $db_point_rec = db_fetch_array(db_query($sql, $description, $operation));
+   $this->assertTrue($db_point_rec['description'] == $description, t('Point description successfully verified in DB'));
+   $this->assertTrue($db_point_rec['operation'] == $operation, t('Point event successfully verified in DB'));
   }
  
-
 
  /**
    *
@@ -177,6 +215,7 @@ class UserpointsTestCase extends DrupalWebTestCase {
   function testModeration() {
 	
   }
+
   /**
    *
    */
@@ -193,20 +232,9 @@ class UserpointsTestCase extends DrupalWebTestCase {
   /**
    *
    */
-  function testGetCurrentPoints() {
-	
-  }
-  /**
-   *
-   */
-  function testGetMaxPoints() {
-	
-  }
-  /**
-   *
-   */
   function testGetDefaultExpiryDate() {
-	
+	$date = userpoints_get_default_expiry_date();
+	$this->assertTrue((is_number($date) && $date > 0), "Valid expiration date returned");
   }
   /**
    *
@@ -225,7 +253,14 @@ class UserpointsTestCase extends DrupalWebTestCase {
    *
    */
   function testGetCategories() {
-	
+	$cats = userpoints_get_categories();
+	$this->assertTrue(is_array($cats), 'Successfully verified userpoints_get_categories() returned an array');
   }
+
+
+  function removeallpoints() {
+	db_query("TRUNCATE table {userpoints}");
+    db_query("TRUNCATE table {userpoints_txn}");
+  }  
 }
 
