@@ -1,4 +1,6 @@
 <?php
+// Author: Jacob Redding
+// additional tests added by Zhao ning (nzhao, user/96328) 
 
 class UserpointsTestCase extends DrupalWebTestCase {
   /**
