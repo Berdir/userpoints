@@ -4,6 +4,7 @@
 // Copyright 2005-2007 Khalid Baheyeldin http://2bits.com
 
 define('USERPOINTS_PERM_VIEW',           'view userpoints');
+define('USERPOINTS_PERM_VIEW_OWN',       'view own userpoints');
 //The permission(PERM_USE) was removed from use as per #158490 it'll remain 
 //out until code exists to use the permission (jredding 12/26/2007)
 define('USERPOINTS_PERM_USE',            'use userpoints');
@@ -170,14 +171,14 @@ function userpoints_menu() {
  */
 function userpoints_access_my_points() {
   global $user;
-  return (user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in());
+  return ((user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in()) || (user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $account->uid ) );
 }
 
 /**
  * Implementation of hook_perm().
  */
 function userpoints_perm() {
-  return array(USERPOINTS_PERM_VIEW, USERPOINTS_PERM_ADMIN);
+  return array(USERPOINTS_PERM_VIEW, USERPOINTS_PERM_VIEW_OWN, USERPOINTS_PERM_ADMIN);
 }
 
 /**
@@ -818,6 +819,7 @@ function _userpoints_user_exists($uid, $tid = NULL) {
  *
  */
 function userpoints_user($op, &$edit, &$account, $category = '') {
+	global $user;
   switch ($op) {
     case 'delete':
       // The user is being deleted, delete all traces in userpoints and txn tables
@@ -826,11 +828,11 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
       break;
 
     case 'view':
-      if (user_access(USERPOINTS_PERM_VIEW)) {
+      if (user_access(USERPOINTS_PERM_VIEW) || (user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $account->uid )) {
         $details = '';
         if (userpoints_access_my_points()) {
-		  $details .= l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
-	    }
+		  		$details .= l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
+	    	}
         if (user_access(USERPOINTS_PERM_ADMIN)) {
           $details .= ', '. l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substrat points from this user'))));
         }
@@ -841,13 +843,12 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
         $account->content['userpoints'] = array(
           '#type' => 'user_profile_category',
           '#title' => t('User !points', userpoints_translation()),
-		);
-		$account->content['userpoints']['points'] = array(
-		  '#type' => 'user_profile_item',
-		  '#title' => t('!Points', userpoints_translation()),
-		  '#value' => $details ? $points .' - '. $details : $points,
-		);
-		
+				);
+				$account->content['userpoints']['points'] = array(
+		  		'#type' => 'user_profile_item',
+		  		'#title' => t('!Points', userpoints_translation()),
+		  		'#value' => $details ? $points .' - '. $details : $points,
+				);
       }
       break;
   }
