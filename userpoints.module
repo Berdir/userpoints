@@ -171,7 +171,9 @@ function userpoints_menu() {
  */
 function userpoints_access_my_points() {
   global $user;
-  return ((user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in()) || (user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $account->uid ) );
+  return ( _userpoints_user_exists($user->uid) && 
+					((user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in()) || user_access(USERPOINTS_PERM_VIEW_OWN)) 
+				 );
 }
 
 /**
@@ -589,7 +591,7 @@ function userpoints_userpointsapi($params) {
   } 
   else {
     
-    $mesg = (t('User %uname %op %pointsvalue !points! Total now is %total points.',
+    $mesg = (t('User %uname %op %pointsvalue !points Total now is %total points.',
       array_merge(userpoints_translation(), array(
         '%uname'  => $account->name,
         '%op'     => $msg,
@@ -1605,43 +1607,46 @@ function userpoints_list_my_userpoints() {
     $uid = $user->uid;
   }
   $point_user = user_load(array('uid' => $uid));
-  if ($point_user && user_access(USERPOINTS_PERM_VIEW)) { 
-    $title = t('!Points for ', userpoints_translation()) . $point_user->name;
-    drupal_set_title($title);
-  } 
-
-  // Look up user's total
-  if (_userpoints_user_exists($uid)) {
-    //Grab all tids for this user
-    $sql = "SELECT p.tid, t.name
-      FROM {userpoints_txn} p
-      LEFT JOIN {term_data} t on p.tid = t.tid
-      WHERE uid = %d 
-      GROUP BY p.tid, t.name";
-    $results = db_query($sql, $uid);  
-    while ($result = db_fetch_array($results)) {
-      if ($result['name'] == null) {
-        $result['name'] = t('!Uncategorized', userpoints_translation());
-      }
-      //pull the sum from the caching table for resource reason and b/c the 
-      $result['total'] = userpoints_get_current_points($uid, $result['tid']);
-      $args['subtotals'][$result['tid']] = $result;
-
-      //maintain a grand total
-      $grand_total += $result['total'];
-    }
-    $args['approved_total'] = $grand_total;
-
-    //Grab the unmoderated point total
-    $result = db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d AND status = 1", $uid);
-    if (db_result($result, 0, 0)) {
-      $args['unapproved_total'] = db_result($result, 0, 0);
-    }
-    else {
-      $args['unapproved_total'] =0;
-    }
-    $args['overall_total'] = ($args['approved_total'] + $args['unapproved_total']);
+  if (!$point_user || !_userpoints_user_exists($uid)) {
+		drupal_not_found();
+		return;
   }
+  elseif(!user_access(USERPOINTS_PERM_VIEW) && !(user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $point_user->uid) ) {
+		drupal_access_denied();
+  } 
+		
+  $title = t('!Points for ', userpoints_translation()) . $point_user->name;
+  drupal_set_title($title);
+
+   //Grab all tids for this user
+  $sql = "SELECT p.tid, t.name
+    FROM {userpoints_txn} p
+    LEFT JOIN {term_data} t on p.tid = t.tid
+    WHERE uid = %d 
+    GROUP BY p.tid, t.name";
+  $results = db_query($sql, $uid);  
+  while ($result = db_fetch_array($results)) {
+    if ($result['name'] == null) {
+      $result['name'] = t('!Uncategorized', userpoints_translation());
+    }
+    //pull the sum from the caching table for resource reason and b/c the 
+    $result['total'] = userpoints_get_current_points($uid, $result['tid']);
+    $args['subtotals'][$result['tid']] = $result;
+
+    //maintain a grand total
+    $grand_total += $result['total'];
+  }
+  $args['approved_total'] = $grand_total;
+
+  //Grab the unmoderated point total
+  $result = db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d AND status = 1", $uid);
+  if (db_result($result, 0, 0)) {
+    $args['unapproved_total'] = db_result($result, 0, 0);
+  }
+  else {
+    $args['unapproved_total'] =0;
+  }
+  $args['overall_total'] = ($args['approved_total'] + $args['unapproved_total']);
 
   $header = array(
     array('data' => t('!Points', userpoints_translation()), 'field' => 'points'),
@@ -1710,13 +1715,12 @@ function userpoints_list_my_userpoints() {
         array('data' => $row->cat),
         array('data' => $description),
     );
-  }
-  if ($num_rows <= 0) {
-    $rows[] = array(
+  	if ($num_rows <= 0) {
+    	$rows[] = array(
           array('data' => t('No !Points earned', userpoints_translation()), 'colspan' => 5, 'align' => 'center')
-    );
+    			);
+  	}
   }
-
   return theme('userpoints_list_my_userpoints', $args, $header, $rows);
 }
 
