@@ -279,8 +279,7 @@ function userpoints_admin_settings() {
     '#collapsed' => TRUE,
     '#title' => t('!Points expiration', userpoints_translation()),
     '#description' => t('These settings affect new points only, they are not retroactive!
-                        Point expiration depends upon cron.
-                       '),
+                        Point expiration depends upon cron.'),
   );
 
   $form[$group][USERPOINTS_EXPIREAFTER_DATE] = array(
@@ -488,18 +487,15 @@ function userpoints_userpointsapi($params) {
       global $user;
       $params['uid'] = $user->uid;
     }
-    if (!isset($params['operation'])) {
-      $params['operation'] = NULL;
+
+    // check if parameters are set
+    $params_null_check = array('operation', 'description', 'reference', 'display', 'entity_id', 'entity_type');
+    foreach($params_null_check as $param_null_check) {
+      if (!isset($params[$param_null_check])) {
+        $params[$param_null_check] = NULL; 
+      }
     }
-    if (!isset($params['description'])) {
-      $params['description'] = NULL;
-    }
-    if (!isset($params['reference'])) {
-      $params['reference'] = NULL;
-    }
-    if (!isset($params['display'])) {
-      $params['display'] = NULL;
-    }
+
     if (!isset($params['moderate'])) {
       //if not passed then site default is used
       $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, 0);
@@ -516,19 +512,13 @@ function userpoints_userpointsapi($params) {
       //if not passed then site default is used
       $params['tid'] = variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL);
     }
-    if (!isset($params['entity_id'])) { 
-      $params['entity_id'] = NULL; 
-    }
-    if (!isset($params['entity_type'])) { 
-      $params['entity_type'] = NULL; 
-    }
+
     // anonymous users do not get points, and there have to be points to process
     if (($params['uid'] == 0 || $params['points'] == 0)) {
       return array(
         'status' => false,
         'reason' => 'uid or points = 0. Anonymous users do not get points
-                     and there must be points to process. 
-                    ',
+                     and there must be points to process.',
       );
     }
   }
@@ -543,8 +533,7 @@ function userpoints_userpointsapi($params) {
   if ($account == false) {
     return array(
       'status' => false,
-      'reason' => 'invalid uid or user account could not be loaded
-                  ',
+      'reason' => 'invalid uid or user account could not be loaded',
     );
   }
   
@@ -586,8 +575,9 @@ function userpoints_userpointsapi($params) {
         '%uname'  => $account->name,
         '%op'     => $msg,
         '%pointsvalue' => abs($params['points']),
-        '%total'  => userpoints_get_current_points($params['uid'], $params['tid'])
-        ))));
+        '%total'  => userpoints_get_current_points($params['uid'], $params['tid']),
+        ))
+      ));
   } 
   else {
     
@@ -645,15 +635,15 @@ function _userpoints_transaction(&$params) {
         $params['status'] = 0;
       }
     }
-    if (!isset($params['operation'])) { 
-      $params['operation'] = NULL; 
+    
+    // check if parameters are set
+    $params_null_check = array('operation', 'description', 'reference', 'expired', 'parent_txn_id', 'entity_id', 'entity_type');
+    foreach($params_null_check as $param_null_check) {
+      if (!isset($params[$param_null_check])) {
+        $params[$param_null_check] = NULL; 
+      }
     }
-    if (!isset($params['description'])) { 
-      $params['description'] = NULL; 
-    }
-    if (!isset($params['reference'])) { 
-      $params['reference'] = NULL; 
-    }
+
     if (!isset($params['tid']) || !is_numeric($params['tid'])) {
       $params['tid'] = variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL);
     }
@@ -664,18 +654,6 @@ function _userpoints_transaction(&$params) {
     }
     if (!isset($params['expirydate'])) { 
       $params['expirydate'] = userpoints_get_default_expiry_date();
-    }
-    if (!isset($params['expired'])) { 
-      $params['expired'] = NULL; 
-    }
-    if (!isset($params['parent_txn_id'])) { 
-      $params['parent_txn_id'] = NULL; 
-    }
-    if (!isset($params['entity_id'])) { 
-      $params['entity_id'] = NULL; 
-    }
-    if (!isset($params['entity_type'])) { 
-      $params['entity_type'] = NULL; 
     }
   } // if txn_id
   if (is_numeric($params['txn_id'])) {
@@ -799,11 +777,11 @@ function userpoints_get_default_expiry_date() {
  * Returns : true if user found, falase otherwise 
  */
 function _userpoints_user_exists($uid, $tid = NULL) {
-  if ( is_numeric($tid) ) {
+  if (is_numeric($tid) ) {
     return (int)db_result(
       db_query('SELECT COUNT(uid) 
       FROM {userpoints} 
-      WHERE uid = %d AND tid = %d ', 
+      WHERE uid = %d AND tid = %d', 
       $uid, $tid));
   }
   else {
@@ -811,7 +789,7 @@ function _userpoints_user_exists($uid, $tid = NULL) {
       db_query('SELECT COUNT(uid) 
       FROM {userpoints} 
       WHERE uid = %d', 
-      $uid ));
+      $uid));
 
   }
 }
@@ -942,9 +920,14 @@ function userpoints_admin_manage() {
     }
   if (!$rows) {
     //no points in moderation
-    $rows[] = array(array('data' => t('No !points awaiting moderation', userpoints_translation()), 
-                          'colspan' => 6, 'align' => 'center')
-                    ); //$rows[]
+    $rows[] = array(
+                array(
+                  'data' => t('No !points awaiting moderation',
+                  userpoints_translation()),
+                  'colspan' => 6,
+                  'align' => 'center',
+                ),
+              );
   }
 
   if ($cat_count > 1) {
@@ -997,7 +980,7 @@ function userpoints_confirm_approve_submit($form, &$form_state) {
     case 'decline':
       $status = USERPOINTS_TXN_STATUS_DECLINED;
       break;
-    default :
+    default:
       return false; 
   }
 
@@ -1298,7 +1281,6 @@ function userpoints_admin_points() {
     $output = theme('table', $header, $rows);
     $output .= theme('pager', NULL, $pager_limit, 0);
   }
-
 
   return $output;
 }
