@@ -1325,6 +1325,9 @@ function userpoints_list_users() {
   $sql .= tablesort_sql($header);
   $pager_limit = variable_get(USERPOINTS_REPORT_USERCOUNT, 30);
   $result = pager_query($sql, $pager_limit, 0, $sql_cnt, $tid);
+
+  $rows = array();
+
   while ($data = db_fetch_object($result)) {
     $rows[] = theme('userpoints_list_users_row', $data);
   }
