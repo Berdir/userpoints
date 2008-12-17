@@ -83,81 +83,82 @@ function userpoints_help($path, $arg) {
 function userpoints_menu() {
   $items = array();
   $items['admin/settings/userpoints'] = array(
-    'title' => '!Points settings',
-    'title arguments' => userpoints_translation(),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('userpoints_admin_settings'),
+    'title'            => '!Points settings',
+    'description'      => strtr('Settings for !points', userpoints_translation()),
+    'title arguments'  => userpoints_translation(),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('userpoints_admin_settings'),
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_NORMAL_ITEM
+    'type'             => MENU_NORMAL_ITEM
   );
   $items['admin/user/userpoints'] = array(
-    'title' => '!Points',
-    'title arguments' => userpoints_translation(),
-    'description' => strtr('Manage !points', userpoints_translation()),
-    'page callback' => 'userpoints_admin_points',
+    'title'            => '!Points',
+    'title arguments'  => userpoints_translation(),
+    'description'      => strtr('Manage !points', userpoints_translation()),
+    'page callback'    => 'userpoints_admin_points',
     'access arguments' => array(USERPOINTS_PERM_ADMIN)
   );
   $items['admin/user/userpoints/list'] = array(
-    'title' => 'List',
-    'title arguments' => userpoints_translation(),
-    'description' => strtr('List users by !points', userpoints_translation()),
+    'title'            => 'List',
+    'title arguments'  => userpoints_translation(),
+    'description'      => strtr('List users by !points', userpoints_translation()),
     'access arguments' => array(USERPOINTS_PERM_VIEW),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -2,
+    'type'             => MENU_DEFAULT_LOCAL_TASK,
+    'weight'           => -2,
   );
   $items['admin/user/userpoints/moderate'] = array(
-    'title' => 'Moderation',
-    'title arguments' => userpoints_translation(),
-    'description' => strtr('Review !points in moderation', userpoints_translation()),
-    'page callback' => 'userpoints_admin_manage',
+    'title'            => 'Moderation',
+    'title arguments'  => userpoints_translation(),
+    'description'      => strtr('Review !points in moderation', userpoints_translation()),
+    'page callback'    => 'userpoints_admin_manage',
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => -1,
+    'type'             => MENU_LOCAL_TASK,
+    'weight'           => -1,
   );
   $items['admin/user/userpoints/add'] = array(
-    'title' => 'Add',
-    'description' => 'Admin add/delete userpoints',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('userpoints_admin_txn'),
+    'title'            => 'Add',
+    'description'      => 'Admin add/delete userpoints',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('userpoints_admin_txn'),
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 0,
+    'type'             => MENU_LOCAL_TASK,
+    'weight'           => 0,
   );
   $items['admin/user/userpoints/edit'] = array(
-    'title' => 'Edit',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('userpoints_admin_txn'),
+    'title'            => 'Edit',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('userpoints_admin_txn'),
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_CALLBACK
+    'type'             => MENU_CALLBACK
   );
   
   $items['admin/user/userpoints/approve'] = array(
-    'title' => 'Approve Userpoints',
-    'page callback' => 'userpoints_admin_approve',
+    'title'            => 'Approve Userpoints',
+    'page callback'    => 'userpoints_admin_approve',
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_CALLBACK
+    'type'             => MENU_CALLBACK
   );
   $items['admin/user/userpoints/decline'] = array(
-    'title' => 'Approve Userpoints',
-    'page callback' => 'userpoints_admin_approve',
+    'title'            => 'Approve Userpoints',
+    'page callback'    => 'userpoints_admin_approve',
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_CALLBACK
+    'type'             => MENU_CALLBACK
   );
   
   $items['userpoints'] = array(
-    'title' => 'Users by !points',
-    'title arguments' => userpoints_translation(),
-    'page callback' => 'userpoints_list_users',
+    'title'            => 'Users by !points',
+    'title arguments'  => userpoints_translation(),
+    'page callback'    => 'userpoints_list_users',
     'access arguments' => array(USERPOINTS_PERM_VIEW),
-    'type' => MENU_NORMAL_ITEM,
+    'type'             => MENU_NORMAL_ITEM,
   );
   
   $items['myuserpoints'] = array(
-    'title' => 'My !points',
+    'title'           => 'My !points',
     'title arguments' => userpoints_translation(),
-    'page callback' => 'userpoints_list_my_userpoints',
+    'page callback'   => 'userpoints_list_my_userpoints',
     'access callback' => 'userpoints_access_my_points',
-    'type' => MENU_NORMAL_ITEM
+    'type'            => MENU_NORMAL_ITEM
   );
   return $items;
 }
