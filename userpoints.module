@@ -1378,12 +1378,16 @@ function theme_userpoints_list_users_header() {
  */
 function theme_userpoints_list_users_row(&$row) {
   global $user;
+
   if (!$row->cat) {
     $row->cat = t('!Uncategorized', userpoints_translation());
   }
+
+  $details = '';
   if ($user->uid == $row->uid) {
     $details = "&nbsp;&nbsp;". l("(details)", "myuserpoints");
   }
+
   return array(
     array('data' => theme('username', $row) . $details),
     array('data' => $row->cat, 'align' => 'right'),
