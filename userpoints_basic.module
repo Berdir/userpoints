@@ -13,10 +13,8 @@ define('USERPOINTS_USE_V2BUG',    'userpoints_use_v2bug');
 function userpoints_basic_help($path, $arg) {
   switch ($path) {
     case 'admin/settings/userpoints_basic':
-      $output = t('<strong>UP:</strong> Some basic interfaces for userpoints, such as posting nodes, comments, ...etc.');
-      break;
+      return t('<strong>UP:</strong> Some basic interfaces for userpoints, such as posting nodes, comments, ...etc.');
   }
-  return $output;
 }
 
 function userpoints_basic_userpoints($op, $points = 0, $uid = 0, $event = '') {

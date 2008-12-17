@@ -71,12 +71,10 @@ function userpoints_txn_status() {
 function userpoints_help($path, $arg) {
   switch ($path) {
     case 'admin/settings/userpoints':
-      $output = t('Configure userpoints moderation and branding translation', userpoints_translation());
-      break;
+      return t('Configure userpoints moderation and branding translation', userpoints_translation());
     case 'admin/help#userpoints':
-      $output = t('Users earn !points as they post nodes, comments, and vote on nodes', userpoints_translation());
+      return t('Users earn !points as they post nodes, comments, and vote on nodes', userpoints_translation());
   }
-  return $output;
 }
 
 /**
