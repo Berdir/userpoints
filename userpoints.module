@@ -1613,6 +1613,7 @@ function userpoints_list_my_userpoints() {
     WHERE uid = %d 
     GROUP BY p.tid, t.name";
   $results = db_query($sql, $uid);  
+  $grand_total = 0;
   while ($result = db_fetch_array($results)) {
     if ($result['name'] == null) {
       $result['name'] = t('!Uncategorized', userpoints_translation());
