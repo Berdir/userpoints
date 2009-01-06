@@ -634,12 +634,9 @@ function _userpoints_transaction(&$params) {
         $params['status'] = 0;
       }
     }
-		if($params['expirydate'] == '') {
-			drupal_set_message("emptyempty");
-		}
     if (isset($params['expirydate']) && !is_numeric($params['expirydate'])) {
-			return false;	
-		}
+      return false;	
+    }
 
     // check if parameters are set
     $params_null_check = array('operation', 'description', 'reference', 'expired', 'parent_txn_id', 'entity_id', 'entity_type');
