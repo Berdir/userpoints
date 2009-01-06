@@ -224,8 +224,6 @@ class UserpointsTestCase extends DrupalWebTestCase {
 		$times['expire']['string'] = '(expirydate = today)';	
 		$times['null']['time'] = NULL;
 		$times['null']['string'] = '(expirydate = NULL)';
-		$times['empty']['time'] = ' ';
-		$times['empty']['string'] = '(expirydate = empty string)';
 		
 		$bad_time = 'test string';
 		  //First lets check to make sure it is blocking bad times
