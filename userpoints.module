@@ -277,14 +277,14 @@ function userpoints_admin_settings() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#title' => t('!Points expiration', userpoints_translation()),
-    '#description' => t('These settings affect new points only, they are not retroactive!
+    '#description' => t('These settings affect new !points only, they are not retroactive!
                         Point expiration depends upon cron.'),
   );
 
   $form[$group][USERPOINTS_EXPIREAFTER_DATE] = array(
     '#type' => 'select',
     '#title' => t('Expire !points after', userpoints_translation()),
-    '#description' => t('Once points have been obtained by the user 
+    '#description' => t('Once !points have been obtained by the user
                           they will expire according to this setting'),
     '#options' => expiry_dates(),
     '#default_value' => variable_get(USERPOINTS_EXPIREAFTER_DATE, NULL),
@@ -305,7 +305,7 @@ function userpoints_admin_settings() {
   $form[$group][USERPOINTS_EXPIREON_DATE] = array(
     '#type' => 'date',
     '#title' => t('Expire !points on this date', userpoints_translation()),
-    '#description' => t('Once points have been obtained by the user they will 
+    '#description' => t('Once !points have been obtained by the user they will
                          last until this date. This setting overrides the 
                          "Expire after setting" above'. $warning),
     '#default_value' => variable_get(USERPOINTS_EXPIREON_DATE, array('day' => 1, 'month' => 1, 'year' => 1980)),
@@ -314,16 +314,16 @@ function userpoints_admin_settings() {
     '#type' => 'textarea',
     '#title' => t('Expiration entry description'),
     '#description' => t('A negating expiration entry is made to expire 
-                         points leaving the original entry intact
-                         (e.g. original points + expiration points = 0).
+                         !points leaving the original entry intact
+                         (e.g. original !points + expiration !points = 0).
                          When the expiration entry is made this description will
                          be placed on the entry. This is useful so the users will
                          know what happened to their point balance. In crafting
                          your message you can use the following variables. 
                          <br /> !points = The name used in branding 
                          above (also use !Points and !point)
-                         <br />!operation = Original operation that granted the points 
-                         <br/> !description = Original description for the point 
+                         <br />!operation = Original operation that granted the !points
+                         <br /> !description = Original description for the point
                          <br /> !txn_id Original transaction ID 
                          <br /> !date = Date of the original entry'),
     '#default_value' => variable_get(USERPOINTS_EXPIRY_DESCRIPTION, ''),
@@ -394,7 +394,7 @@ function userpoints_admin_settings() {
       '#title' => t('Default Category'),
       '#default_value' => variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL),
       '#options' =>  userpoints_get_categories(),
-      '#description' => t('By default all points are assigned to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>', 
+      '#description' => t('By default all !points are assigned to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>',
         array('!url' => url('admin/content/taxonomy/'. variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '')))),
     );
   }
@@ -580,7 +580,7 @@ function userpoints_userpointsapi($params) {
   } 
   else {
     
-    $mesg = (t('User %uname %op %pointsvalue !points Total now is %total points.',
+    $mesg = (t('User %uname %op %pointsvalue !points Total now is %total !points.',
       array_merge(userpoints_translation(), array(
         '%uname'  => $account->name,
         '%op'     => $msg,
@@ -816,7 +816,7 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
 		  		$details .= l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
 	    	}
         if (user_access(USERPOINTS_PERM_ADMIN)) {
-          $details .= ', '. l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substrat points from this user'))));
+          $details .= ', '. l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user'))));
         }
 
         // Get the uncategorized points for the user
@@ -874,52 +874,53 @@ function userpoints_admin_manage() {
   $sql .= tablesort_sql($header);
   $pager_limit = variable_get(USERPOINTS_REPORT_USERCOUNT, 30);
   $result = pager_query($sql, $pager_limit, 0, NULL, USERPOINTS_TXN_STATUS_PENDING, $tid);
-    while ($data = db_fetch_object($result)) {
-      $user = user_load(array('uid' => $data->uid));
-      if (!$data->cat) {
-        $data->cat = t('!Uncategorized', userpoints_translation());
-      }
-      $operation = module_invoke_all('userpoints', 'entity_type', $data);
+  $rows = array();
+  while ($data = db_fetch_object($result)) {
+    $user = user_load(array('uid' => $data->uid));
+    if (!$data->cat) {
+      $data->cat = t('!Uncategorized', userpoints_translation());
+    }
+    $operation = module_invoke_all('userpoints', 'entity_type', $data);
 
-      if (!$operation) {
-        switch ($data->entity_type) {
-          case 'node' :
-            $node = node_load($data->entity_id);
-            if ($node) {
-              $operation = l($data->operation, 'node/'. $node->nid, array('attributes' => array('title' => $node->title)));
+    if (!$operation) {
+      switch ($data->entity_type) {
+        case 'node' :
+          $node = node_load($data->entity_id);
+          if ($node) {
+            $operation = l($data->operation, 'node/'. $node->nid, array('attributes' => array('title' => $node->title)));
+          }
+          else {
+            $operation = $data->operation;
+          }
+          break;
+        case 'comment' :
+          if (module_exists('comment')) {
+            //We have to load the comment to get the nid for the comment
+            $comment = _comment_load($data->entity_id);
+            if ($comment) {
+              $operation = l($data->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject, NULL, 'comment-'. $comment->cid)));
             }
             else {
               $operation = $data->operation;
             }
-            break;
-          case 'comment' :
-            if (module_exists('comment')) {
-              //We have to load the comment to get the nid for the comment
-              $comment = _comment_load($data->entity_id);
-              if ($comment) {
-                $operation = l($data->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject, NULL, 'comment-'. $comment->cid)));
-              }
-              else {
-                $operation = $data->operation;
-              }
-            }
-            break;
-          default:
-            $operation = $data->operation;
-        }
+          }
+          break;
+        default:
+          $operation = $data->operation;
       }
-      $rows[] = array(
-        array('data' => theme('username', $user)),
-        array('data' => format_date($data->time_stamp, 'custom', 'Y-m-d H:i')),
-        array('data' => $data->points, 'align' => 'right'),
-        array('data' => $operation),
-        array('data' => $data->cat),
-        array('data' => l('approve', "admin/user/userpoints/approve/$data->txn_id") .
-          ' '. l('decline', "admin/user/userpoints/decline/$data->txn_id") .
-          ' '. l('edit',    "admin/user/userpoints/edit/$data->txn_id")
-        ),
-      );
     }
+    $rows[] = array(
+      array('data' => theme('username', $user)),
+      array('data' => format_date($data->time_stamp, 'custom', 'Y-m-d H:i')),
+      array('data' => $data->points, 'align' => 'right'),
+      array('data' => $operation),
+      array('data' => $data->cat),
+      array('data' => l('approve', "admin/user/userpoints/approve/$data->txn_id") .
+        ' '. l('decline', "admin/user/userpoints/decline/$data->txn_id") .
+        ' '. l('edit',    "admin/user/userpoints/edit/$data->txn_id")
+      ),
+    );
+  }
   if (!$rows) {
     //no points in moderation
     $rows[] = array(
@@ -1001,7 +1002,6 @@ function userpoints_admin_txn($form_state) {
   global $user;
 
   $mode = arg(3);
-  
   $timestamp = format_date(time(), 'custom', 'Y-m-d H:i O');
 
   if ($mode == 'edit' && arg(4)) {
@@ -1023,7 +1023,7 @@ function userpoints_admin_txn($form_state) {
     '#maxlength'     => 60,
     '#default_value' => $txn_user->name,
     '#autocomplete_path' => 'user/autocomplete',
-    '#description'   => t('User Name for the user you want the points to affect'),
+    '#description'   => t('User Name for the user you want the !points to affect'),
     );
 
   $form['points'] = array(
@@ -1032,7 +1032,7 @@ function userpoints_admin_txn($form_state) {
     '#size'          => 10,
     '#maxlength'     => 10,
     '#default_value' => $txn->points,
-    '#description'   => t('Number of points to add/subtract from the user. For example, 25 (to add points) or -25 (to subtract points).'),
+    '#description'   => t('Number of !points to add/subtract from the user. For example, 25 (to add !points) or -25 (to subtract !points).'),
     );
 
   $form['time_stamp'] = array(
@@ -1062,8 +1062,8 @@ function userpoints_admin_txn($form_state) {
     '#default_value' => $expirydate,
     '#size'          => 30,
     '#maxlength'     => 30,
-    '#description'   => t('Date and time to expire these points, in the form YYYY-MM-DD HH:MM +ZZZZ') .
-                        '<br/>'. t('Leave blank for non-expiring points'),
+    '#description'   => t('Date and time to expire these !points, in the form YYYY-MM-DD HH:MM +ZZZZ') .
+                        '<br />'. t('Leave blank for non-expiring !points'),
   );
   if (module_exists('taxonomy')) {
     $form['tid'] = array(
@@ -1071,7 +1071,7 @@ function userpoints_admin_txn($form_state) {
       '#title' => t('Category'),
       '#default_value' => variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, 0),
       '#options' =>  userpoints_get_categories(),
-      '#description' => t('Category to apply these points to'),
+      '#description' => t('Category to apply these !points to'),
     );
   }
 
@@ -1744,7 +1744,7 @@ function userpoints_get_vid() {
     variable_set(USERPOINTS_CATEGORY_DEFAULT_VID, $vid);
   }
   if (!is_numeric($vid)) {
-    watchdog('userpoints', 'userpoints module was unable to select or create a vocabulary. Points will be uncategorized', array(), WATCHDOG_ERROR);
+    watchdog('userpoints', 'userpoints module was unable to select or create a vocabulary. !Points will be uncategorized', array(), WATCHDOG_ERROR);
   }
   return $vid;
 }
