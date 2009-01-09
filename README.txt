@@ -140,7 +140,7 @@ userpoints_userpointsapi()
 
   
 //---Hooks
-hook_userpoints($op, $params) 
+hook_userpoints($op, $params = array()) 
 
   Use this hook to act upon certain operations. When other modules award
   points to a user, your hook will be called, among others.
