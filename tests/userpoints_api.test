@@ -23,7 +23,7 @@ class UserpointsTestCase extends DrupalWebTestCase {
 
     // Create an administrator account
     global $admin_user;
-    $admin_user = $this->drupalCreateUser(array('admin userpoints'));
+    $admin_user = $this->drupalCreateUser(array('administer userpoints'));
 
     // Create a standard Drupal account and log in as that person
     $non_admin_user = $this->drupalCreateUser();
