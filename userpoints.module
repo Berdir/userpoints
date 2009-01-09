@@ -1235,7 +1235,6 @@ function userpoints_admin_points() {
 
   //Check for filtering
   if ( $tid === 0) {
-	  drupal_set_message("entering 0");
     $sql .= "WHERE p.tid = 0";
     $cat = t('!Uncategorized', userpoints_translation()); 
   }
