@@ -193,22 +193,24 @@ function userpoints_theme() {
         'rows' => NULL,
         'tid' => NULL,
         'pager_limit' => NULL,
-      )
-    ),
-    'userpoints_list_users_header' => array('arguments' => array()),
+        )
+      ),
+    'userpoints_list_users_header' => array(
+	    'arguments' => array()
+	   ),
     'userpoints_list_users_row' => array(
       'arguments' => array(
         'row' => NULL,
-      )
+         )
     ),
     'userpoints_list_my_userpoints' => array(
       'arguments' => array(
         'args' => NULL,
         'header' => NULL,
         'rows' => NULL,
-      ),
+        ),
     ),
-  );
+  ); //return array
 }
 
 /**
@@ -466,7 +468,7 @@ function userpoints_userpointsapi($params) {
 
   //Test for the existence of parameters and set defaults if necessary
   if (!isset($params['txn_id'])) {
-    //If a txn_id is passed in we'll do an UPDATE thus the std check don't apply
+    //If a txn_id is passed in we'll do an UPDATE thus the std checks don't apply
     if (is_numeric($params)) {
       $points = $params;
       $params = array();
@@ -1267,7 +1269,7 @@ function userpoints_admin_points() {
       $data->cat = t('!Uncategorized', userpoints_translation());
     }
     $rows[] = array(
-      array('data' => theme('username', $data) ."&nbsp;&nbsp;". l("(details)", "myuserpoints/$data->uid")),
+      array('data' => theme('username', $data) ."&nbsp;&nbsp;". l(t("(details)"), "myuserpoints/$data->uid")),
       array('data' => $data->cat, 'align' => 'right'),
       array('data' => $data->points, 'align' => 'right'),
     );
@@ -1388,7 +1390,7 @@ function theme_userpoints_list_users_row(&$row) {
 
   $details = '';
   if ($user->uid == $row->uid) {
-    $details = "&nbsp;&nbsp;". l("(details)", "myuserpoints");
+    $details = "&nbsp;&nbsp;". l(t("(details)"), "myuserpoints");
   }
 
   return array(
