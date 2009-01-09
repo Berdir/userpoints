@@ -539,7 +539,7 @@ function userpoints_userpointsapi($params) {
   }
   
   // Call the _userpoints hook, and stop if one of them returns FALSE
-  $rc = module_invoke_all('userpoints', 'points before', $params['points'], $account->uid, $params['event']);
+  $rc = module_invoke_all('userpoints', 'points before', $params);
 
   foreach ($rc as $key => $value) {
     if ($value == FALSE) {
@@ -595,7 +595,7 @@ function userpoints_userpointsapi($params) {
     drupal_set_message($mesg);
   }
   // Call the _userpoints hook to allow modules to act after points are awarded
-  module_invoke_all('userpoints', 'points after', $params['points'], $account->uid, $params['operation']);
+  module_invoke_all('userpoints', 'points after', $params);
   return array(
     'status' => true,
   );
