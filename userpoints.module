@@ -1726,6 +1726,9 @@ function userpoints_list_my_userpoints() {
  *  if no vocab exists it will create one
  */
 function userpoints_get_vid() {
+	if (!module_exists('taxonomy')) {
+    return false;
+	}
   //code lovingly inspired by the image.module w/ code by drewish
   $vid = variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '');
   if (empty($vid) || !taxonomy_vocabulary_load($vid)) {
