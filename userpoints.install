@@ -237,3 +237,9 @@ function userpoints_update_6009() {
   db_add_index($ret, 'userpoints', 'uid_tid', array('uid', 'tid'));
   return $ret;
 }
+
+function userpoints_update_6010() {
+  $ret = array();
+  $ret[] = update_sql("UPDATE {permission} SET perm = REPLACE(perm, 'admin userpoints', 'administer userpoints') WHERE perm LIKE '%admin userpoints%'");
+  return $ret;
+}

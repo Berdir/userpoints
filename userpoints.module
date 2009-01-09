@@ -8,7 +8,7 @@ define('USERPOINTS_PERM_VIEW_OWN',       'view own userpoints');
 //The permission(PERM_USE) was removed from use as per #158490 it'll remain 
 //out until code exists to use the permission (jredding 12/26/2007)
 define('USERPOINTS_PERM_USE',            'use userpoints');
-define('USERPOINTS_PERM_ADMIN',          'admin userpoints');
+define('USERPOINTS_PERM_ADMIN',          'administer userpoints');
 
 define('USERPOINTS_TRANS_UCPOINTS',      'userpoints_trans_ucpoints');
 define('USERPOINTS_TRANS_LCPOINTS',      'userpoints_trans_lcpoints');
