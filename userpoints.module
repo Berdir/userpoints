@@ -1535,6 +1535,7 @@ function expiry_dates() {
  */
 function userpoints_date_to_timestamp($date) {
   //This takes the FAPI date form array and returns a timestamp
+drupal_set_message("DEFAULT TIMEZONE". variable_get('date_default_timezone', 0));
   if ($date) {
     return mktime(0, 0, 0, $date['month'], $date['day'], $date['year']);
   }

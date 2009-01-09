@@ -359,7 +359,7 @@ class UserpointsTestCase extends DrupalWebTestCase {
     $term = taxonomy_get_term_by_name($term_name);
 
     /* login as admin userpoints */
-    $admin_user = $this->drupalCreateUser(array('admin userpoints'));
+    $admin_user = $this->drupalCreateUser(array('administer userpoints'));
     $this->drupalLogin($admin_user);
 
     /* save settings */
@@ -408,7 +408,7 @@ class UserpointsTestCase extends DrupalWebTestCase {
     $points = 10;
 
     /** check permission with admin user **/
-    $admin_user = $this->drupalCreateUser(array('admin userpoints'));
+    $admin_user = $this->drupalCreateUser(array('administer userpoints'));
     $this->drupalLogin($admin_user);
 
     /*check access page*/
