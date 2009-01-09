@@ -813,12 +813,15 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
 
     case 'view':
       if (user_access(USERPOINTS_PERM_VIEW) || (user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $account->uid )) {
-        $details = '';
+        $details = null;
         if (userpoints_access_my_points()) {
 		  		$details .= l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
 	    	}
         if (user_access(USERPOINTS_PERM_ADMIN)) {
-          $details .= ', '. l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user'))));
+	        if (!is_null($details)) {
+						$details .= ', ';
+					}
+          $details .= l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user'))));
         }
 
         // Get the uncategorized points for the user
