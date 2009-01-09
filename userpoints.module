@@ -36,6 +36,8 @@ define('USERPOINTS_REPORT_DISPLAYZERO', 'userpoints_report_displayzero');
 define('USERPOINTS_CATEGORY_NAME', 'Userpoints');
 define('USERPOINTS_CATEGORY_DEFAULT_VID', 'userpoints_category_default_vid');
 define('USERPOINTS_CATEGORY_DEFAULT_TID', 'userpoints_category_default_tid');
+define('USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID', 'userpoints_category_profile_display_tid');
+
 
 /**
  * Purpose: Returns an array of common translation placeholders
@@ -218,23 +220,6 @@ function userpoints_theme() {
  */
 function userpoints_admin_settings() {
   $form = array();
-  $group = 'status';
-  $form[$group] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Moderation'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => -1,
-  );
-
-  $form[$group][USERPOINTS_POINTS_MODERATION] = array(
-    '#type'          => 'radios',
-    '#title'         => t('Transaction status'),
-    '#default_value' => variable_get(USERPOINTS_POINTS_MODERATION, 0),
-    '#options'       => array(t('Approved'), t('Moderated')),
-    '#description'   => t('Select whether all !points should be approved automatically, or moderated, and require admin approval', userpoints_translation()),
-  );
-
   $group = 'renaming';
   $form[$group] = array(
     '#type' => 'fieldset',
@@ -273,6 +258,24 @@ function userpoints_admin_settings() {
   '#size' => 20,
   '#maxlength' => 20,
   );
+
+  $group = 'status';
+  $form[$group] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Moderation'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -1,
+  );
+
+  $form[$group][USERPOINTS_POINTS_MODERATION] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Transaction status'),
+    '#default_value' => variable_get(USERPOINTS_POINTS_MODERATION, 0),
+    '#options'       => array(t('Approved'), t('Moderated')),
+    '#description'   => t('Select whether all !points should be approved automatically, or moderated, and require admin approval', userpoints_translation()),
+  );
+
   $group = "Points expiration";
   $form[$group] = array(
     '#type' => 'fieldset',
@@ -399,6 +402,14 @@ function userpoints_admin_settings() {
       '#description' => t('By default all !points are assigned to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>',
         array('!url' => url('admin/content/taxonomy/'. variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '')))),
     );
+    $all_option = array('all' => 'All');
+	  $form[$group][USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID] = array(
+	    '#type' => 'select',
+	    '#title' => t('Category to display on the user profile page'),
+	    '#default_value' => variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, NULL),
+	    '#options' =>  array_merge($all_option,userpoints_get_categories()),
+	    '#description' => t('Select which category of points to display on the user profile page. Select "All" to display a sum total of all categories'),
+	  );
   }
 
   $form['setting'] = module_invoke_all('userpoints', 'setting');
@@ -824,8 +835,8 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
           $details .= l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user'))));
         }
 
-        // Get the uncategorized points for the user
-        $points = userpoints_get_current_points($account->uid);
+        //Which points are we display? 
+        $points = userpoints_get_current_points($account->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
 
         $account->content['userpoints'] = array(
           '#type' => 'user_profile_category',
