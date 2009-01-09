@@ -1,6 +1,0 @@
-; $Id$
-name = Userpoints Basic
-description = Userpoints for core Drupal, such as posting nodes and comments, and moderating comments.
-package = Userpoints
-dependencies[] = userpoints
-core = 6.x
