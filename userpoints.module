@@ -846,8 +846,8 @@ function userpoints_admin_manage() {
   $cat_count = count(userpoints_get_categories());
 
   $header = array(
-    array('data' => t('User'), 'field' => 'uid', 'sort' => 'desc'),
-    array('data' => t('Time stamp'), 'field' => 'time_stamp'),
+    array('data' => t('User'), 'field' => 'uid'),
+    array('data' => t('Time stamp'), 'field' => 'time_stamp', 'sort' => 'desc'),
     array('data' => t('!Points', userpoints_translation()), 'field' => 'points'),
     array('data' => t('Operation'), 'field' => 'operation'),
     array('data' => t('Category'), 'field' => 'cat'),
