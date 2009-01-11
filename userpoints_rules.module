@@ -12,7 +12,7 @@
 function userpoints_rules_action_info() {
    $actions = array();
    $actions['userpoints_action_grant_points'] = array(
-      'label' => t('Grant points to a user'),
+      'label' => t('Grant !points to a user', userpoints_translation()),
       'arguments' => array(
         'user' => array('type' => 'user','label' => t('User') )
        ),
@@ -38,6 +38,6 @@ function userpoints_action_grant_points_form($settings = array(), &$form) {
     '#type' => 'textfield',
     '#title' => t('Number of points'),
     '#default_value' => isset($settings['points']) ? $settings['points'] : '',
-    '#description' => t('The number of points to award')
+    '#description' => t('The number of !points to award', userpoints_translation())
   );
 }

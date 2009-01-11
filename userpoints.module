@@ -73,7 +73,7 @@ function userpoints_txn_status() {
 function userpoints_help($path, $arg) {
   switch ($path) {
     case 'admin/settings/userpoints':
-      return t('Configure userpoints moderation and branding translation', userpoints_translation());
+      return t('Configure userpoints moderation and branding translation');
     case 'admin/help#userpoints':
       return t('Users earn !points as they post nodes, comments, and vote on nodes', userpoints_translation());
   }
@@ -283,14 +283,14 @@ function userpoints_admin_settings() {
     '#collapsed' => TRUE,
     '#title' => t('!Points expiration', userpoints_translation()),
     '#description' => t('These settings affect new !points only, they are not retroactive!
-                        Point expiration depends upon cron.'),
+                        Point expiration depends upon cron.', userpoints_translation()),
   );
 
   $form[$group][USERPOINTS_EXPIREAFTER_DATE] = array(
     '#type' => 'select',
     '#title' => t('Expire !points after', userpoints_translation()),
     '#description' => t('Once !points have been obtained by the user
-                          they will expire according to this setting'),
+                          they will expire according to this setting',  userpoints_translation()),
     '#options' => expiry_dates(),
     '#default_value' => variable_get(USERPOINTS_EXPIREAFTER_DATE, NULL),
   );
@@ -312,7 +312,7 @@ function userpoints_admin_settings() {
     '#title' => t('Expire !points on this date', userpoints_translation()),
     '#description' => t('Once !points have been obtained by the user they will
                          last until this date. This setting overrides the 
-                         "Expire after setting" above'. $warning),
+                         "Expire after setting" above'. $warning,  userpoints_translation()),
     '#default_value' => variable_get(USERPOINTS_EXPIREON_DATE, array('day' => 1, 'month' => 1, 'year' => 1980)),
   );
   $form[$group][USERPOINTS_EXPIRY_DESCRIPTION] = array(
@@ -330,7 +330,7 @@ function userpoints_admin_settings() {
                          <br />!operation = Original operation that granted the !points
                          <br /> !description = Original description for the point
                          <br /> !txn_id Original transaction ID 
-                         <br /> !date = Date of the original entry'),
+                         <br /> !date = Date of the original entry',  userpoints_translation()),
     '#default_value' => variable_get(USERPOINTS_EXPIRY_DESCRIPTION, ''),
   );
 
@@ -400,7 +400,7 @@ function userpoints_admin_settings() {
       '#default_value' => variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL),
       '#options' =>  userpoints_get_categories(),
       '#description' => t('By default all !points are assigned to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>',
-        array('!url' => url('admin/content/taxonomy/'. variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '')))),
+        array('!url' => url('admin/content/taxonomy/'. variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, ''))), userpoints_translation()),
     );
     $all_option = array('all' => 'All');
 	  $form[$group][USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID] = array(
@@ -408,7 +408,7 @@ function userpoints_admin_settings() {
 	    '#title' => t('Category to display on the user profile page'),
 	    '#default_value' => variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, NULL),
 	    '#options' =>  array_merge($all_option,userpoints_get_categories()),
-	    '#description' => t('Select which category of points to display on the user profile page. Select "All" to display a sum total of all categories'),
+	    '#description' => t('Select which category of !points to display on the user profile page. Select "All" to display a sum total of all categories', userpoints_translation()),
 	  );
   }
 
@@ -557,7 +557,7 @@ function userpoints_userpointsapi($params) {
       // Do not process the points
       return array(
         'status' => false,
-        'reason' => t('%key returned false from the hook_userpoints points before call', array('%key' => $key)),
+        'reason' => t('@key returned false from the hook_userpoints points before call', array('@key' => $key)),
       );
     }
   }
@@ -1039,7 +1039,7 @@ function userpoints_admin_txn($form_state) {
     '#maxlength'     => 60,
     '#default_value' => $txn_user->name,
     '#autocomplete_path' => 'user/autocomplete',
-    '#description'   => t('User Name for the user you want the !points to affect'),
+    '#description'   => t('User Name for the user you want the !points to affect', userpoints_translation()),
     );
 
   $form['points'] = array(
@@ -1048,7 +1048,7 @@ function userpoints_admin_txn($form_state) {
     '#size'          => 10,
     '#maxlength'     => 10,
     '#default_value' => $txn->points,
-    '#description'   => t('Number of !points to add/subtract from the user. For example, 25 (to add !points) or -25 (to subtract !points).'),
+    '#description'   => t('Number of !points to add/subtract from the user. For example, 25 (to add !points) or -25 (to subtract !points).', userpoints_translation()),
     );
 
   $form['time_stamp'] = array(
@@ -1078,8 +1078,8 @@ function userpoints_admin_txn($form_state) {
     '#default_value' => $expirydate,
     '#size'          => 30,
     '#maxlength'     => 30,
-    '#description'   => t('Date and time to expire these !points, in the form YYYY-MM-DD HH:MM +ZZZZ') .
-                        '<br />'. t('Leave blank for non-expiring !points'),
+    '#description'   => t('Date and time to expire these !points, in the form YYYY-MM-DD HH:MM +ZZZZ', userpoints_translation()) .
+                        '<br />'. t('Leave blank for non-expiring !points',  userpoints_translation()),
   );
   if (module_exists('taxonomy')) {
     $form['tid'] = array(
@@ -1087,7 +1087,7 @@ function userpoints_admin_txn($form_state) {
       '#title' => t('Category'),
       '#default_value' => variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, 0),
       '#options' =>  userpoints_get_categories(),
-      '#description' => t('Category to apply these !points to'),
+      '#description' => t('Category to apply these !points to', userpoints_translation()),
     );
   }
 

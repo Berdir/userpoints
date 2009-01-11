@@ -21,7 +21,7 @@ function userpoints_views_data() {
   $data['userpoints']['table']['base'] = array(
     'field' => 'uid',
     'title' => t('Userpoints'),
-    'help' => t('Points accumulated by users on your site.'),
+    'help' => t('!Points accumulated by users on your site.', userpoints_translation()),
   );
 
   $data['userpoints']['table']['join'] = array(
@@ -43,8 +43,8 @@ function userpoints_views_data() {
 
   // Describe the points column of the userpoints table.
   $data['userpoints']['points'] = array(
-    'title' => t('Points'),
-    'help' => t("A User's current points."), // The help that appears on the UI,
+    'title' => t('!Points', userpoints_translation()),
+    'help' => t("A User's current !points.", userpoints_translation()), // The help that appears on the UI,
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
