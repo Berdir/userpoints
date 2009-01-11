@@ -141,7 +141,7 @@ function userpoints_menu() {
     'type'             => MENU_CALLBACK
   );
   $items['admin/user/userpoints/decline'] = array(
-    'title'            => 'Approve Userpoints',
+    'title'            => t('Approve !points', userpoints_translation()),
     'page callback'    => 'userpoints_admin_approve',
     'access arguments' => array(USERPOINTS_PERM_ADMIN),
     'type'             => MENU_CALLBACK
