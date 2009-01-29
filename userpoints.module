@@ -1622,11 +1622,14 @@ function userpoints_list_my_userpoints() {
     $uid = $user->uid;
   }
   $point_user = user_load(array('uid' => $uid));
+  /* //Removed as the newly introduced permission "view own userpoints" means that "view userpoints" allows users to 
+     //view the user transactions of other users (i.e. line 1632 changed dramatically with the new permission)
   if (!$point_user || !_userpoints_user_exists($uid)) {
 		drupal_not_found();
 		return;
   }
-  elseif(!user_access(USERPOINTS_PERM_VIEW) && !(user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $point_user->uid) ) {
+  */
+  if(!user_access(USERPOINTS_PERM_VIEW) && !(user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $point_user->uid) ) {
 		drupal_access_denied();
   } 
 		
