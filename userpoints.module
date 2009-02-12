@@ -410,12 +410,14 @@ function userpoints_admin_settings() {
       '#description' => t('By default all !points are assigned to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>',
         array_merge(userpoints_translation(), array('!url' => url('admin/content/taxonomy/'. variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, ''))))),
     );
-    $all_option = array('all' => 'All');
+    $options = userpoints_get_categories(); 
+    //$options doesn't include all so we'll add it
+    $options['all'] = t('All categories');
 	  $form[$group][USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID] = array(
 	    '#type' => 'select',
 	    '#title' => t('Category to display on the user profile page'),
 	    '#default_value' => variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, NULL),
-	    '#options' =>  array_merge($all_option, userpoints_get_categories()),
+	    '#options' =>  $options,
 	    '#description' => t('Select which category of !points to display on the user profile page. Select "All" to display a sum total of all categories', userpoints_translation()),
 	  );
   }
