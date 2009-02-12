@@ -842,7 +842,7 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
 	        if (!is_null($details)) {
 						$details .= ', ';
 					}
-          $details .= l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user'))));
+          $details .= l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user', userpoints_translation()))));
         }
 
         //Which points are we display? 
