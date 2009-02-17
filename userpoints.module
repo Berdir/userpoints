@@ -1804,7 +1804,7 @@ function userpoints_get_categories() {
  * Wrapper function to return the default tid via API call
  */
 function userpoints_get_default_tid() {
-  variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL);
+  return variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL);
 }
 
 /*
