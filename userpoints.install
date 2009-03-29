@@ -179,8 +179,8 @@ function userpoints_update_1() {
 
 function userpoints_update_2() {
   $ret = array();
-  db_add_field($ret, 'userpoints', 'max_points', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'lenght' => 10));
-  db_change_field($ret, 'userpoints', 'points', 'points', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'lenght' => 10));
+  db_add_field($ret, 'userpoints', 'max_points', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'length' => 10));
+  db_change_field($ret, 'userpoints', 'points', 'points', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'length' => 10));
   return $ret;
 }
 
@@ -192,22 +192,22 @@ function userpoints_update_3() {
 
 function userpoints_update_4() {
   $ret = array();
-  db_change_field($ret, 'userpoints_txn', 'event', 'event', array('type' => 'varchar', 'lenght' => 32 ));
+  db_change_field($ret, 'userpoints_txn', 'event', 'event', array('type' => 'varchar', 'length' => 32 ));
   db_change_field($ret, 'userpoints_txn', 'status', 'status', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0 ));
   return $ret;
 }
 
 function userpoints_update_5() {
   $ret = array();
-  db_add_field($ret, 'userpoints_txn', 'reference', array('type' => 'varchar', 'lenght' => 128));
+  db_add_field($ret, 'userpoints_txn', 'reference', array('type' => 'varchar', 'length' => 128));
   db_add_index($ret, 'userpoints_txn', 'reference', array('reference'));
   return $ret;
 }
 
 function userpoints_update_6() {
   $ret = array();
-  db_add_field($ret, 'userpoints_txn', 'expirydate', array('type' => 'int', 'lenght' => 11, 'not null' => true));
-  db_add_field($ret, 'userpoints_txn', 'expired', array('type' => 'int', 'lenght' => 1, 'not null' => true, 'size' => 'tiny'));
+  db_add_field($ret, 'userpoints_txn', 'expirydate', array('type' => 'int', 'length' => 11, 'not null' => true));
+  db_add_field($ret, 'userpoints_txn', 'expired', array('type' => 'int', 'length' => 1, 'not null' => true, 'size' => 'tiny'));
   db_add_field($ret, 'userpoints_txn', 'parent_txn_id', array('type' => 'int'));
   db_add_field($ret, 'userpoints_txn', 'tid', array('type' => 'int'));
 
@@ -220,15 +220,15 @@ function userpoints_update_6() {
 }
 function userpoints_update_7() {
   $ret = array();
-  db_add_field($ret, 'userpoints_txn', 'entity_id', array('type' => 'int', 'lenght' => 11, 'not null' => true));
-  db_add_field($ret, 'userpoints_txn', 'entity_type', array('type' => 'varchar', 'lenght' => 32));
+  db_add_field($ret, 'userpoints_txn', 'entity_id', array('type' => 'int', 'length' => 11, 'not null' => true));
+  db_add_field($ret, 'userpoints_txn', 'entity_type', array('type' => 'varchar', 'length' => 32));
   db_change_field($ret, 'userpoints_txn', 'event', 'operation', array('type' => 'varchar'));
   return $ret;
 }
 function userpoints_update_8() {
   $ret = array();
-  db_change_field($ret, 'userpoints_txn', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'lenght' => 11));
-  db_change_field($ret, 'userpoints', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'lenght' => 11));
+  db_change_field($ret, 'userpoints_txn', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'length' => 11));
+  db_change_field($ret, 'userpoints', 'tid', 'tid', array('type' => 'int', 'not null' => true, 'default' => 0, 'length' => 11));
   return $ret;
 }
 
