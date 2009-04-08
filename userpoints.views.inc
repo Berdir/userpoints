@@ -62,5 +62,17 @@ function userpoints_views_data() {
     ),
   );
 
+  // Add relationship to user table.
+  $data['userpoints']['uid'] = array(
+    'title' => t('User'),
+    'help' => t('Relate the userpoints table to the user table.'),
+    'relationship' => array(
+      'base' => 'users',
+      'field' => 'uid',
+      'label' => t('Users'),
+      'handler' => 'views_handler_relationship',
+    ),
+  );
+
   return $data;
 }
