@@ -30,8 +30,8 @@ function userpoints_rules_event_info() {
     'userpoints_event_points_awarded' => array(
        'label' => t('User was awarded !points', userpoints_translation()),
        'arguments' => array(
-         'user' => array('type' => 'user', 'label' => t('Current User')),
-         'points' => array('type' => 'points', 'label' => t('Points Awarded'))
+         'user' => array('type' => 'user', 'label' => t('updated user')),
+         'points' => array('type' => 'number', 'label' => t('Points awarded'))
         ),
        'module' => 'Userpoints',
     ),
@@ -63,7 +63,8 @@ function userpoints_action_grant_points_form($settings = array(), &$form) {
 function userpoints_rules_userpoints($op, $params='') {
   switch ($op) {
   case 'points after':
-    rules_invoke_event('userpoints_event_points_awarded', $params['uid'], $params['points']);
+    $account = user_load($params['uid']);
+    rules_invoke_event('userpoints_event_points_awarded', $account, $params['points']);
     break;
   }
 }
