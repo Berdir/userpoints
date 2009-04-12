@@ -218,6 +218,30 @@ function userpoints_theme() {
 }
 
 /**
+ * Implementation of hook_token_values().
+ */
+function userpoints_token_values($type, $object = NULL, $options = array()) {
+  if ($type == 'user') {
+    $tokens = array(
+      'userpoints' => userpoints_get_current_points($object->uid),
+    );
+    return $tokens;
+  }
+}
+
+/**
+ * Implementation of hook_token_list().
+ */
+function userpoints_token_list($type = 'all') {
+  if ($type == 'user' || $type == 'all') {
+    $tokens['user'] = array(
+      'userpoints' => t('The number of points a user has.'),
+    );
+    return $tokens;
+  }
+}
+
+/**
  * menu callback for settings form.
  */
 function userpoints_admin_settings() {
