@@ -948,7 +948,7 @@ function userpoints_admin_manage() {
             //We have to load the comment to get the nid for the comment
             $comment = _comment_load($data->entity_id);
             if ($comment) {
-              $operation = l($data->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject, NULL, 'comment-'. $comment->cid)));
+              $operation = l($data->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject), 'fragment' => 'comment-'. $comment->cid));
             }
             else {
               $operation = $data->operation;
@@ -1741,7 +1741,7 @@ function userpoints_list_my_userpoints() {
             //We have to load the comment to get the nid for the comment
             $comment = _comment_load($row->entity_id);
             if ($comment) {
-              $operation = l($row->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject, 'fragment' => 'comment-'. $comment->cid)));
+              $operation = l($row->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject), 'fragment' => 'comment-'. $comment->cid ));
             }
             else {
               $operation = $row->operation;
