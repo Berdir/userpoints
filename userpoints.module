@@ -725,7 +725,7 @@ function _userpoints_transaction(&$params) {
   //Control time_stamp functionality, by default with current timestamp
   $time = time();
   //overide system time if meeting criteria matches: Don't let future timestamps, Don't let bad formated timestamps
-  if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 0) || !isset($params['time_stamp']) || !is_numeric($params['time_stamp']) || $params['time_stamp'] > $time || $params['time_stamp'] < 0) {
+  if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || !is_numeric($params['time_stamp']) || $params['time_stamp'] > $time || $params['time_stamp'] < 0) {
       $params['time_stamp'] = $time;
   }
   //Always force changed timestamp to current time() for transaction tracking
