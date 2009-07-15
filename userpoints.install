@@ -84,6 +84,12 @@ function userpoints_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'changed' => array(
+        'description' => t('Effective timestamp of last action on this transaction, for tracking purposes.'),
+        'type'        => 'int',
+        'not null'    => TRUE,
+        'default'     => 0,
+      ),
       'status' => array(
         'description' => t('Status'),
         'type' => 'int',
@@ -148,6 +154,8 @@ function userpoints_schema() {
       'operation' => array('operation'),
       'reference' => array('reference'),
       'status' => array('status'),
+      //Optional as in update_6011
+      'changed' => array('changed'),
     )
   );
   return $schema;
@@ -241,5 +249,25 @@ function userpoints_update_6009() {
 function userpoints_update_6010() {
   $ret = array();
   $ret[] = update_sql("UPDATE {permission} SET perm = REPLACE(perm, 'admin userpoints', 'administer userpoints') WHERE perm LIKE '%admin userpoints%'");
+  return $ret;
+}
+
+/*
+ * From: http://drupal.org/node/395500
+ * "time_stamp parameter is not considered in userpoints api"
+ */
+function userpoints_update_6011() {
+  $ret = array();
+  db_add_field($ret, 'userpoints_txn', 'changed', array(
+    'type'        => 'int',
+    'not null'    => TRUE,
+    'default'     => 0,
+    'description' => t("Efective timestamp of last action on this transaction, for tracking purposes."),
+    )
+  );
+//Optional: An index could help about tracking operations so it would be better to define here..
+  db_add_index($ret, 'userpoints_txn', 'changed', array('changed'));
+//Optional: update table information to mark each transaction as changed on creation only..
+  $ret[] = update_sql("UPDATE {userpoints_txn} SET changed = time_stamp");
   return $ret;
 }
