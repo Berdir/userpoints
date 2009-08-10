@@ -4,7 +4,7 @@ Copyright 2005-2008 http://2bits.com
 
 Description
 -----------
-The userpoints and userpoints_basic module provides the ability for users to gain
+The userpoints and userpoints_nc module provides the ability for users to gain
 points with the do certain actions, such as:
 
 - posting a node (different points can be awarded for different
