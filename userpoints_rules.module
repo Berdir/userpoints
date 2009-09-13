@@ -12,7 +12,8 @@
 function userpoints_rules_userpoints($op, $params='') {
   switch ($op) {
   case 'points after':
-    rules_invoke_event('userpoints_event_points_awarded', $params['uid'], $params['points']);
+    $account = user_load($params['uid']);
+    rules_invoke_event('userpoints_event_points_awarded', $account, $params['points']);
     break;
   }
 }

@@ -41,8 +41,8 @@ function userpoints_rules_event_info() {
 /**
  * Rules action - grant points to a user.
  */
-function userpoints_action_grant_points($account_uid, $settings) {
-    userpoints_userpointsapi(array('uid' => $account_uid, 'points' => $settings['points']));
+function userpoints_action_grant_points($account, $settings) {
+  userpoints_userpointsapi(array('uid' => $account->uid, 'points' => $settings['points']));
 }
 
 /**
@@ -101,7 +101,7 @@ function userpoints_rules_amount_form($settings = array(), &$form) {
 /**
  * Rules Condition - Userpoints amount is >= than
  */
-function userpoints_rules_amount($account_uid, $settings) {
-  $balance = userpoints_get_current_points($account_uid, $settings['type']);
+function userpoints_rules_amount($account, $settings) {
+  $balance = userpoints_get_current_points($account->uid, $settings['type']);
 return ($balance >= $settings['amount']);
 }
