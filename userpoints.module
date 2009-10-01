@@ -494,17 +494,35 @@ function userpoints_get_current_points($uid = NULL, $tid = NULL) {
  * @return number of max points in that user's account
  */
 function userpoints_get_max_points($uid = NULL, $tid = NULL) {
+  static $max = array();
+
+  // Check if uid is passed as a parameter
   if (!$uid) { 
+    // It is not, so we use the currently logged in user's uid
     global $user;
     $uid = $user->uid;
   }
+
+  // Check if a term id is passed as a parameter
   if (!$tid) {
+    // It is not, so get the default term id
     $tid = userpoints_get_default_tid();
   }
-  elseif ($tid == 'all') {
-    return (int)db_result(db_query('SELECT SUM(max_points) FROM {userpoints} WHERE uid = %d',  $uid));
+
+  // Check if we have already cached the maximum for the user/term combination on previous calls
+  if (!isset($max[$uid][$tid])) {
+    // We did not cache it
+    if ($tid == 'all') {
+      // There is no term id, so we use "all"
+      $max[$uid][$tid] = db_result(db_query('SELECT SUM(max_points) FROM {userpoints} WHERE uid = %d',  $uid));
+    }
+    else {
+      // A term ID is specified, so fetch its maximum points
+      $max[$uid][$tid] = db_result(db_query('SELECT max_points FROM {userpoints} WHERE uid = %d AND tid = %d', $uid, $tid));
+    }
   }
-  return (int)db_result(db_query('SELECT max_points FROM {userpoints} WHERE uid = %d AND tid = %d', $uid, $tid));
+  // Return
+  return $max[$uid][$tid];
 }
 
 /**
