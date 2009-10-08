@@ -10,36 +10,36 @@ function userpoints_schema() {
     'description' => 'Holds the user points',
     'fields' => array(
       'pid' => array(
-        'description' => t('User ID'),
+        'description' => 'User ID',
         'type' => 'serial',
         'not null' => TRUE,
       ),
       'uid' => array(
-        'description' => t('User ID'),
+        'description' => 'User ID',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'points' => array(
-        'description' => t('Current Points'),
+        'description' => 'Current Points',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'max_points' => array(
-        'description' => t('Out of a maximum points'),
+        'description' => 'Out of a maximum points',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'last_update' => array(
-        'description' => t('Timestamp'),
+        'description' => 'Timestamp',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'tid' => array(
-        'description' => t('Category ID'),
+        'description' => 'Category ID',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
@@ -53,97 +53,97 @@ function userpoints_schema() {
   );
   
   $schema['userpoints_txn'] = array(
-    'description' => t('Userpoints Transactions'),
+    'description' => 'Userpoints Transactions',
     'fields' => array(
       'txn_id' => array(
-        'description' => t('Transaction ID'),
+        'description' => 'Transaction ID',
         'type' => 'serial',
         'not null' => TRUE,
       ),
       'uid' => array(
-        'description' => t('User ID'),
+        'description' => 'User ID',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'approver_uid' => array(
-        'description' => t('Approving User ID'),
+        'description' => 'Approving User ID',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'points' => array(
-        'description' => t('Points'),
+        'description' => 'Points',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'time_stamp' => array(
-        'description' => t('Timestamp'),
+        'description' => 'Timestamp',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'changed' => array(
-        'description' => t('Effective timestamp of last action on this transaction, for tracking purposes.'),
+        'description' => 'Effective timestamp of last action on this transaction, for tracking purposes.',
         'type'        => 'int',
         'not null'    => TRUE,
         'default'     => 0,
       ),
       'status' => array(
-        'description' => t('Status'),
+        'description' => 'Status',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
         'default' => 0,
       ),
       'description' => array(
-        'description' => t('Description'),
+        'description' => 'Description',
         'type' => 'text',
       ),
       'reference' => array(
-        'description' => t('Reserved for module specific use'),
+        'description' => 'Reserved for module specific use',
         'type' => 'varchar',
         'length' => 128,
       ),
       'expirydate' => array(
-        'description' => t('Expirydate'),
+        'description' => 'Expirydate',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'expired' => array(
-        'description' => t('User ID'),
+        'description' => 'User ID',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
         'default' => 0,
       ),
       'parent_txn_id' => array(
-        'description' => t('Parent Transaction ID'),
+        'description' => 'Parent Transaction ID',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'tid' => array(
-        'description' => t('Category ID'),
+        'description' => 'Category ID',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'entity_id' => array(
-        'description' => t('ID of an entity in the Database'),
+        'description' => 'ID of an entity in the Database',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'entity_type' => array(
-        'description' => t('Type of entity'),
+        'description' => 'Type of entity',
         'type' => 'varchar',
         'length' => 32,
       ),
       'operation' => array(
-        'description' => t('Operation being carried out'),
+        'description' => 'Operation being carried out',
         'type' => 'varchar',
         'length' => 32,
       ),
@@ -262,7 +262,7 @@ function userpoints_update_6011() {
     'type'        => 'int',
     'not null'    => TRUE,
     'default'     => 0,
-    'description' => t("Efective timestamp of last action on this transaction, for tracking purposes."),
+    'description' => 'Effective timestamp of last action on this transaction, for tracking purposes.',
     )
   );
 //Optional: An index could help about tracking operations so it would be better to define here..
