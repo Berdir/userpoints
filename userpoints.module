@@ -1668,24 +1668,36 @@ function userpoints_list_my_userpoints() {
   $approved_total = 0;
 
   global $user;
-  //First which user are we displaying? 
-  $uid = db_escape_string(arg(1));
-  if (!$uid) {
+
+  // User which are displaying points for
+  $uid = (int)arg(1);
+  if ($uid) {
+    if ($uid != $user->uid) {
+      // If not the same as logged in user
+		  drupal_access_denied();
+      return;
+    }
+  }
+  else {
+    // Default to currently logged in user
     $uid = $user->uid;
   }
   $point_user = user_load(array('uid' => $uid));
-  /* //Removed as the newly introduced permission "view own userpoints" means that "view userpoints" allows users to 
-     //view the user transactions of other users (i.e. line 1632 changed dramatically with the new permission)
-  if (!$point_user || !_userpoints_user_exists($uid)) {
-		drupal_not_found();
-		return;
-  }
-  */
-  if(!user_access(USERPOINTS_PERM_VIEW) && !(user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $point_user->uid) ) {
+
+  // Check permissions
+  if(!user_access(USERPOINTS_PERM_VIEW)) {
+    // User has no access to view points
 		drupal_access_denied();
+    return;
+  }
+
+  if (!user_access(USERPOINTS_PERM_VIEW_OWN)) {
+    // User has no access to view own points
+		drupal_access_denied();
+    return;
   } 
 		
-  $title = t('!Points for ', userpoints_translation()) . $point_user->name;
+  $title = t('!Points for ', userpoints_translation()) . check_plain($point_user->name);
   drupal_set_title($title);
 
    //Grab all tids for this user
@@ -1727,8 +1739,7 @@ function userpoints_list_my_userpoints() {
     array('data' => t('Category'), 'field' => 'cat'),
     array('data' => t('Description'), 'field' => 'description'),
   );
-  $sql  = "SELECT p.points, p.time_stamp, p.operation, p.description, p.status, p.tid,
-                  t.name as cat , p.entity_id, p.entity_type 
+  $sql  = "SELECT p.points, p.time_stamp, p.operation, p.description, p.status, p.tid, t.name as cat , p.entity_id, p.entity_type 
            FROM {userpoints_txn} p 
            LEFT JOIN {term_data} t on p.tid = t.tid
            WHERE p.uid = %d";
