@@ -110,7 +110,7 @@ function userpoints_service_points($uid, $points, $tid = NULL, $event = 'userpoi
     'points'      => $points,
     'tid'         => $tid,
     'event'       => $event,
-    'description' => $desc,
+    'description' => $description,
     'display'     => FALSE,
     'moderate'    => FALSE,
   );
