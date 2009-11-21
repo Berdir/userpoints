@@ -42,7 +42,7 @@ function userpoints_rules_event_info() {
  * Rules action - grant points to a user.
  */
 function userpoints_action_grant_points($account, $settings) {
-  userpoints_userpointsapi(array('uid' => $account->uid, 'points' => $settings['points']));
+  userpoints_userpointsapi(array('uid' => $account->uid, 'points' => $settings['points'], 'description' => $settings['description'], 'operation' => $settings['operation']));
 }
 
 /**
@@ -54,6 +54,17 @@ function userpoints_action_grant_points_form($settings = array(), &$form) {
     '#title' => t('Number of points'),
     '#default_value' => isset($settings['points']) ? $settings['points'] : '',
     '#description' => t('The number of !points to award. You may enter a negative number as-well', userpoints_translation())
+  );
+$form['settings']['description'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Description'),
+    '#default_value' => isset($settings['description']) ? $settings['description'] : '',
+    '#description' => t('Points description')
+  );
+$form['settings']['operation'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Operation'),
+    '#default_value' => isset($settings['operation']) ? $settings['operation'] : ''
   );
 }
 
@@ -88,6 +99,7 @@ function userpoints_rules_amount_form($settings = array(), &$form) {
     '#default_value' => isset($settings['amount']) ? $settings['amount'] : '',
     '#description' => t('The amount to compare if userpoints are >=. Example:30, will trigger the condition if the user userpoints are >= than 30 points.')
   );
+  
   $form['settings']['type'] = array(
     '#type' => 'select',
     '#title' => t('Userpoints Categories to analyze'),
