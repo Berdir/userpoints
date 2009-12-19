@@ -607,13 +607,12 @@ function userpoints_userpointsapi($params) {
   }
   else {
     //We have a txn_id so we can look up some user information
-    $sql = "SELECT uid from {userpoints_txn} WHERE txn_id = %d";
-    $params['uid'] = db_result(db_query($sql, $params['txn_id']));
+    $params['uid'] = db_result(db_query('SELECT uid from {userpoints_txn} WHERE txn_id = %d', $params['txn_id']));
   } //if txn_id
 
   // Load the user object that will be awarded the points
-  $account = user_load(array('uid' => $params['uid']));
-  if ($account == false) {
+  $name = db_result(db_query('SELECT name FROM {users} WHERE uid = %d', $params['uid']));
+  if ($name == '') {
     return array(
       'status' => false,
       'reason' => 'invalid uid or user account could not be loaded',
@@ -643,7 +642,6 @@ function userpoints_userpointsapi($params) {
     $msg = t('earned');
   }
 
-
   $ret = _userpoints_transaction($params);
   if ($ret == false) {
     return array(
@@ -655,7 +653,7 @@ function userpoints_userpointsapi($params) {
   if ($params['status'] == 1) {
     $mesg = (t('User %uname %op %pointsvalue !points, pending administrator approval.',
       array_merge(userpoints_translation(), array(
-        '%uname'  => $account->name,
+        '%uname'  => $name,
         '%op'     => $msg,
         '%pointsvalue' => abs($params['points']),
         '%total'  => userpoints_get_current_points($params['uid'], $params['tid']),
@@ -663,10 +661,9 @@ function userpoints_userpointsapi($params) {
       ));
   } 
   else {
-    
     $mesg = (t('User %uname %op %pointsvalue !points Total now is %total !points.',
       array_merge(userpoints_translation(), array(
-        '%uname'  => $account->name,
+        '%uname'  => $name,
         '%op'     => $msg,
         '%pointsvalue' => abs($params['points']),
         '%total'  => userpoints_get_current_points($params['uid'], $params['tid'])
