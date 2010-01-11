@@ -1745,6 +1745,7 @@ function userpoints_list_my_userpoints() {
   $result = pager_query($sql, $pager_limit, 0, NULL, $uid);
   $stati = userpoints_txn_status();
   $num_rows = 0;
+  $rows = array();
   while ($row = db_fetch_object($result)) {
     $num_rows++;
     $status = $stati[$row->status];
@@ -1787,12 +1788,12 @@ function userpoints_list_my_userpoints() {
       }
     }
     $rows[] = array(
-        array('data' => $row->points, 'align' => 'center'),
-        array('data' => $status, 'align' => 'center'),
-        array('data' => format_date($row->time_stamp, 'small'), 'align' => 'center'),
-        array('data' => $operation),
-        array('data' => $row->cat),
-        array('data' => $description),
+      array('data' => $row->points, 'align' => 'center'),
+      array('data' => $status, 'align' => 'center'),
+      array('data' => format_date($row->time_stamp, 'small'), 'align' => 'center'),
+      array('data' => $operation),
+      array('data' => $row->cat),
+      array('data' => $description),
     );
   	if ($num_rows <= 0) {
     	$rows[] = array(
