@@ -954,9 +954,11 @@ function userpoints_admin_manage() {
     if (!$data->cat) {
       $data->cat = t('!Uncategorized', userpoints_translation());
     }
-    $operation = module_invoke_all('userpoints', 'entity_type', $data);
-
-    if (!$operation) {
+    $operations = module_invoke_all('userpoints', 'entity_type', $data);
+    if (is_array($operations) && isset($operations[0])) {
+      $operation = $operations[0];
+    }
+    else {
       switch ($data->entity_type) {
         case 'node' :
           $node = node_load($data->entity_id);
@@ -1758,9 +1760,11 @@ function userpoints_list_my_userpoints() {
     else {
       $description = t('None');
     }
-    $operation = module_invoke_all('userpoints', 'entity_type', $row);
-
-    if (!$operation) {
+    $operations = module_invoke_all('userpoints', 'entity_type', $row);
+    if (is_array($operations) && isset($operations[0])) {
+      $operation = $operations[0];
+    }
+    else {
       switch ($row->entity_type) {
         case 'node' :
           $node = node_load($row->entity_id);
