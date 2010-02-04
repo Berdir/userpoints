@@ -153,7 +153,7 @@ function userpoints_schema() {
     'indexes' => array(
       'operation' => array('operation'),
       'reference' => array('reference'),
-      'status' => array('status'),
+      'status_expired_expiry' => array('status', 'expired', 'expirydate'),
       //Optional as in update_6011
       'changed' => array('changed'),
     )
@@ -269,5 +269,15 @@ function userpoints_update_6011() {
   db_add_index($ret, 'userpoints_txn', 'changed', array('changed'));
 //Optional: update table information to mark each transaction as changed on creation only..
   $ret[] = update_sql("UPDATE {userpoints_txn} SET changed = time_stamp");
+  return $ret;
+}
+
+/**
+ * For userpoints_txn, need an index on expirydate and expired columns.
+ */
+function userpoints_update_6012() {
+  $ret = array();
+  db_drop_index($ret, 'userpoints_txn', 'status');
+  db_add_index($ret, 'userpoints_txn', 'status_expired_expiry', array('status', 'expired', 'expirydate'));
   return $ret;
 }
