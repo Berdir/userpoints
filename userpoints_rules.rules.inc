@@ -31,7 +31,7 @@ function userpoints_rules_action_info() {
           'user' => array('type' => 'user', 'label' => t('User'))
         ),
       'module' => 'Userpoints',
-      'eval input' => array('points'),
+      'eval input' => array('points', 'entity_id'),
     ),
   );
 }
@@ -56,7 +56,7 @@ function userpoints_rules_event_info() {
  * Rules action - grant points to a user.
  */
 function userpoints_action_grant_points($account, $settings) {
-  userpoints_userpointsapi(array('uid' => $account->uid, 'points' => $settings['points'], 'description' => $settings['description'], 'operation' => $settings['operation']));
+  userpoints_userpointsapi(array('uid' => $account->uid, 'points' => $settings['points'], 'tid' => $settings['tid'], 'entity_type' => $settings['entity_type'], 'entity_id' => $settings['entity_id'], 'description' => $settings['description'], 'operation' => $settings['operation']));
 }
 
 /**
@@ -69,17 +69,31 @@ function userpoints_action_grant_points_form($settings = array(), &$form) {
     '#default_value' => isset($settings['points']) ? $settings['points'] : '',
     '#description' => t('The number of !points to award. You may enter a negative number as-well', userpoints_translation())
   );
-$form['settings']['description'] = array(
+  $form['settings']['description'] = array(
     '#type' => 'textfield',
     '#title' => t('Description'),
     '#default_value' => isset($settings['description']) ? $settings['description'] : '',
     '#description' => t('Points description')
   );
-$form['settings']['operation'] = array(
+  $form['settings']['operation'] = array(
     '#type' => 'textfield',
     '#title' => t('Operation'),
     '#default_value' => isset($settings['operation']) ? $settings['operation'] : ''
   );
+  $form['settings']['entity_type'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Entity Type'),
+    '#default_value' => isset($settings['entity_type']) ? $settings['entity_type'] : '',
+    '#description' => t("Entity type. ex. 'node' or 'user'")
+  );
+  $form['settings']['entity_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Entity Id'),
+    '#default_value' => isset($settings['entity_id']) ? $settings['entity_id'] : '',
+    '#description' => t('ID of an entity in the Database. ex. $node->id or $user->uid')
+  );
+  $form['settings']['tid'] = taxonomy_form(userpoints_get_vid(), isset($settings['tid']) ? $settings['tid'] : '', 'The category ID');
+
 }
 
 
