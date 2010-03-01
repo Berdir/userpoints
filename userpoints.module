@@ -1671,9 +1671,9 @@ function userpoints_list_my_userpoints() {
   // User which are displaying points for
   $uid = (int)arg(1);
   if ($uid) {
-    if ($uid != $user->uid) {
+    if ($uid != $user->uid && !user_access(USERPOINTS_PERM_ADMIN)) {
       // If not the same as logged in user
-		  drupal_access_denied();
+      drupal_access_denied();
       return;
     }
   }
@@ -1684,17 +1684,11 @@ function userpoints_list_my_userpoints() {
   $point_user = user_load(array('uid' => $uid));
 
   // Check permissions
-  if(!user_access(USERPOINTS_PERM_VIEW)) {
+  if(!user_access(USERPOINTS_PERM_VIEW) && !user_access(USERPOINTS_PERM_VIEW_OWN)) {
     // User has no access to view points
-		drupal_access_denied();
+    drupal_access_denied();
     return;
   }
-
-  if (!user_access(USERPOINTS_PERM_VIEW_OWN)) {
-    // User has no access to view own points
-		drupal_access_denied();
-    return;
-  } 
 		
   $title = t('!Points for ', userpoints_translation()) . check_plain($point_user->name);
   drupal_set_title($title);
