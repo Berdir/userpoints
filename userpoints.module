@@ -749,7 +749,7 @@ function _userpoints_transaction(&$params) {
   //Always force changed timestamp to current time() for transaction tracking
   $params['changed'] = $time;
 
-  if (is_numeric($params['txn_id'])) {
+  if (!empty($params['txn_id']) && is_numeric($params['txn_id'])) {
     //A transaction ID was passed in so we'll update the transaction
     $result = db_query("SELECT txn_id, uid, approver_uid, points, 
       time_stamp, status, operation, description, reference, expirydate, expired, 
