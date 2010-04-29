@@ -1,5 +1,5 @@
 <?php
-//$Id$
+// $Id$
 
 // Copyright 2005-2007 Khalid Baheyeldin http://2bits.com
 
@@ -547,7 +547,7 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
  *     'status' => FALSE when no action is take, TRUE when points are credited or debited
  *     'reason' => (string) error message to indicate reason for failure
  */
-function userpoints_userpointsapi($params) {
+function userpoints_userpointsapi(&$params) {
   //Test for the existence of parameters and set defaults if necessary
   if (!isset($params['txn_id'])) {
     //If a txn_id is passed in we'll do an UPDATE thus the std checks don't apply
@@ -649,7 +649,6 @@ function userpoints_userpointsapi($params) {
       'reason' => 'transaction failed in _userpoints_transaction, this is an internal module error',
     );
   }
-  
   if ($params['status'] == 1) {
     $mesg = (t('User %uname %op %pointsvalue !points, pending administrator approval.',
       array_merge(userpoints_translation(), array(
@@ -802,28 +801,20 @@ function _userpoints_update_cache(&$params) {
   }
 
   // insert or update the userpoints caching table with the user's current points
+  $record_params = array(
+    'points' => $current_points,
+    'max_points' => $max_points,
+    'last_update' => time(),
+    'uid' => $params['uid'],
+    'tid' => $params['tid'],
+  );
+  $update = array();
+  
   if (_userpoints_user_exists($params['uid'], $params['tid'])) {
-    db_query("UPDATE {userpoints}
-              SET points = %d, max_points = %d, last_update = %d 
-              WHERE uid = %d AND tid = %d",
-              $current_points,
-              $max_points,
-              time(),
-              $params['uid'],
-              $params['tid']
-            );
+    $update = array('uid', 'tid');
   }
-  else {
-    $result = db_query("INSERT INTO {userpoints}
-     (uid, points, max_points, last_update, tid)
-      VALUES (%d, %d, %d, %d, %d )",
-      $params['uid'],
-      $current_points,
-      $max_points,
-      time(),
-      $params['tid']
-      );
-  }
+  
+  drupal_write_record('userpoints', $record_params, $update);
   unset($params);
 }
 
