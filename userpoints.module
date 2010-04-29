@@ -555,7 +555,6 @@ function userpoints_userpointsapi(&$params) {
       $points = $params;
       $params = array();
       $params['points'] = $points;
-      unset($points);
     }
     if (!is_array($params)) {
       //has to be an array to continue
@@ -672,6 +671,12 @@ function userpoints_userpointsapi(&$params) {
   if ($mesg && ($params['display'] || ($params['display'] === null && variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1))) {
     drupal_set_message($mesg);
   }
+  
+  // If we don't pass an array into the function, we should set it back to how it was before.
+  if (isset($points)) {
+    $params = $points;
+  }
+  
   // Call the _userpoints hook to allow modules to act after points are awarded
   module_invoke_all('userpoints', 'points after', $params);
   return array(
