@@ -48,9 +48,8 @@ class UserpointsTestCase extends DrupalWebTestCase {
 
     //Check the database to ensure the point were properly saved
     $sql = "SELECT points from {userpoints_txn} WHERE uid = %d AND points = %d";
-    $this->assertNotNull($points, t('Sanity check, Points is assigned something !points', array('!points' => $points)));
     $db_points = (int) db_result(db_query($sql, $user->uid, $points));
-    $this->assertTrue($db_points === $points, t('Successfully verified points in the txn table !dbpoints !points', array('!dbpoints' => $db_points, '!points' => $points)));
+    $this->assertTrue($db_points === $points, t('Successfully verified points in the txn table'));
 
     //Check that the transaction table and the summary table match
     $sql = "SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d";
