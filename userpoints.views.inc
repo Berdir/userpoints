@@ -86,6 +86,42 @@ function userpoints_views_data() {
     ),
   );
 
+  // Describe the max_points column of the userpoints table.
+  $data['userpoints']['max_points'] = array(
+    'title' => t('Max !points', userpoints_translation()),
+    'help' => t("A User's max !points.", userpoints_translation()), // The help that appears on the UI,
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+      'numeric' => TRUE,
+      'name field' => 'max_points', // display this field in the summary
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  // Describe the last_update column of the userpoints table.
+  $data['userpoints']['last_update'] = array(
+    'title' => t('Last update'),
+    'help' => t("The last update timestamp for a User's current !points.", userpoints_translation()),
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort_date',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date',
+    ),
+  );
+
   // Add relationship to user table.
   $data['userpoints']['uid'] = array(
     'title' => t('User'),
