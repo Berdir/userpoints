@@ -175,7 +175,7 @@ function userpoints_menu() {
  */
 function userpoints_access_my_points() {
   global $user;
-  if ($user->uid === 1 || user_access('USERPOINTS_PERM_ADMIN')) {
+  if ($user->uid === 1 || user_access(USERPOINTS_PERM_ADMIN)) {
     return TRUE;
   }
   return ( _userpoints_user_exists($user->uid) && 
