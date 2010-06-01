@@ -71,10 +71,10 @@ function userpoints_views_data() {
     'title' => t('Userpoints Category', userpoints_translation()),
     'help' => t('The categories (terms) of userpoints used', userpoints_translation()), // The help that appears on the UI,
     'field' => array(
-      'handler' => 'views_handler_filter_term_node_tid',
+      'handler' => 'views_handler_field_term_node_tid',
     ),
     'argument' => array(
-      'handler' => 'views_handler_filter_term_node_tid',
+      'handler' => 'views_handler_argument_term_node_tid',
       'numeric' => TRUE,
       'name field' => 'category', // display this field in the summary
     ),
@@ -191,10 +191,10 @@ function userpoints_views_data() {
     'title' => t('Userpoints Category', userpoints_translation()),
     'help' => t('The categories (terms) of userpoints used for this transaction', userpoints_translation()), // The help that appears on the UI,
     'field' => array(
-      'handler' => 'views_handler_filter_term_node_tid',
+      'handler' => 'views_handler_field_term_node_tid	',
     ),
     'argument' => array(
-      'handler' => 'views_handler_filter_term_node_tid',
+      'handler' => 'views_handler_argument_term_node_tid',
       'numeric' => TRUE,
       'name field' => 'category', // display this field in the summary
     ),
@@ -256,6 +256,12 @@ function userpoints_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_numeric',
     ),
+	  'filter' => array(
+		    'handler' => 'views_handler_filter_numeric',
+	  ),
+		'sort' => array(
+				'handler' => 'views_handler_sort',
+			),
   );
 
   $data['userpoints_txn']['description'] = array(
@@ -272,6 +278,12 @@ function userpoints_views_data() {
     'field' => array(
       'handler' => 'views_handler_field',
     ),
+	  'filter' => array(
+		    'handler' => 'views_handler_filter_string',
+	  ),
+		'sort' => array(
+			'handler' => 'views_handler_sort',
+			),
   );
 
   $data['userpoints_txn']['expirydate'] = array(
@@ -294,6 +306,12 @@ function userpoints_views_data() {
     'field' => array(
       'handler' => 'views_handler_field_numeric',
     ),
+	  'filter' => array(
+		    'handler' => 'views_handler_filter_numeric',
+	  ),
+		'sort' => array(
+				'handler' => 'views_handler_sort',
+			),
   );
 
   $data['userpoints_txn']['entity_id'] = array(
@@ -320,6 +338,12 @@ function userpoints_views_data() {
     'field' => array(
       'handler' => 'views_handler_field',
     ),
+	  'filter' => array(
+		    'handler' => 'views_handler_filter_string',
+	  ),
+		'sort' => array(
+			'handler' => 'views_handler_sort',
+			),
   );
 
   $data['userpoints_txn']['operation'] = array(
@@ -328,6 +352,12 @@ function userpoints_views_data() {
     'field' => array(
       'handler' => 'views_handler_field',
     ),
+	  'filter' => array(
+		    'handler' => 'views_handler_filter_string',
+	  ),
+		'sort' => array(
+			'handler' => 'views_handler_sort',
+			),
   );
 
 
