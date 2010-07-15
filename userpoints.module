@@ -1523,8 +1523,8 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
     case 'view':
       if ($delta == -1 && (user_access(USERPOINTS_PERM_VIEW) || user_access(USERPOINTS_PERM_VIEW_OWN))) {
           $title = t('@user\'s !points', array_merge(array('@user' => $user->name), userpoints_translation()));;
-          if ($user->uid) {
-            $points = userpoints_get_current_points($account->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
+          if (isset($user->uid)) {
+            $points = userpoints_get_current_points($user->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
             $show_points = format_plural($points, '!point', '!points', userpoints_translation());
             $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
           }
