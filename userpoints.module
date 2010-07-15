@@ -1522,48 +1522,47 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
 
     case 'view':
       if ($delta == -1 && (user_access(USERPOINTS_PERM_VIEW) || user_access(USERPOINTS_PERM_VIEW_OWN))) {
-          $title = t('@user\'s !points', array_merge(array('@user' => $user->name), userpoints_translation()));;
-          if (isset($user->uid)) {
-            $points = userpoints_get_current_points($user->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
-            $show_points = format_plural($points, '!point', '!points', userpoints_translation());
-            $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
-          }
-          else {
-            $content = t('!Points are visible to logged in users only', userpoints_translation());
-          }
+        $title = t('@user\'s !points', array_merge(array('@user' => $user->name), userpoints_translation()));;
+        if ($user->uid) {
+          $points = userpoints_get_current_points($user->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
+          $show_points = format_plural($points, '!point', '!points', userpoints_translation());
+          $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
         }
+        else {
+          $content = t('!Points are visible to logged in users only', userpoints_translation());
+        }
+      }
       else if (user_access(USERPOINTS_PERM_VIEW)) {
-          //$delta is our tid for pulling the points
-          //if 0 we pull 0 or NULL
-          $title = t('Highest Users');
-          $num = variable_get('userpoints_block_up_records_'. $delta, 5);
-          $sql = 'SELECT p.uid, u.name, p.points
-                  FROM {userpoints} p
-                  INNER JOIN {users} u USING (uid)';
-          if ( $delta == 0 ) {
-            $sql .= ' WHERE p.tid = 0 OR p.tid IS NULL ORDER BY p.points DESC';
-            $result = db_query_range($sql, 0, $num);
-          } 
-          else {
-            $sql .= ' WHERE p.tid = %d ORDER BY p.points DESC';
-            $result = db_query_range($sql, $delta, 0, $num);
-          }
+        //$delta is our tid for pulling the points
+        //if 0 we pull 0 or NULL
+        $title = t('Highest Users');
+        $num = variable_get('userpoints_block_up_records_'. $delta, 5);
+        $sql = 'SELECT p.uid, u.name, p.points FROM {userpoints} p INNER JOIN {users} u USING (uid)';
+        if ($delta == 0) {
+          $sql .= ' WHERE p.tid = 0 OR p.tid IS NULL ORDER BY p.points DESC';
+          $result = db_query_range($sql, 0, $num);
+        } 
+        else {
+          $sql .= ' WHERE p.tid = %d ORDER BY p.points DESC';
+          $result = db_query_range($sql, $delta, 0, $num);
+        }
 
-          while ($data = db_fetch_object($result)) {
-            $rows[] =
-              array(
-                array('data' => theme('username', $data)),
-                array('data' => $data->points, 'align' => 'right'));
-            }
-          $header = array(t('User'), t('!Points', userpoints_translation()));
-          $content = theme('table', $header, $rows);
-          $content .= '<div class="more-link">'. l(t('more'), 'userpoints/'. $delta, array('attributes' => array('title' => t('All users by !points', userpoints_translation())))) .'</div>';
-        } //if $delta
+        while ($data = db_fetch_object($result)) {
+          $rows[] = array(
+            array('data' => theme('username', $data)),
+            array('data' => $data->points, 'align' => 'right'),
+          );
+        }
+        $header = array(t('User'), t('!Points', userpoints_translation()));
+        $content = theme('table', $header, $rows);
+        $content .= '<div class="more-link">'. l(t('more'), 'userpoints/'. $delta, array('attributes' => array('title' => t('All users by !points', userpoints_translation())))) .'</div>';
+      } //if $delta
 
-        $block['subject'] = $title;
-        $block['content'] = $content;
+      $block['subject'] = $title;
+      $block['content'] = $content;
 
-        return $block;
+      return $block;
+
     case 'configure':
       $form['up_records'] = array(
         '#type' => 'select',
