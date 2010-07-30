@@ -1,26 +1,20 @@
 <?php
-//$Id$
 
+// $Id$
 // Copyright 2005-2007 Khalid Baheyeldin http://2bits.com
+define('USERPOINTS_TRANS_UCPOINTS', 'userpoints_trans_ucpoints');
+define('USERPOINTS_TRANS_LCPOINTS', 'userpoints_trans_lcpoints');
+define('USERPOINTS_TRANS_UCPOINT', 'userpoints_trans_ucpoint');
+define('USERPOINTS_TRANS_LCPOINT', 'userpoints_trans_lcpoint');
+define('USERPOINTS_TRANS_UNCAT', 'userpoints_trans_uncat');
 
-define('USERPOINTS_PERM_VIEW',           'view userpoints');
-//The permission(PERM_USE) was removed from use as per #158490 it'll remain 
-//out until code exists to use the permission (jredding 12/26/2007)
-define('USERPOINTS_PERM_USE',            'use userpoints');
-define('USERPOINTS_PERM_ADMIN',          'admin userpoints');
+define('USERPOINTS_STATUS', 'userpoints_status');
 
-define('USERPOINTS_TRANS_UCPOINTS',      'userpoints_trans_ucpoints');
-define('USERPOINTS_TRANS_LCPOINTS',      'userpoints_trans_lcpoints');
-define('USERPOINTS_TRANS_LCPOINT',       'userpoints_trans_lcpoint');
-define('USERPOINTS_TRANS_UNCAT',         'userpoints_trans_uncat');
+define('USERPOINTS_POINTS_MODERATION', 'userpoints_points_moderation');
 
-define('USERPOINTS_STATUS',              'userpoints_status');
-
-define('USERPOINTS_POINTS_MODERATION',    'userpoints_points_moderation');
-
-define('USERPOINTS_TXN_STATUS_APPROVED',  0);
-define('USERPOINTS_TXN_STATUS_PENDING',   1);
-define('USERPOINTS_TXN_STATUS_DECLINED',  2);
+define('USERPOINTS_TXN_STATUS_APPROVED', 0);
+define('USERPOINTS_TXN_STATUS_PENDING', 1);
+define('USERPOINTS_TXN_STATUS_DECLINED', 2);
 
 
 define('USERPOINTS_EXPIRY_DESCRIPTION', 'userpoints_expiry_description');
@@ -35,130 +29,148 @@ define('USERPOINTS_REPORT_DISPLAYZERO', 'userpoints_report_displayzero');
 define('USERPOINTS_CATEGORY_NAME', 'Userpoints');
 define('USERPOINTS_CATEGORY_DEFAULT_VID', 'userpoints_category_default_vid');
 define('USERPOINTS_CATEGORY_DEFAULT_TID', 'userpoints_category_default_tid');
+define('USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID', 'userpoints_category_profile_display_tid');
+define('USERPOINTS_TRANSACTION_TIMESTAMP', 'userpoints_transaction_timestamp');
 
 /**
- * Purpose: Returns an array of common translation placeholders
+ * Returns an array of common translation placeholders.
  */
 function userpoints_translation() {
   static $trans;
-  
+
   if (!isset($trans)) {
     $trans = array(
-      '!Points' => variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points'),
-      '!points' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
-      '!point'  => variable_get(USERPOINTS_TRANS_LCPOINT, 'point'),
-      '!Uncategorized'  => variable_get(USERPOINTS_TRANS_UNCAT, 'Uncategorized'),
-      );
+        '!Points' => variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points'),
+        '!points' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
+        '!Point' => variable_get(USERPOINTS_TRANS_UCPOINT, 'Point'),
+        '!point' => variable_get(USERPOINTS_TRANS_LCPOINT, 'point'),
+        '!Uncategorized' => variable_get(USERPOINTS_TRANS_UNCAT, 'Uncategorized'),
+    );
   }
-  return $trans;  
+  return $trans;
 }
 
 /*
- * Purpose: Returns an array of possible transaction statuses
+ * Returns an array of possible transaction statuses.
  */
+
 function userpoints_txn_status() {
   return array(
       USERPOINTS_TXN_STATUS_APPROVED => t('Approved'),
-      USERPOINTS_TXN_STATUS_PENDING  => t('Pending'),
+      USERPOINTS_TXN_STATUS_PENDING => t('Pending'),
       USERPOINTS_TXN_STATUS_DECLINED => t('Declined'),
-      );
+  );
 }
 
 /**
- * Implementation of hook_help().
+ * Implements hook_help().
  */
-function userpoints_help($section) {
-  switch ($section) {
+function userpoints_help($path, $arg) {
+  switch ($path) {
     case 'admin/settings/userpoints':
-      $output = t('Configure userpoints moderation and branding translation', userpoints_translation());
-      break;
+      return t('Configure userpoints moderation and branding translation');
     case 'admin/help#userpoints':
-      $output = t('Users earn !points as they post nodes, comments, and vote on nodes', userpoints_translation());
+      return t('Users earn !points as they post nodes, comments, and vote on nodes', userpoints_translation());
   }
-  return $output;
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function userpoints_menu() {
   $items = array();
-  $items['admin/settings/userpoints'] = array(
-    'title' => '!Points settings',
-    'title arguments' => userpoints_translation(),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('userpoints_admin_settings'),
-    'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_NORMAL_ITEM
+  $items['admin/config/people/userpoints'] = array(
+      'title' => '!Points',
+      'title arguments' => userpoints_translation(),
+      'description' => strtr('Manage !points', userpoints_translation()),
+      'page callback' => 'userpoints_admin_points',
+      'access arguments' => array('administer userpoints'),
+      'file' => 'userpoints.admin.inc',
   );
-  $items['admin/user/userpoints'] = array(
-    'title' => '!Points',
-    'title arguments' => userpoints_translation(),
-    'description' => 'Manage !points',
-    'page callback' => 'userpoints_admin_points',
-    'access arguments' => array(USERPOINTS_PERM_ADMIN)
+  $items['admin/config/people/userpoints/list'] = array(
+      'title' => 'List',
+      'title arguments' => userpoints_translation(),
+      'description' => strtr('List users by !points', userpoints_translation()),
+      'access arguments' => array('view userpoints'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -2,
   );
-  $items['admin/user/userpoints/list'] = array(
-    'title' => 'List',
-    'title arguments' => userpoints_translation(),
-    'description' => 'List users by points',
-    'access arguments' => array(USERPOINTS_PERM_VIEW),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -2,
+  $items['admin/config/people/userpoints/moderate'] = array(
+      'title' => 'Moderation',
+      'title arguments' => userpoints_translation(),
+      'description' => strtr('Review !points in moderation', userpoints_translation()),
+      'page callback' => 'userpoints_admin_manage',
+      'access arguments' => array('administer userpoints'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+      'weight' => -1,
   );
-  $items['admin/user/userpoints/moderate'] = array(
-    'title' => 'Moderation',
-    'title arguments' => userpoints_translation(),
-    'description' => 'Review points in moderation',
-    'page callback' => 'userpoints_admin_points',
-    'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => -1,
+  $items['admin/config/people/userpoints/add'] = array(
+      'title' => 'Add',
+      'description' => 'Admin add/delete userpoints',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('userpoints_admin_txn', 4, 5),
+      'access arguments' => array('administer userpoints'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 0,
   );
-  $items['admin/user/userpoints/add'] = array(
-    'title' => 'Add',
-    'description' => 'Admin add/delete userpoints',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('userpoints_admin_txn'),
-    'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 0,
+  $items['admin/config/people/userpoints/edit'] = array(
+      'title' => 'Edit',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('userpoints_admin_txn', 4, 5),
+      'access arguments' => array('administer userpoints'),
+      'type' => MENU_CALLBACK
   );
-  $items['admin/user/userpoints/edit'] = array(
-    'title' => 'Edit',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('userpoints_admin_txn'),
-    'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_CALLBACK
+
+  $items['admin/config/people/userpoints/approve'] = array(
+      'title' => 'Approve Userpoints',
+      'page callback' => 'userpoints_admin_approve',
+      'page arguments' => array(4, 5),
+      'access arguments' => array('administer userpoints'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_CALLBACK
   );
-  
-  $items['admin/user/userpoints/approve'] = array(
-    'title' => 'Approve Userpoints',
-    'page callback' => 'userpoints_admin_approve',
-    'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_CALLBACK
+  $items['admin/config/people/userpoints/decline'] = array(
+      'title' => 'Approve !points',
+      'title arguments' => userpoints_translation(),
+      'page callback' => 'userpoints_admin_approve',
+      'page arguments' => array(4, 5),
+      'access arguments' => array('administer userpoints'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_CALLBACK
   );
-  $items['admin/user/userpoints/decline'] = array(
-    'title' => 'Approve Userpoints',
-    'page callback' => 'userpoints_admin_approve',
-    'access arguments' => array(USERPOINTS_PERM_ADMIN),
-    'type' => MENU_CALLBACK
+
+  $items['admin/config/people/userpoints/settings'] = array(
+      'title' => '!Points settings',
+      'description' => strtr('Settings for !points', userpoints_translation()),
+      'title arguments' => userpoints_translation(),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('userpoints_admin_settings'),
+      'access arguments' => array('administer userpoints'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 10,
   );
-  
+
   $items['userpoints'] = array(
-    'title' => 'Users by !points',
-    'title arguments' => userpoints_translation(),
-    'page callback' => 'userpoints_list_users',
-    'access' => array(USERPOINTS_PERM_VIEW),
-    'type' => MENU_NORMAL_ITEM,
+      'title' => 'Users by !points',
+      'title arguments' => userpoints_translation(),
+      'page callback' => 'userpoints_list_users',
+      'access arguments' => array('view userpoints'),
+      'file' => 'userpoints.pages.inc',
+      'type' => MENU_NORMAL_ITEM,
   );
-  
+
   $items['myuserpoints'] = array(
-    'title' => 'My !points',
-    'title arguments' => userpoints_translation(),
-    'page callback' => 'userpoints_my_userpoints',
-    'access callback' => 'userpoints_access_my_points',
-    'type' => MENU_NORMAL_ITEM
+      'title' => 'My !points',
+      'title arguments' => userpoints_translation(),
+      'page callback' => 'userpoints_list_my_userpoints',
+      'access callback' => 'userpoints_access_my_points',
+      'file' => 'userpoints.pages.inc',
+      'type' => MENU_NORMAL_ITEM,
+      'menu_name' => 'user-menu',
   );
   return $items;
 }
@@ -166,250 +178,103 @@ function userpoints_menu() {
 /**
  * Checks if user can access their points - used via hook_menu().
  *
- * @return true if user has permissions to view userpoints and if the user is logged in
+ * @return
+ *   TRUE if user has permissions to view userpoints and if the user is logged
+ *   in.
  */
 function userpoints_access_my_points() {
   global $user;
-  return (user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in());
+  if ($user->uid === 1 || user_access('administer userpoints')) {
+    return TRUE;
+  }
+  return _userpoints_user_exists($user->uid) && ((user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints'));
 }
 
 /**
- * Implementation of hook_perm().
+ * Implements hook_perm().
  */
-function userpoints_perm() {
-  return array(USERPOINTS_PERM_VIEW, USERPOINTS_PERM_ADMIN);
+function userpoints_permission() {
+  return array(
+    'view userpoints' => array(
+      'title' => t('View all UserPoints'),
+    ),
+    'view own userpoints' => array(
+      'title' => t('View own UserPoints'),
+    ),
+    'administer userpoints' => array(
+      'title' => t('Administer Userpoints')
+  ));
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements hook_theme().
  */
 function userpoints_theme() {
-  $themes = array();
-  $themes['userpoints_list_users'] = array(
-    'arguments' => array(
-      'header',
-      'rows',
-      'tid',
-      'pager_limit',
-    ),
+  return array(
+      'userpoints_list_users' => array(
+          'variables' => array(
+              'header' => NULL,
+              'rows' => NULL,
+              'tid' => NULL,
+              'pager_limit' => NULL,
+          ),
+          'file' => 'userpoints.theme.inc',
+      ),
+      'userpoints_list_users_header' => array(
+          'variables' => array(),
+          'file' => 'userpoints.theme.inc',
+      ),
+      'userpoints_list_users_row' => array(
+          'variables' => array(
+              'row' => NULL,
+          ),
+          'file' => 'userpoints.theme.inc',
+      ),
+      'userpoints_list_my_userpoints' => array(
+          'variables' => array(
+              'args' => NULL,
+              'header' => NULL,
+              'rows' => NULL,
+          ),
+          'file' => 'userpoints.theme.inc',
+      ),
   );
-  $themes['userpoints_list_users_header'] = array(
-  );
-  $themes['userpoints_list_users_row'] = array(
-    'arguments' => array(
-      'row'
-    ),
-  );
-  $themes['userpoints_my_userpoints'] = array(
-    'arguments' => array(
-      'args',
-      'header',
-      'rows',
-    ),
-  );
-  return $themes;
 }
 
 /**
- * menu callback for settings form.
+ * Implements hook_tokens().
  */
-function userpoints_admin_settings() {
-  $form = array();
-  $group = 'status';
-  $form[$group] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Moderation'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => -1,
-  );
-
-  $form[$group][USERPOINTS_POINTS_MODERATION] = array(
-    '#type'          => 'radios',
-    '#title'         => t('Transaction status'),
-    '#default_value' => variable_get(USERPOINTS_POINTS_MODERATION, 0),
-    '#options'       => array(t('Approved'), t('Moderated')),
-    '#description'   => t('Select whether all !points should be approved automatically, or moderated, and require admin approval', userpoints_translation()),
-  );
-
-  $group = 'renaming';
-  $form[$group] = array(
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#title' => t('Points branding'),
-  );
-  
-  $form[$group][USERPOINTS_TRANS_UCPOINTS] = array(
-  '#type' => 'textfield',
-  '#title' => t('Word to use in the interface for the upper case plural word !Points', userpoints_translation()),
-  '#default_value' => variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points'),
-  '#size' => 20,
-  '#maxlength' => 20,
-  );
-  
-  $form[$group][USERPOINTS_TRANS_LCPOINTS] = array(
-  '#type' => 'textfield',
-  '#title' => t('Word to use in the interface for the lower case plural word !points', userpoints_translation()),
-  '#default_value' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
-  '#size' => 20,
-  '#maxlength' => 20,
-  );
-  
-  $form[$group][USERPOINTS_TRANS_LCPOINT] = array(
-  '#type' => 'textfield',
-  '#title' => t('Word to use in the interface for the lower case singular word !point', userpoints_translation()),
-  '#default_value' => variable_get(USERPOINTS_TRANS_LCPOINT, 'point'),
-  '#size' => 20,
-  '#maxlength' => 20,
-  );
-  $form[$group][USERPOINTS_TRANS_UNCAT] = array(
-  '#type' => 'textfield',
-  '#title' => t('Word to use for the uncategorized category'),
-  '#default_value' => variable_get(USERPOINTS_TRANS_UNCAT, 'Uncategorized'),
-  '#size' => 20,
-  '#maxlength' => 20,
-  );
-  $group = "Points expiration";
-  $form[$group] = array(
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#title' => t('!Points expiration', userpoints_translation()),
-    '#description' => t('These settings affect new points only, they are not retroactive!
-                        Point expiration depends upon cron.
-                       '),
-  );
-
-  $form[$group][USERPOINTS_EXPIREAFTER_DATE] = array(
-    '#type' => 'select',
-    '#title' => t('Expire !points after', userpoints_translation()),
-    '#description' => t('Once points have been obtained by the user 
-                          they will expire according to this setting'),
-    '#options' => expiry_dates(),
-    '#default_value' => variable_get(USERPOINTS_EXPIREAFTER_DATE, NULL),
-  );
-
-  /**
-   * If the expiration date is earlier than today 
-   * new points will last forever. Although this may be desirable
-   * it could also be an oversight so we'll display a message
-   * to the administrator
-   *
-   */
-  $warning="";
-  if (userpoints_date_to_timestamp(variable_get(USERPOINTS_EXPIREON_DATE, array('day' => 1, 'month' => 1, 'year' => 1900))) < time()) {
-    $warning = '<br /><strong>'. t('This setting will not take affect, date must be in the future') .'</strong>';
+function userpoints_tokens($type, $tokens, array $data = array(), array $options = array()) {
+  if ($type == 'user' && isset($data['user']) && isset($tokens['userpoints'])) {
+    return array($tokens['userpoints'] => userpoints_get_current_points($data['user']->uid));
   }
-
-  $form[$group][USERPOINTS_EXPIREON_DATE] = array(
-    '#type' => 'date',
-    '#title' => t('Expire !points on this date', userpoints_translation()),
-    '#description' => t('Once points have been obtained by the user they will 
-                         last until this date. This setting overrides the 
-                         "Expire after setting" above'. $warning),
-    '#default_value' => variable_get(USERPOINTS_EXPIREON_DATE, array('day' => 1, 'month' => 1, 'year' => 1980)),
-  );
-  $form[$group][USERPOINTS_EXPIRY_DESCRIPTION] = array(
-    '#type' => 'textarea',
-    '#title' => t('Expiration entry description'),
-    '#description' => t('A negating expiration entry is made to expire 
-                         points leaving the original entry intact
-                         (e.g. original points + expiration points = 0).
-                         When the expiration entry is made this description will
-                         be placed on the entry. This is useful so the users will
-                         know what happened to their point balance. In crafting
-                         your message you can use the following variables. 
-                         <br /> !points = The name used in branding 
-                         above (also use !Points and !point)
-                         <br />!operation = Original operation that granted the points 
-                         <br/> !description = Original description for the point 
-                         <br /> !txn_id Original transaction ID 
-                         <br /> !date = Date of the original entry'),
-    '#default_value' => variable_get(USERPOINTS_EXPIRY_DESCRIPTION, ''),
-  );
-
-  $group = "misc";
-  $form[$group] = array(
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#title' => t('Messages'),
-    '#description' => t('Control the behavior of messages users see. '),
-  );
-
-  $form[$group][USERPOINTS_DISPLAY_MESSAGE] = array(
-    '#type'          => 'radios',
-    '#title'         => t('Display message'),
-    '#default_value' => variable_get(USERPOINTS_DISPLAY_MESSAGE, 1),
-    '#options'       => array(0 => t('No'), 1 => t('Yes')),
-    '#description'   => t('Determines if a message should be displayed whenever !points are awarded/substracted ', userpoints_translation()),
-  );
-  $group = "reports";
-  $form[$group] = array(
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#title' => t('Report Settings'),
-    '#description' => t(''),
-  );
-
-  $form[$group][USERPOINTS_REPORT_LIMIT] = array(
-    '#type'          => 'select',
-    '#title'         => t('Transactions per page'),
-    '#default_value' => variable_get(USERPOINTS_REPORT_LIMIT, 10),
-    '#options'       => array(10 => 10, 20 => 20, 30 => 30, 40 => 40, 50 => 50, 100 => 100),
-    '#description'   => t('Limits the number of transactions displayed per page'), 
-  );
-  $form[$group][USERPOINTS_REPORT_DISPLAYZERO] = array(
-    '#type'          => 'radios',
-    '#title'         => t('Display zero !point users?', userpoints_translation()),
-    '#default_value' => variable_get(USERPOINTS_REPORT_DISPLAYZERO, 1),
-    '#options'       => array(t('No'), t('Yes')),
-    '#description'   => t('If set to "No" users with zero !points will not be displayed in the reports ', userpoints_translation()),
-  );
-  $form[$group][USERPOINTS_REPORT_USERCOUNT] = array(
-    '#type'          => 'select',
-    '#title'         => t('Users per page'),
-    '#default_value' => variable_get(USERPOINTS_REPORT_USERCOUNT, 30),
-    '#options'       => array(10 => 10, 20 => 20, 30 => 30, 40 => 40, 50 => 50, 100 => 100),
-    '#description'   => t('When listing !points by user limit how many users are displayed on a single page', userpoints_translation()), 
-  );
-  
-
-  /* Categories will only appear if the taxonomy module is enabled as 
-   * the module is required for this functionality but not necessarily
-   * a requirement for the module. 
-   */
-  if (module_exists('taxonomy')) {
-    $group = 'category';
-    $form[$group] = array(
-      '#type' => 'fieldset',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#title' => t('!Points Categorization', userpoints_translation()),
-    );
-    $form[$group][USERPOINTS_CATEGORY_DEFAULT_TID] = array(
-      '#type' => 'select',
-      '#title' => t('Default Category'),
-      '#default_value' => variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL),
-      '#options' =>  userpoints_get_categories(),
-      '#description' => t('By default all points are assigned to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>', 
-        array('!url' => url('admin/content/taxonomy/'. variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '')))),
-    );
-  }
-
-  $form['setting'] = module_invoke_all('userpoints', 'setting');
-  return system_settings_form($form);
-}  
+}
 
 /**
- * @param uid: user id of the user to get or lose the points
+ * Implements hook_token_list().
+ */
+function userpoints_token_list($type = 'all') {
+  return array(
+      'tokens' => array(
+          'user' => array(
+              'name' => t('User points'),
+              'description' => t('The number of points a user has.'),
+          )
+      )
+  );
+}
+
+/**
+ * Get current points of a user.
  *
- * @return number of current points in that user's account
+ * @param $uid
+ *   User id of the user to get or lose the points.
+ *
+ * @return
+ *   Number of current points in that user's account.
  */
 function userpoints_get_current_points($uid = NULL, $tid = NULL) {
-  if (!$uid) { 
+  if (!$uid) {
     global $user;
     $uid = $user->uid;
   }
@@ -417,39 +282,64 @@ function userpoints_get_current_points($uid = NULL, $tid = NULL) {
     $tid = userpoints_get_default_tid();
   }
   elseif ($tid == 'all') {
-    return (int)db_result(db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = %d', $uid));
+    return (int) db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
   }
-  return (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d AND tid = %d', $uid, $tid));
+  return (int) db_query('SELECT points FROM {userpoints} WHERE uid = :uid AND tid = :tid', array(':uid' => $uid, ':tid' => $tid))->fetchField();
 }
 
 /**
- * @param uid: user id of the user to get or lose the points
+ * Gets the number of maximal points of that user.
  *
- * @return number of max points in that user's account
+ * @param $uid
+ *   User id of the user to get or lose the points.
+ *
+ * @return
+ *   Number of max points in that user's account.
  */
 function userpoints_get_max_points($uid = NULL, $tid = NULL) {
-  if (!$uid) { 
+  $max = drupal_static(__FUNCTION__, array());
+
+  // Check if uid is passed as a parameter.
+  if (!$uid) {
+    // It is not, so we use the currently logged in user's uid.
     global $user;
     $uid = $user->uid;
   }
+
+  // Check if a term id is passed as a parameter.
   if (!$tid) {
+    // It is not, so get the default term id.
     $tid = userpoints_get_default_tid();
   }
-  elseif ($tid == 'all') {
-    return (int)db_result(db_query('SELECT SUM(max_points) FROM {userpoints} WHERE uid = %d',  $uid));
+
+  // Check if we have already cached the maximum for the user/term combination on previous calls.
+  if (!isset($max[$uid][$tid])) {
+    // We did not cache it.
+    if ($tid == 'all') {
+      // There is no term id, so we use "all".
+      $max[$uid][$tid] = db_query('SELECT SUM(max_points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
+    }
+    else {
+      // A term ID is specified, so fetch its maximum points.
+      $max[$uid][$tid] = db_query('SELECT max_points FROM {userpoints} WHERE uid = :uid AND tid = :tid', array(':uid' => $uid, ':tid' => $tid))->fetchField();
+    }
   }
-  return (int)db_result(db_query('SELECT max_points FROM {userpoints} WHERE uid = %d AND tid = %d', $uid, $tid));
+  // Return the cached value.
+  return $max[$uid][$tid];
 }
 
 /**
- * @param $params(array) or (int)
+ * Save userpoint changes and call hooks.
+ *
+ * @param $params
  *    if (int) assumed to be points for current user
- *    Accepts an array of keyed variables and parameters  
+ *    Accepts an array of keyed variables and parameters
  *    'points' => # of points (int) (required)
- *    'moderate' => TRUE/FALSE 
- *    'uid' => $user->uid 
+ *    'moderate' => TRUE/FALSE
+ *    'uid' => $user->uid
+ *    'time_stamp' => unix time of the points assignement date
  *    'operation' => 'published' 'moderated' etc.
- *    'tid' => 'category ID' 
+ *    'tid' => 'category ID'
  *    'expirydate' => timestamp or 0, 0 = non-expiring; NULL = site default
  *    'description' => 'description'
  *    'reference' => reserved for module specific use
@@ -458,26 +348,23 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
  *    'entity_id' => ID of an entity in the Database. ex. $node->id or $user->uid
  *    'entity_type' => string of the entity type. ex. 'node' or 'user' NOT 'node-content-custom'
  *
- * @return array with status and reason. 
+ * @return
+ *   Array with status and reason.
  *     'status' => FALSE when no action is take, TRUE when points are credited or debited
  *     'reason' => (string) error message to indicate reason for failure
  */
 function userpoints_userpointsapi($params) {
-
-  //Test for the existence of parameters and set defaults if necessary
+  // Test for the existence of parameters and set defaults if necessary.
   if (!isset($params['txn_id'])) {
-    //If a txn_id is passed in we'll do an UPDATE thus the std check don't apply
-    if (is_numeric($params)) {
-      $points = $params;
-      $params = array();
-      $params['points'] = $points;
-      unset($points);
+    // If a txn_id is passed in we'll do an UPDATE thus the std checks don't apply.
+    if (is_int($params)) {
+      $params = array('points' => $params);
     }
     if (!is_array($params)) {
-      //has to be an array to continue
+      // Has to be an array to continue.
       return array(
-        'status' => false,
-        'reason' => 'Parameters did not properly form as an array, 
+          'status' => FALSE,
+          'reason' => 'Parameters did not properly form as an array,
                      this is an internal module error.
                     ',
       );
@@ -486,24 +373,21 @@ function userpoints_userpointsapi($params) {
       global $user;
       $params['uid'] = $user->uid;
     }
-    if (!isset($params['operation'])) {
-      $params['operation'] = NULL;
+
+    // Check if parameters are set.
+    $params_null_check = array('operation', 'description', 'reference', 'display', 'entity_id', 'entity_type');
+    foreach ($params_null_check as $param_null_check) {
+      if (!isset($params[$param_null_check])) {
+        $params[$param_null_check] = NULL;
+      }
     }
-    if (!isset($params['description'])) {
-      $params['description'] = NULL;
-    }
-    if (!isset($params['reference'])) {
-      $params['reference'] = NULL;
-    }
-    if (!isset($params['display'])) {
-      $params['display'] = NULL;
-    }
+
     if (!isset($params['moderate'])) {
-      //if not passed then site default is used
+      // If not passed then site default is used.
       $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, 0);
     }
     else {
-      if ($params['moderate'] == true) {
+      if ($params['moderate'] == TRUE) {
         $params['status'] = 1;
       }
       else {
@@ -511,887 +395,330 @@ function userpoints_userpointsapi($params) {
       }
     }
     if (!isset($params['tid']) || !is_numeric($params['tid'])) {
-      //if not passed then site default is used
-      $params['tid'] = variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL);
+      // If not passed then site default is used.
+      $params['tid'] = userpoints_get_default_tid();
     }
-    if (!isset($params['entity_id'])) { 
-      $params['entity_id'] = NULL; 
-    }
-    if (!isset($params['entity_type'])) { 
-      $params['entity_type'] = NULL; 
-    }
-    // anonymous users do not get points, and there have to be points to process
+
+    // Anonymous users do not get points, and there have to be points to process.
     if (($params['uid'] == 0 || $params['points'] == 0)) {
       return array(
-        'status' => false,
-        'reason' => 'uid or points = 0. Anonymous users do not get points
-                     and there must be points to process. 
-                    ',
+          'status' => FALSE,
+          'reason' => 'uid or points = 0. Anonymous users do not get points
+                     and there must be points to process.',
       );
     }
   }
   else {
-    //We have a txn_id so we can look up some user information
-    $sql = "SELECT uid from {userpoints_txn} WHERE txn_id = %d";
-    $params['uid'] = db_result(db_query($sql, $params['txn_id']));
-  } //if txn_id
+    // We have a txn_id so we can look up some user information.
+    $params['uid'] = db_query('SELECT uid from {userpoints_txn} WHERE txn_id = :txn_id', array(':txn_id' => $params['txn_id']))->fetchField();
+  } // If txn_id.
+  // Load the user object that will be awarded the points.
+  $name = db_query('SELECT name FROM {users} WHERE uid = :uid', array(':uid' => $params['uid']))->fetchField();
+  if (!$name) {
+    return array(
+        'status' => FALSE,
+        'reason' => 'invalid uid or user account could not be loaded',
+    );
+  }
 
-  // Load the user object that will be awarded the points
-  $account = user_load(array('uid' => $params['uid']));
-  
-  // Call the _userpoints hook, and stop if one of them returns FALSE
-  $rc = module_invoke_all('userpoints', 'points before', $params['points'], $account->uid, $params['event']);
+  // Call the _userpoints hook, and stop if one of them returns FALSE.
+  $rc = module_invoke_all('userpoints', 'points before', $params);
 
   foreach ($rc as $key => $value) {
     if ($value == FALSE) {
-      // Do not process the points
+      // Do not process the points.
       return array(
-        'status' => false,
-        'reason' => t('%key returned false from the hook_userpoints points before call', array('%key' => $key)),
+          'status' => FALSE,
+          'reason' => t('@key returned FALSE from the hook_userpoints points before call', array('@key' => $key)),
       );
     }
   }
-  if ($params['points'] < 0) {
-    $msg = t('lost');
+  $msg = '';
+  if (isset($params['points'])) {
+    if ($params['points'] < 0) {
+      $msg = t('lost');
+    }
+    elseif ($params['status'] == 2) {
+      // Points have been declined.
+      $msg = t('was declined');
+    }
+    else {
+      $msg = t('earned');
+    }
   }
-  elseif ($params['status'] == 2) {
-    //points have been declined 
-    $msg = t('was declined');
-  }
-  else {
-    $msg = t('earned');
-  }
-
 
   $ret = _userpoints_transaction($params);
-  if ($ret == false) {
+  if ($ret == FALSE) {
     return array(
-      'status' => false,
-      'reason' => 'transaction failed in _userpoints_transaction, this is an internal module error',
+        'status' => FALSE,
+        'reason' => 'transaction failed in _userpoints_transaction, this is an internal module error',
     );
   }
-  
-  if ($params['status'] == 1) {
-    $mesg = (t('User %uname %op %pointsvalue !points, pending administrator approval.',
-      array_merge(userpoints_translation(), array(
-        '%uname'  => $account->name,
-        '%op'     => $msg,
-        '%pointsvalue' => abs($params['points']),
-        '%total'  => userpoints_get_current_points($params['uid'], $params['tid'])
-        ))));
-  } 
-  else {
-    
-    $mesg = (t('User %uname %op %pointsvalue !points! Total now is %total points.',
-      array_merge(userpoints_translation(), array(
-        '%uname'  => $account->name,
-        '%op'     => $msg,
-        '%pointsvalue' => abs($params['points']),
-        '%total'  => userpoints_get_current_points($params['uid'], $params['tid'])
-        ))));
-  } //if $params['status']
 
-  if ($mesg && ($params['display'] || ($params['display'] === null && variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1))) {
-    drupal_set_message($mesg);
+  if (isset($params['display']) || variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1) {
+    if ($params['status'] == 1) {
+      $mesg = (t('User %uname %op %pointsvalue !points, pending administrator approval.',
+                      array_merge(userpoints_translation(), array(
+                          '%uname' => $name,
+                          '%op' => $msg,
+                          '%pointsvalue' => abs($params['points']),
+                          '%total' => userpoints_get_current_points($params['uid'], $params['tid']),
+                      ))
+              ));
+    }
+    else {
+      $mesg = (t('User %uname %op %pointsvalue !points Total now is %total !points.',
+                      array_merge(userpoints_translation(), array(
+                          '%uname' => $name,
+                          '%op' => $msg,
+                          '%pointsvalue' => abs($params['points']),
+                          '%total' => userpoints_get_current_points($params['uid'], $params['tid'])
+                      ))));
+    }
+
+    if ($mesg) {
+      drupal_set_message($mesg);
+    }
   }
-  // Call the _userpoints hook to allow modules to act after points are awarded
-  module_invoke_all('userpoints', 'points after', $params['points'], $account->uid, $params['operation']);
+  // Call the _userpoints hook to allow modules to act after points are awarded.
+  module_invoke_all('userpoints', 'points after', $params);
   return array(
-    'status' => true,
+      'status' => TRUE,
   );
 }
 
-/*
- * Adds the points to the txn table
- * PRIVATE FUNCTION use userpoints_userpointsapi! 
+/**
+ * Adds the points to the txn table.
  */
 function _userpoints_transaction(&$params) {
-  //Check, again, for a properly formed array
-  if (!is_array($params)) { 
-    return false; 
+  // Check, again, for a properly formed array.
+  if (!is_array($params)) {
+    return FALSE;
   }
   if (!isset($params['txn_id'])) {
-    //If a txn_id is preset we UPDATE the record instead of adding one
-    //the standard checks don't apply
-    if (!is_numeric($params['points'])) { 
-      return false; 
-    } 
+    // If a txn_id is preset we UPDATE the record instead of adding one
+    // the standard checks don't apply.
+    if (!is_numeric($params['points'])) {
+      return FALSE;
+    }
     if (!isset($params['uid'])) {
       global $user;
       $params['uid'] = $user->uid;
-      //there must be a UID, anonymous does not receive points
+      // There must be a UID, anonymous does not receive points.
       if (!$params['uid'] > 0) {
-        return false;
+        return FALSE;
       }
     }
     if (!isset($params['moderate'])) {
-      //if not passed then site default is used
+      // If not passed then site default is used.
       $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, 0);
     }
     else {
-      if ($params['moderate'] == true) {
+      if ($params['moderate'] == TRUE) {
         $params['status'] = 1;
       }
       else {
         $params['status'] = 0;
       }
     }
-    if (!isset($params['operation'])) { 
-      $params['operation'] = NULL; 
+    if (isset($params['expirydate']) && !is_numeric($params['expirydate'])) {
+      return FALSE;
     }
-    if (!isset($params['description'])) { 
-      $params['description'] = NULL; 
-    }
-    if (!isset($params['reference'])) { 
-      $params['reference'] = NULL; 
-    }
-    if (!isset($params['tid']) || !is_numeric($params['tid'])) {
-      $params['tid'] = variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL);
-    }
-    elseif ($params['tid'] == 0) {
-      //tid with 0 are uncategorized and are set to NULL
-      //this is a backwards compatibilty issue
-      $params['tid'] = NULL;
-    }
-    if (!isset($params['expirydate'])) { 
-      $params['expirydate'] = userpoints_get_default_expiry_date();
-    }
-    if (!isset($params['expired'])) { 
-      $params['expired'] = NULL; 
-    }
-    if (!isset($params['parent_txn_id'])) { 
-      $params['parent_txn_id'] = NULL; 
-    }
-    if (!isset($params['entity_id'])) { 
-      $params['entity_id'] = NULL; 
-    }
-    if (!isset($params['entity_type'])) { 
-      $params['entity_type'] = NULL; 
-    }
-  } // if txn_id
-  if (is_numeric($params['txn_id'])) {
-    //A transaction ID was passed in so we'll update the transaction
-    $result = db_query("SELECT txn_id, uid, approver_uid, points, 
-      time_stamp, status, operation, description, reference, expirydate, expired, 
-      parent_txn_id, tid, entity_id, entity_type
-      FROM {userpoints_txn}
-      WHERE txn_id = %d",
-      $params['txn_id']);
-    $txn = db_fetch_array($result);
-    foreach ($txn as $key => $value) {
-      if (isset($params[$key])) {
-        $arr[] = $key .' = \''. $params[$key] .'\'';
-      } 
-      else {
-        $params[$key] = $value;
+
+    // Check if parameters are set.
+    $params_null_check = array('operation', 'description', 'reference', 'expired', 'parent_txn_id', 'entity_id', 'entity_type');
+    foreach ($params_null_check as $param_null_check) {
+      if (!isset($params[$param_null_check])) {
+        $params[$param_null_check] = NULL;
       }
     }
 
-    db_query('UPDATE {userpoints_txn} SET '. implode(', ', $arr) .' 
-              WHERE txn_id = %d',
-              $params['txn_id']
-            );
-    _userpoints_update_cache($params);
+    if (!isset($params['tid']) || !is_numeric($params['tid'])) {
+      $params['tid'] = userpoints_get_default_tid();
+    }
+    elseif ($params['tid'] == 0) {
+      // Tid with 0 are uncategorized and are set to NULL
+      // this is a backwards compatibilty issue.
+      $params['tid'] = NULL;
+    }
+    if (!isset($params['expirydate'])) {
+      $params['expirydate'] = userpoints_get_default_expiry_date();
+    }
+  } // If txn_id.
+  // Control time_stamp functionality, by default with current timestamp.
+  $time = REQUEST_TIME;
+  // Overide system time if meeting criteria matches: Don't let future timestamps, Don't let bad formated timestamps.
+  if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || !is_numeric($params['time_stamp']) || $params['time_stamp'] > $time || $params['time_stamp'] < 0) {
+    $params['time_stamp'] = $time;
+  }
+  // Always force changed timestamp to current REQUEST_TIME for transaction tracking.
+  $params['changed'] = $time;
+
+  if (!empty($params['txn_id']) && is_numeric($params['txn_id'])) {
+    // A transaction ID was passed in so we'll update the transaction.
+    $txn = db_query("SELECT txn_id, uid, approver_uid, points,
+      time_stamp, status, operation, description, reference, expirydate, expired,
+      parent_txn_id, tid, entity_id, entity_type
+      FROM {userpoints_txn}
+      WHERE txn_id = :txn_id",
+                    array(':txn_id' => $params['txn_id']))->fetchAssoc();
+
+    // Don't superseed existing keys, just complete missing keys.
+    $params += $txn;
+    // Update existing transaction record for key txn_id.
+    $ret = drupal_write_record('userpoints_txn', $params, array('txn_id'));
+    // Only update if the record has been successfully updated.
+    if ($ret != FALSE) {
+      _userpoints_update_cache($params);
+    }
   }
   else {
-    $ret = db_query("INSERT INTO {userpoints_txn}
-      (uid, points, time_stamp, status, operation, description, 
-      reference, expirydate, expired, parent_txn_id, tid, entity_id, entity_type)
-      VALUES (%d, %d, %d, %d, '%s', '%s', '%s', %d, %d, %d, %d, %d, '%s')",
-      $params['uid'],
-      $params['points'],
-      time(),
-      $params['status'],
-      $params['operation'],
-      $params['description'],
-      $params['reference'],
-      $params['expirydate'],
-      $params['expired'], 
-      $params['parent_txn_id'],
-      $params['tid'],
-      $params['entity_id'],
-      $params['entity_type']
-    );
-    if ($params['status'] != true && $ret != false) {
+    // Create new transaction record.
+    $ret = drupal_write_record('userpoints_txn', $params);
+    // Don't cache entry if it's pending.
+    if ($params['status'] != TRUE && $ret != FALSE) {
       _userpoints_update_cache($params);
     }
   }
   return TRUE;
-} //function userpoints_transaction
+}
 
-/*
+/**
  * Update the caching table
  */
 function _userpoints_update_cache(&$params) {
-  if ( $params['status'] != 0 || $params['expired'] == 1) {
-      //Only update the cache for fully approved non-expired points 
-      return false;
+  if ($params['status'] != 0 || $params['expired'] == 1) {
+    // Only update the cache for fully approved non-expired points.
+    return FALSE;
   }
   if (!isset($params['tid'])) {
-    $params['tid'] = NULL;
+    $params['tid'] = 0;
   }
 
-  // Calculate the current points based upon the tid
-  $current_points = (int)$params['points'] + userpoints_get_current_points($params['uid'], $params['tid']);
-  //Grab the user's maximum points to preserve it
-  $max_points = db_result(db_query('SELECT max_points FROM {userpoints} WHERE uid = %d AND tid = %d',
-    $params['uid'], $params['tid']));
+  // Calculate the current points based upon the tid.
+  $current_points = (int) $params['points'] + userpoints_get_current_points($params['uid'], $params['tid']);
+  // Grab the user's maximum points to preserve it.
+  $max_points = (int) db_query('SELECT max_points FROM {userpoints} WHERE uid = :uid AND tid = :tid',
+                  array(':uid' => $params['uid'], ':tid' => (int) $params['tid']))->fetchField();
   if ($params['points'] > 0) {
-    //points are greater than zero, update their max_points
-    $max_points = (int)$params['points'] + (int)$max_points;
+    // Points are greater than zero, update their max_points.
+    $max_points = (int) $params['points'] + (int) $max_points;
   }
 
-  // insert or update the userpoints caching table with the user's current points
-  if (_userpoints_user_exists($params['uid'], $params['tid'])) {
-    db_query("UPDATE {userpoints}
-              SET points = %d, max_points = %d, last_update = %d 
-              WHERE uid = %d AND tid = %d",
-              $current_points,
-              $max_points,
-              time(),
-              $params['uid'],
-              $params['tid']
-            );
-  }
-  else {
-    $result = db_query("INSERT INTO {userpoints}
-     (uid, points, max_points, last_update, tid)
-      VALUES (%d, %d, %d, %d, %d )",
-      $params['uid'],
-      $current_points,
-      $max_points,
-      time(),
-      $params['tid']
-      );
-  }
+  // Insert or update the userpoints caching table with the user's current points.
+  db_merge('userpoints')
+          ->key(array(
+              'uid' => $params['uid'],
+              'tid' => (int) $params['tid'],
+          ))
+          ->fields(array(
+              'points' => (int) $current_points,
+              'max_points' => (int) $max_points,
+              'last_update' => REQUEST_TIME,
+          ))
+          ->execute();
   unset($params);
 }
 
-
-/* Purpose: Determines the correct default expiration date
- * Returns: timestamp
+/**
+ * Determines the correct default expiration date.
+ *
+ * @return
+ *   The default expiration date.
  */
 function userpoints_get_default_expiry_date() {
-  $expirydate = userpoints_date_to_timestamp(variable_get(USERPOINTS_EXPIREON_DATE, NULL));
-  if ($expirydate < time()) {
-    $expirydate = variable_get(USERPOINTS_EXPIREAFTER_DATE, NULL);
-    if ($expirydate) { 
-      $expirydate = time() + $expirydate; 
-    }
-  }
-  return $expirydate;
-} //userpoints_get_default_expiry_date
-
-/*
- * Purpose: Checks to ensure that a user exists corresponding to a category
- * @param $uid User ID to check for existence of points for the user
- * @param $tid taxonomy id of the category to limit to, if omitted 
- *   if the use has points in any category the return is true
- * Returns : true if user found, falase otherwise 
- */
-function _userpoints_user_exists($uid, $tid = NULL) {
-  if ( is_numeric($tid) ) {
-    return (int)db_result(
-      db_query('SELECT COUNT(uid) 
-      FROM {userpoints} 
-      WHERE uid = %d AND tid = %d ', 
-      $uid, $tid));
-  }
-  else {
-    return (int)db_result(
-      db_query('SELECT COUNT(uid) 
-      FROM {userpoints} 
-      WHERE uid = %d', 
-      $uid ));
-
-  }
-}
-
-function userpoints_user($op, &$edit, &$account, $category = '') {
-  switch ($op) {
-    case 'delete':
-      // The user is being deleted, delete all traces in userpoints and txn tables
-      db_query('DELETE FROM {userpoints} WHERE uid = %d', $account->uid);
-      db_query('DELETE FROM {userpoints_txn} WHERE uid = %d', $account->uid);
-      break;
-
-    case 'view':
-      // Get the points for the user
-      $points = userpoints_get_current_points($account->uid);
-      if (user_access(USERPOINTS_PERM_ADMIN)) {
-        $points = l($points, 'admin/user/userpoints/add/'. $account->uid, array('title' => t('Manage points')));
-      }
-      if (user_access(USERPOINTS_PERM_VIEW)) {
-        $disp_points[] = array(
-          'title' => t('User !points', userpoints_translation()),
-          'value' => $points,
-          );
-        return array(t('!Points', userpoints_translation()) => $disp_points);
-      }
-      break;
-  }
-}
-
-function userpoints_admin_manage() {
-  $tid = arg(4);
-  $cat_count = count(userpoints_get_categories());
-
-  $header = array(
-    array('data' => t('User'), 'field' => 'uid', 'sort' => 'desc'),
-    array('data' => t('Time stamp'), 'field' => 'time_stamp'),
-    array('data' => t('!Points', userpoints_translation()), 'field' => 'points'),
-    array('data' => t('Operation'), 'field' => 'operation'),
-    array('data' => t('Category'), 'field' => 'cat'),
-    array('data' => t('Operation')),
-  );
-
-  $sql = "SELECT p.txn_id, p.uid, p.time_stamp, p.points, p.operation, p.status,
-          p.entity_type, p.entity_id, t.name as cat
-          FROM {userpoints_txn} p 
-          LEFT JOIN {term_data} t ON p.tid = t.tid 
-          WHERE p.status = %d";
-
-  //Check for filtering
-  if (is_numeric($tid) && $tid == 0) { 
-    $sql .= " AND (p.tid IS NULL OR p.tid = '')";
-    $cat = t('!Uncategorized', userpoints_translation());
-  }
-  elseif (is_numeric($tid)) {
-    $sql .= " AND p.tid = %d";
-    $cat = db_result(db_query("SELECT name from {term_data} WHERE tid = %d", $tid));
-  }
-  else {
-    $cat = t('All');
-  }
-
-  //Set the title of the page
-  drupal_set_title(t($cat) ." ". t("!points", userpoints_translation()));
-
-  $sql .= tablesort_sql($header);
-  $pager_limit = variable_get(USERPOINTS_REPORT_USERCOUNT, 30);
-  $result = pager_query($sql, $pager_limit, 0, NULL, USERPOINTS_TXN_STATUS_PENDING, $tid);
-    while ($data = db_fetch_object($result)) {
-      $user = user_load(array('uid' => $data->uid));
-      if (!$data->cat) {
-        $data->cat = t('!Uncategorized', userpoints_translation());
-      }
-      $operation = module_invoke_all('userpoints', 'entity_type', $data);
-
-      if (!$operation) {
-        switch ($data->entity_type) {
-          case 'node' :
-            $node = node_load($data->entity_id);
-            if ($node) {
-              $operation = l($data->operation, 'node/'. $node->nid, array('title' => $node->title));
-            }
-            else {
-              $operation = $data->operation;
-            }
-            break;
-          case 'comment' :
-            if (module_exists('comment')) {
-              //We have to load the comment to get the nid for the comment
-              $comment = _comment_load($data->entity_id);
-              if ($comment) {
-                $operation = l($data->operation, 'node/'. $comment->nid, array('title' => $comment->subject), NULL, 'comment-'. $comment->cid);
-              }
-              else {
-                $operation = $data->operation;
-              }
-            }
-            break;
-          default:
-            $operation = $data->operation;
-        }
-      }
-      $rows[] = array(
-        array('data' => theme('username', $user)),
-        array('data' => format_date($data->time_stamp, 'custom', 'Y-m-d H:i')),
-        array('data' => $data->points, 'align' => 'right'),
-        array('data' => $operation),
-        array('data' => $data->cat),
-        array('data' => l('approve', "admin/user/userpoints/approve/$data->txn_id") .
-          ' '. l('decline', "admin/user/userpoints/decline/$data->txn_id") .
-          ' '. l('edit',    "admin/user/userpoints/edit/$data->txn_id")
-        ),
-      );
-    }
-  if (!$rows) {
-    //no points in moderation
-    $rows[] = array(array('data' => t('No !points awaiting moderation', userpoints_translation()), 
-                          'colspan' => 6, 'align' => 'center')
-                    ); //$rows[]
-  }
-
-  if ($cat_count > 1) {
-    $output = drupal_get_form('userpoints_filter_cat_select', 'admin/user/userpoints/moderate/', arg(4));
-    $output .= theme('table', $header, $rows);
-    $output .= theme('pager', NULL, $pager_limit, 0);
-  }
-  else {
-    $output = theme('table', $header, $rows);
-    $output .= theme('pager', NULL, $pager_limit, 0);
-  }
-  return $output;
-}
-
-/*
- * Purpose: Approves moderated points
- */
-function userpoints_admin_approve() {
-  $operation = arg(3);
-  $txn_id = (int)arg(4);
-  return drupal_get_form('userpoints_confirm_approve', $operation, $txn_id);
-}
-
-function userpoints_confirm_approve($operation, $txn_id) {
-  $form = array(
-    'operation' => array(
-      '#type' => 'value',
-      '#value' => $operation,
-    ),
-    'txn_id' => array(
-      '#type' => 'value',
-      '#value' => $txn_id,
-    ),
-  );
-
-  return confirm_form(
-    $form,
-    t('Are you sure you want to @op txn @txn_id', array('@op' => $operation, '@txn_id' => $txn_id)),
-    'admin/user/userpoints/moderate'
-    );  
-}
-       
-function userpoints_confirm_approve_submit($form, &$form_state) {
-  global $user;
-  
-  $form_values = $form_state['values'];
-
-  switch ($form_state['clicked_button']['#value']) {
-    case 'approve':
-      $status = USERPOINTS_TXN_STATUS_APPROVED;
-      break;
-    case 'decline':
-      $status = USERPOINTS_TXN_STATUS_DECLINED;
-      break;
-    default :
-      return false; 
-  }
-
-  $params = array(
-    'txn_id'       => $form_values['txn_id'],
-    'approver_uid' => $user->uid,
-    'status'       => $status,
-  );
-
-  userpoints_userpointsapi($params);
-
-  $form_state['redirect'] = 'admin/user/userpoints/moderate';
-}
-
-function userpoints_admin_txn($form_state) {
-  global $user;
-
-  $mode = arg(3);
-  
-  $timestamp = format_date(time(), 'custom', 'Y-m-d H:i O');
-
-  if ($mode == 'edit' && arg(4)) {
-    $txn_id = (int)arg(4);
-    $result = db_query('SELECT * FROM {userpoints_txn} WHERE txn_id = %d', $txn_id);
-    $txn = db_fetch_object($result);
-    $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i O');
-    $txn_user = user_load(array('uid' => $txn->uid));
-  }
-  elseif ($mode == 'add' && arg(4)) {
-    $uid = (int)arg(4);
-    $txn_user = user_load(array('uid' => $uid));
-  }
-
-  $form['txn_user'] = array(
-    '#type'          => 'textfield',
-    '#title'         => t('User Name'),
-    '#size'          => 30,
-    '#maxlength'     => 60,
-    '#default_value' => $txn_user->name,
-    '#autocomplete_path' => 'user/autocomplete',
-    '#description'   => t('User Name for the user you want the points to affect'),
-    );
-
-  $form['points'] = array(
-    '#type'          => 'textfield',
-    '#title'         => t('Points'),
-    '#size'          => 10,
-    '#maxlength'     => 10,
-    '#default_value' => $txn->points,
-    '#description'   => t('Number of points to add/subtract from the user. For example, 25 (to add points) or -25 (to subtract points).'),
-    );
-
-  $form['time_stamp'] = array(
-    '#type'          => 'textfield',
-    '#title'         => t('Date/Time'),
-    '#default_value' => $timestamp,
-    '#size'          => 30,
-    '#maxlength'     => 30,
-    '#description'   => t('Date and time of this transaction, in the form YYYY-MM-DD HH:MM +ZZZZ'),
-    );  
-
-  if ($txn->txn_id) {
-    if ($txn->expirydate > 0) {
-      $expirydate = format_date($txn->expirydate, 'custom', 'Y-m-d H:i O');
-    }
-  }
-  else {
-    //If we're not editing we use site defaults
-    $expirydate = userpoints_get_default_expiry_date();
+  $expirydate = userpoints_date_to_timestamp(variable_get(USERPOINTS_EXPIREON_DATE, 0));
+  if ($expirydate < REQUEST_TIME) {
+    $expirydate = variable_get(USERPOINTS_EXPIREAFTER_DATE, 0);
     if ($expirydate) {
-      $expirydate = format_date($expirydate, 'custom', 'Y-m-d H:i O');
+      $expirydate = REQUEST_TIME + $expirydate;
     }
-  }  
-  $form['expirydate'] = array(
-    '#type'          => 'textfield',
-    '#title'         => t('Expiration date'),
-    '#default_value' => $expirydate,
-    '#size'          => 30,
-    '#maxlength'     => 30,
-    '#description'   => t('Date and time to expire these points, in the form YYYY-MM-DD HH:MM +ZZZZ') .
-                        '<br/>'. t('Leave blank for non-expiring points'),
-  );
-  if (module_exists('taxonomy')) {
-    $form['tid'] = array(
-      '#type' => 'select',
-      '#title' => t('Category'),
-      '#default_value' => variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, 0),
-      '#options' =>  userpoints_get_categories(),
-      '#description' => t('Category to apply these points to'),
-    );
   }
-
-  $form['reference'] = array(
-    '#type'          => 'textfield',
-    '#title'         => t('Reference'),
-    '#default_value' => $txn->reference,
-    '#size'          => 30,
-    '#maxlength'     => 128,
-    '#description'   => t('Enter optional reference for this transaction. This field will be indexed and searchable.'),
-    ); 
-
-  $form['description'] = array(
-    '#type'          => 'textarea',
-    '#title'         => t('Description'),
-    '#default_value' => $txn->description,
-    '#width'         => 70,
-    '#lines'         => 5,
-    '#description'   => t('Enter an optional description for this transaction, such as the reason it is created.'),
-    );
-
-
-  switch ($mode) {
-    case 'add':
-      $form['approver_uid'] = array(
-        '#type'  => 'hidden',
-        '#value' => $user->uid,
-        );
-
-      $form['operation'] = array(
-        '#type'  => 'hidden',
-        '#value' => 'admin',
-        );
-
-      $form['status'] = array(
-        '#type'  => 'hidden',
-        '#value' => USERPOINTS_TXN_STATUS_PENDING,
-        );
-
-      $form['mode'] = array(
-        '#type'  => 'hidden',
-        '#value' => $mode,
-        );
-      break;
-
-    case 'edit':
-     
-      $form['txn_user']['#disabled'] = true;
-      unset($form['txn_user']['#autocomplete_path']);
-
-      $form['txn_uid'] = array(
-        '#type'  => 'value',
-        '#value' => $txn->uid,
-        );
-      $form['txn_id'] = array(
-        '#type'  => 'value',
-        '#value' => $txn_id,
-        );
-      $form['approver_uid'] = array(
-        '#type'  => 'textfield',
-        '#description' => t('Approver ID'),
-        '#default_value' => $txn->approver_uid,
-        '#size'          => 10,
-        '#maxlength'     => 7,
-        '#description'   => t('The user ID of the person who approved this transaction. 0 means not yet approved.'),
-        );
-
-      $form['operation'] = array(
-        '#type'  => 'textfield',
-        '#description' => t('Operation'),
-        '#default_value' => $txn->operation,
-        '#size'          => 20,
-        '#maxlength'     => 20,
-        '#description'   => t('The operation type for this transaction. Normally, it is "admin".'),
-        );
-
-      $form['status'] = array(
-        '#title' => t('Approval status'),
-        '#type' => 'radios', 
-        '#options' => userpoints_txn_status(), 
-        '#description' => t('Approval status of the transaction.'),
-        '#default_value' => $txn->status,
-        );
-      break;
-  }
-
-  $form['mode'] = array(
-      '#type'  => 'hidden',
-      '#default_value' => $mode
-      );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save'),
-    );
-
-  return $form;
-}
-
-function userpoints_admin_txn_submit($form, &$form_state) {
-  if ($form['form_id']['#value'] != 'userpoints_admin_txn') {
-    return;
-  }
-
-  $form_values = $form_state['values'];
-
-  $txn_user = user_load(array('name' => $form_values['txn_user']));
-  switch ($form_values['mode']) {
-    case 'add':
-      $params = array(
-                  'points' => $form_values['points'],
-                  'uid' => $txn_user->uid,
-                  'operation' => 'admin',
-                  'description' => $form_values['description'],
-                  'reference' => $form_values['reference'],
-                  'tid' => $form_values['tid'],
-                );
-      if ($form_values['expirydate']) {
-        //Check for the existence of an expirydate 
-        $params['expirydate'] = strtotime($form_values['expirydate']);
-      }
-      userpoints_userpointsapi($params);
-      break;
-      
-    case 'edit':
-      if ($form_values['expirydate']) {
-        $expirydate = strtotime($$form_values['expirydate']);
-      }
-      $params = array(
-        'uid' => $form_values['txn_uid'],
-        'approver_id' => $form_values['approver_uid'],
-        'points' => $form_values['points'],
-        'time_stamp' => strtotime($form_values['time_stamp']),
-        'operation' => $form_values['operation'],
-        'description' => $form_values['description'],
-        'reference' => $form_values['reference'],
-        'status' => $form_values['status'],
-        'expirydate' => $expirydate,
-        'txn_id' => $form_values['txn_id']
-      );
-      userpoints_userpointsapi($params);
-  }
-  
-  $form_state['redirect'] = 'admin/user/userpoints';
+  return (int) $expirydate;
 }
 
 /*
- * Provides an administrative Interface for point listing, moderation and adding
+ * Checks to ensure that a user exists corresponding to a category.
+ *
+ * @param $uid
+ *   User ID to check for existence of points for the user.
+ * @param $tid
+ *   taxonomy id of the category to limit to, if omitted
+ *   if the use has points in any category the return is TRUE.
+ * @return
+ *  TRUE if user found, FALSE otherwise.
  */
-function userpoints_admin_points() {
-  $tid = arg(3);
-  $cat_count = count(userpoints_get_categories());
 
-  $sql = "SELECT p.uid, u.name, p.points, p.tid, t.name as cat 
-          FROM {userpoints} p INNER JOIN {users} u USING (uid) 
-          LEFT JOIN {term_data} t ON p.tid = t.tid
-          ";
-
-  //Check for filtering
-  if ( $tid == 0) {
-    $sql .= "WHERE p.tid = 0";
-    $cat = t('!Uncategorized', userpoints_translation()); 
-  }
-  elseif (is_numeric($tid)) {
-    $sql .= "WHERE p.tid = %d";
-    $cat = db_result(db_query("SELECT name from {term_data} WHERE tid = %d", $tid));
-  }
-  else {
-    $cat = t('All');
-  }
-  drupal_set_title(t($cat) ." ". t("!points", userpoints_translation()));
-
-  $sql_cnt = "SELECT COUNT(DISTINCT(uid)) 
-              FROM {userpoints} 
-              WHERE tid = %d
-              ";
-
-  if (variable_get(USERPOINTS_REPORT_DISPLAYZERO, 1) == 0 ) {
-    //The user would NOT like to see users with zero points
-    $sql .= " AND p.points <> 0";
-    $sql_cnt .= " AND points <> 0";
-  }
-  $sql .= " GROUP BY p.uid, u.name, p.points, p.tid, t.name";
-
-  $header = array(
-    array('data' => t('User'), 'field' => 'u.name'),
-    array('data' => t('Category'), 'field' => 't.name'),
-    array('data' => t('!Points', userpoints_translation()), 'field' => 'p.points', 'sort' => 'desc'),
-  );
-  $sql .= tablesort_sql($header);
-  $pager_limit = variable_get(USERPOINTS_REPORT_USERCOUNT, 30);
-  $result = pager_query($sql, $pager_limit, 0, $sql_cnt, $tid);
-  while ($data = db_fetch_object($result)) {
-    if (!$data->cat) {
-      $data->cat = t('!Uncategorized', userpoints_translation());
-    }
-    $rows[] = array(
-      array('data' => theme('username', $data) ."&nbsp;&nbsp;". l("(details)", "myuserpoints/$data->uid")),
-      array('data' => $data->cat, 'align' => 'right'),
-      array('data' => $data->points, 'align' => 'right'),
-    );
-  }
-
-  //If there is only one category there is no sense in display the category filter dropdown
-  if ($cat_count > 1) {
-    $output = drupal_get_form('userpoints_filter_cat_select', 'admin/user/userpoints/', arg(3));
-    $output .= theme('table', $header, $rows);
-    $output .= theme('pager', NULL, $pager_limit, 0);
-  }
-  else {
-    $output = theme('table', $header, $rows);
-    $output .= theme('pager', NULL, $pager_limit, 0);
-  }
-
-
-  return $output;
-}
-
-/*
- * Purpose: List the users and their point totals by all or by category
- * Returns: HTML from the theme function
- */
-function userpoints_list_users() {
-  $tid = arg(1);
-
-  $sql = "SELECT p.uid, u.name, p.points, p.tid, t.name as cat 
-          FROM {userpoints} p INNER JOIN {users} u USING (uid) 
-          LEFT JOIN {term_data} t ON p.tid = t.tid
-          ";
-
-  //Check for filtering
+function _userpoints_user_exists($uid, $tid = NULL) {
   if (is_numeric($tid)) {
-    if ($tid > 0) {
-      $sql .= "WHERE p.tid = %d";
-      $cat = db_result(db_query("SELECT name from {term_data} WHERE tid = %d", $tid));
-    }
-    else {
-      $sql .= "WHERE p.tid = %d";
-      $cat = t('!Uncategorized', userpoints_translation()); 
-    }
+    return (int) db_query('SELECT COUNT(uid)
+      FROM {userpoints}
+      WHERE uid = :uid AND tid = :tid',
+            array(':uid' => $uid, ':tid' => $tid))->fetchField();
   }
   else {
-    $cat = t('All');
+    return (int) db_query('SELECT COUNT(uid)
+      FROM {userpoints}
+      WHERE uid = :uid',
+            array(':uid' => $uid))->fetchField();
   }
-
-  $sql_cnt = "SELECT COUNT(DISTINCT(uid)) 
-              FROM {userpoints} 
-              WHERE tid = %d
-              ";
-
-  if (variable_get(USERPOINTS_REPORT_DISPLAYZERO, 1) == 0 ) {
-    //The user would NOT like to see users with zero points
-    $sql .= " AND p.points <> 0";
-    $sql_cnt .= " AND points <> 0";
-  }
-  $sql .= " GROUP BY p.uid, u.name, p.points, p.tid, t.name";
-  $header = theme('userpoints_list_users_header');
-  $sql .= tablesort_sql($header);
-  $pager_limit = variable_get(USERPOINTS_REPORT_USERCOUNT, 30);
-  $result = pager_query($sql, $pager_limit, 0, $sql_cnt, $tid);
-  while ($data = db_fetch_object($result)) {
-    $rows[] = theme('userpoints_list_users_row', $data);
-  }
-
-  drupal_set_title(t($cat) ." ". t("!points", userpoints_translation()));
-  return theme('userpoints_list_users', $header, $rows, $tid, $pager_limit);
 }
 
-/*
- * Purpose: themes the output of users by points page accessible at /userpoints
- *   individual rows are themed with theme_userpoints_list_users_rows
- * Returns: HTML
+/**
+ * Implements hook_user_delete().
  */
-function theme_userpoints_list_users($header, &$rows, &$tid, &$pager_limit) {
-  //If there is only one category there is no sense in display the category filter dropdown
-  if ( count(userpoints_get_categories())  > 1) {
-    $output = drupal_get_form('userpoints_filter_cat_select', 'userpoints/', $tid);
-    $output .= theme('table', $header, $rows);
-    $output .= theme('pager', NULL, $pager_limit, 0);
-  }
-  else {
-    $output = theme('table', $header, $rows);
-    $output .= theme('pager', NULL, $pager_limit, 0);
-  }
-  return $output;
-}
-/*
- * Purpose: themes the header of the table on the "user by points" page accessible at /userpoints
- * Returns: An array suitable for use with tablesort_sql
- */
-function theme_userpoints_list_users_header() {
-  return array(
-    array('data' => t('User'), 'field' => 'u.name'),
-    array('data' => t('Category'), 'field' => 't.name'),
-    array('data' => t('!Points', userpoints_translation()), 'field' => 'p.points', 'sort' => 'desc'),
-  );
+function userpoints_user_delete($account) {
+  // The user is being deleted, delete all traces in userpoints and txn tables.
+  db_delete('userpoints')
+          ->condition('uid', $account->uid)
+          ->execute();
+  db_delete('userpoints_txn')
+          ->condition('uid', $account->uid)
+          ->execute();
 }
 
-/*
- * Purpose: themes the output of a single row of the "user by points" page at /userpoints
- * Returns: array for a single row suitable for inclusion with theme_table
+/**
+ * Implements hook_user_view().
  */
-function theme_userpoints_list_users_row(&$row) {
+function userpoints_user_view($account, $view_mode) {
   global $user;
-  if (!$row->cat) {
-    $row->cat = t('!Uncategorized', userpoints_translation());
+  if (user_access('view userpoints') || (user_access('view own userpoints') && $user->uid == $account->uid )) {
+    $details = NULL;
+    if (userpoints_access_my_points ()) {
+      $details .= l(t('View'), 'myuserpoints/' . $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
+    }
+    if (user_access('administer userpoints')) {
+      if (!is_null($details)) {
+        $details .= ', ';
+      }
+      $details .= l(t('Adjust'), 'admin/config/people/userpoints/add/' . $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user', userpoints_translation()))));
+    }
+
+    // Which points are we displaying.
+    $points = userpoints_get_current_points($account->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
+
+    $account->content['userpoints'] = array(
+        '#type' => 'user_profile_category',
+        '#title' => t('User !points', userpoints_translation()),
+    );
+    $account->content['userpoints']['points'] = array(
+        '#type' => 'user_profile_item',
+        '#title' => t('!Points', userpoints_translation()),
+        '#markup' => $details ? $points . ' - ' . $details : $points,
+    );
   }
-  if ($user->uid == $row->uid) {
-    $details = "&nbsp;&nbsp;". l("(details)", "myuserpoints");
-  }
-  return array(
-    array('data' => theme('username', $row) . $details),
-    array('data' => $row->cat, 'align' => 'right'),
-    array('data' => $row->points, 'align' => 'right'),
-  );
 }
 
-/*
- * Purpose: Provides a dropdown to filter by category
+/**
+ * Provides a dropdown to filter by category.
  */
-function userpoints_filter_cat_select($path, $tid) {
+function userpoints_filter_cat_select($form, &$form_state, $path, $tid) {
   $current_cat = url($path . $tid);
   $form = array();
   $formname = 'catselect';
   $sql = "SELECT DISTINCT p.tid, t.name
-          FROM {userpoints_txn} p 
-          LEFT JOIN {term_data} t on p.tid = t.tid";
+          FROM {userpoints_txn} p
+          LEFT JOIN {taxonomy_term_data} t on p.tid = t.tid";
   $cats = userpoints_get_categories();
   $options = array();
   $options[url($path)] = t('Display all');
@@ -1399,118 +726,134 @@ function userpoints_filter_cat_select($path, $tid) {
     $options[url($path . $key)] = $value;
   }
   $form['catselect'] = array(
-    '#type' => 'select',
-    '#name' => $formname,
-    '#id' => $formname,
-    '#title' => t('Filter by category'),
-    '#default_value' => $current_cat,
-    '#options' => $options,
-    '#multiple' => false,
-    '#required' => false,
-    '#attributes' => array('onChange' => "top.location.href=document.getElementById('$formname').options[document.getElementById('$formname').selectedIndex].value"),
+      '#type' => 'select',
+      '#name' => $formname,
+      '#id' => $formname,
+      '#title' => t('Filter by category'),
+      '#default_value' => $current_cat,
+      '#options' => $options,
+      '#multiple' => FALSE,
+      '#required' => FALSE,
+      '#attributes' => array('onChange' => "top.location.href=document.getElementById('$formname').options[document.getElementById('$formname').selectedIndex].value"),
   );
 
   return $form;
-} //userpoints_list_users_cat_select
+}
 
-function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
+/**
+ * Implements hook_block_info().
+ */
+function userpoints_block_info() {
+  $blocks[-1]['info'] = t('User\'s !points', userpoints_translation());
+  // Grab a list of the available terms.
+  $terms = userpoints_get_categories();
+  foreach ($terms as $key => $value) {
+    $blocks[$key]['info'] = t("Highest $value !points", userpoints_translation());
+    ;
+  }
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function userpoints_block_view($delta) {
   global $user;
+  if ($delta == -1 && (user_access('view userpoints') || user_access('view own userpoints'))) {
+    $title = t('!user\'s !points', array_merge(array('!user' => theme('username', array('account' => $user))), userpoints_translation()));
+    if ($user->uid) {
+      $points = userpoints_get_current_points($user->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
+      $show_points = format_plural($points, '!point', '!points', userpoints_translation());
+      $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
+    }
+    else {
+      $content = t('!Points are visible to logged in users only', userpoints_translation());
+    }
+  }
+  elseif (user_access('view userpoints')) {
+    // $delta is our tid for pulling the points.
+    // If 0 we pull 0 or NULL.
+    $title = t('Highest Users');
 
-  switch ($op) {
-    case 'list':
-      $blocks[-1]['info'] = t('User\'s !points', userpoints_translation());
-      //Grab a list of the available terms
-      $terms = userpoints_get_categories();
-      foreach ($terms as $key => $value) {
-        $blocks[$key]['info'] = t("Highest $value !points", userpoints_translation());; 
-      } //foreach
-      
-      return $blocks;
+    $query = db_select('userpoints', 'p')
+                    ->fields('p', array('uid', 'points'))
+                    ->orderBy('p.points', 'DESC')
+                    ->range(0, variable_get('userpoints_block_up_records_' . $delta, 5));
+    if ($delta == 0) {
+      $query->condition(db_or()->condition('p.tid', 0)->isNull('p.tid'));
+    }
+    else {
+      $query->condition('p.tid', $delta);
+    }
 
-    case 'view':
-      if (user_access(USERPOINTS_PERM_VIEW)) {
-        if ($delta == -1) {
-          $title = t('@user\'s !points', array_merge(array('@user' => $user->name), userpoints_translation()));;
-          if ($user->uid) {
-            $points = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d', $user->uid));
-            $show_points = format_plural($points, t('!point', userpoints_translation()), t('!points', userpoints_translation()));
-            $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
-          }
-          else {
-            $content = t('!Points are visible to logged in users only', userpoints_translation());
-          }
-        }
-        else {
-          //$delta is our tid for pulling the points
-          //if 0 we pull 0 or NULL
-          $title = t('Highest Users');
-          $num = variable_get('userpoints_block_up_records_'. $delta, 5);
-          $sql = 'SELECT p.uid, u.name, p.points
-                  FROM {userpoints} p
-                  INNER JOIN {users} u USING (uid)';
-          if ( $delta == 0 ) {
-            $sql .= ' WHERE p.tid = 0 OR p.tid IS NULL ORDER BY p.points DESC';
-            $result = db_query_range($sql, 0, $num);
-          } 
-          else {
-            $sql .= ' WHERE p.tid = %d ORDER BY p.points DESC';
-            $result = db_query_range($sql, $delta, 0, $num);
-          }
-
-          while ($data = db_fetch_object($result)) {
-            $rows[] =
+    $rows = array();
+    foreach ($query->execute() as $data) {
+      $rows[] =
               array(
-                array('data' => theme('username', $data)),
-                array('data' => $data->points, 'align' => 'right'));
-            }
-          $header = array(t('User'), t('!Points', userpoints_translation()));
-          $content = theme('table', $header, $rows);
-          $content .= '<div class="more-link">'. l(t('more'), 'userpoints/'. $delta, array('title' => t('All users by !points', userpoints_translation()))) .'</div>';
-        } //if $delta
+                  array('data' => theme('username', array('account' => user_load($data->uid)))),
+                  array('data' => $data->points, 'align' => 'right'));
+    }
+    $header = array(t('User'), t('!Points', userpoints_translation()));
+    $content = theme('table', array('header' => $header, 'rows' => $rows));
+    $content .= '<div class="more-link">' . l(t('more'), 'userpoints/' . $delta, array('attributes' => array('title' => t('All users by !points', userpoints_translation())))) . '</div>';
+  }
 
-        $block['subject'] = $title;
-        $block['content'] = $content;
+  if (!empty($title) && !empty($content)) {
+    $block['subject'] = $title;
+    $block['content'] = $content;
+    return $block;
+  }
+}
 
-        return $block;
-      } //if user_access()
-    case 'configure':
-      $form['up_records'] = array(
+/**
+ * Implements hook_block_configure().
+ */
+function userpoints_block_configure($delta) {
+  if ($delta > 1) {
+    $form['up_records'] = array(
         '#type' => 'select',
         '#title' => t('Number of users to display'),
-        '#default_value' => variable_get('userpoints_block_up_records_'. $delta, 10),
+        '#default_value' => variable_get('userpoints_block_up_records_' . $delta, 10),
         '#options' => array(
-          1 => 1, 5 => 5, 10 => 10, 15 => 15, 20 => 20,
-          30 => 30, 40 => 40, 50 => 50, 60 => 60,
-          70 => 70, 80 => 80, 90 => 90, 100 => 100, 200 => 200,
+            1 => 1, 5 => 5, 10 => 10, 15 => 15, 20 => 20,
+            30 => 30, 40 => 40, 50 => 50, 60 => 60,
+            70 => 70, 80 => 80, 90 => 90, 100 => 100, 200 => 200,
         ),
         '#description' => t('Limit the number of users displayed to this value'),
-      );
-      return $form;
-      break;
-    case 'save':
-      variable_set('userpoints_block_up_records_'. $delta, $edit['up_records']);
-      break;
-  } //switch $op
+    );
+    return $form;
+  }
 }
-/*
+
+/**
+ * Implements hook_block_save().
+ */
+function userpoints_block_save($delta, $edit) {
+  variable_set('userpoints_block_up_records_' . $delta, isset($edit['up_records']) ? $edit['up_records'] : 10);
+}
+
+/**
  * returns an array of possible expiry times
  * to the administrative settings page
  */
 function expiry_dates() {
   return array(
-  NULL     => 'Never',
-  3600     => 'One hour',
-  86400    => 'One Day',
-  604800   => 'One Week',
-  1209600  => 'Two Weeks',
-  2419200  => 'Four Weeks',
-  31536000 => '365 Days',
+      NULL => 'Never',
+      3600 => 'One hour',
+      86400 => 'One Day',
+      604800 => 'One Week',
+      1209600 => 'Two Weeks',
+      2419200 => 'Four Weeks',
+      31536000 => '365 Days',
   );
-} //expiry_dates 
+}
 
-/* userpoints_date_to_timestamp
- * Purpose: modifies FAPI date setting to timestamp 
- * Returns UNIX timestamp
+/**
+ * Modifies FAPI date setting to timestamp.
+ *
+ * @return
+ *   UNIX timestamp.
  */
 function userpoints_date_to_timestamp($date) {
   //This takes the FAPI date form array and returns a timestamp
@@ -1519,265 +862,127 @@ function userpoints_date_to_timestamp($date) {
   }
 }
 
-/*
- * Purpose: Finds all transactions with a expirydate < time() and posts 
- *          opposite transactions (sum of 0)
+/**
+ * Finds and expires expired points.
+ *
+ * Finds all transactions with a expirydate < REQUEST_TIME and posts
+ * opposite transactions (sum of 0).
  */
 function userpoints_expire_transactions() {
-  $sql = "SELECT txn_id, uid, points, time_stamp, operation, description 
-          FROM {userpoints_txn} 
-          WHERE status = 0 AND expired = 0 
-          AND (expirydate < %d AND expirydate != 0)"; 
-  $results = db_query($sql, time());
-  while ($line = db_fetch_array($results)) {
-    $line['time_stamp'] = format_date($line['time_stamp'], 'custom', 'Y-m-d H:i'); 
-    $description = t(variable_get(USERPOINTS_EXPIRY_DESCRIPTION, NULL), 
-      array_merge(userpoints_translation(), 
-      array('!operation' => $line['operation'], 
-        '!description' => $line['description'], 
-        '!txn_id' => $line['txn_id'], 
-        '!date' => $line['time_stamp']
-        )
-      )
-    ); //$description
+  $sql = "SELECT txn_id, uid, points, time_stamp, operation, description, tid
+          FROM {userpoints_txn}
+          WHERE status = 0 AND expired = 0
+          AND (expirydate < :expiry_date AND expirydate != 0)";
+  $result = db_query($sql, array(':expiry_date' => REQUEST_TIME));
+  foreach ($result as $line) {
+    $time_stamp_formatted = format_date($line->time_stamp, 'custom', 'Y-m-d H:i');
+    $arguments = array_merge(userpoints_translation(), array(
+      '!operation' => $line->operation,
+      '!description' => $line->description,
+      '!txn_id' => $line->txn_id,
+      '!date' => $time_stamp_formatted,
+    ));
+    $description = t(variable_get(USERPOINTS_EXPIRY_DESCRIPTION, NULL), $arguments);
 
     $params = array(
-      'points' => -$line['points'],
-      'uid' => $line['uid'],
-      'operation' => 'expiry',
-      'description' => $description,
-      'parent_txn_id' => $line['txn_id'],
-      'moderate' => false,
-      );
+        'points' => -$line->points,
+        'uid' => $line->uid,
+        'operation' => 'expiry',
+        'description' => $description,
+        'parent_txn_id' => $line->txn_id,
+        'moderate' => FALSE,
+        'tid' => $line->tid,
+        'time_stamp' => $line->time_stamp,
+    );
     userpoints_userpointsapi($params);
-    //Ok we've expired the entry lets update the original entry to set the expired flag
+    // Ok we've expired the entry lets update the original entry to set the
+    // expired flag.
     $params = array(
-      'txn_id' => $line['txn_id'],
-      'expired' => 1,
+        'txn_id' => $line->txn_id,
+        'expired' => 1,
     );
     userpoints_userpointsapi($params);
   }
-} //userpoints_expire_transactions
+}
 
-/*
- * Implementation of hook_cron to expire points
+/**
+ * Implements hook_cron().
  */
 function userpoints_cron() {
   userpoints_expire_transactions();
 }
 
-/*
- * Purpose: Displays a detailed transaction report for an individual user
- * no URL argument returns current user otherwise accepts uid. 
- */
-function userpoints_my_userpoints() {
-  $overall_total = 0;
-  $unapproved_total = 0;
-  $approved_total = 0;
 
-  global $user;
-  //First which user are we displaying? 
-  $uid = db_escape_string(arg(1));
-  if (!$uid) {
-    $uid = $user->uid;
-  }
-  $point_user = user_load(array('uid' => $uid));
-  if ($point_user && user_access(USERPOINTS_PERM_VIEW)) { 
-    $title = t('!Points for ', userpoints_translation()) . $point_user->name;
-    drupal_set_title($title);
-  } 
-
-  // Look up user's total
-  if (_userpoints_user_exists($uid)) {
-    //Grab all tids for this user
-    $sql = "SELECT p.tid, t.name
-      FROM {userpoints_txn} p
-      LEFT JOIN {term_data} t on p.tid = t.tid
-      WHERE uid = %d 
-      GROUP BY p.tid, t.name";
-    $results = db_query($sql, $uid);  
-    while ($result = db_fetch_array($results)) {
-      if ($result['name'] == null) {
-        $result['name'] = t('!Uncategorized', userpoints_translation());
-      }
-      //pull the sum from the caching table for resource reason and b/c the 
-      $result['total'] = userpoints_get_current_points($uid, $result['tid']);
-      $args['subtotals'][$result['tid']] = $result;
-
-      //maintain a grand total
-      $grand_total += $result['total'];
-    }
-    $args['approved_total'] = $grand_total;
-
-    //Grab the unmoderated point total
-    $result = db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d AND status = 1", $uid);
-    if (db_result($result, 0, 0)) {
-      $args['unapproved_total'] = db_result($result, 0, 0);
-    }
-    else {
-      $args['unapproved_total'] =0;
-    }
-    $args['overall_total'] = ($args['approved_total'] + $args['unapproved_total']);
-  }
-
-  $header = array(
-    array('data' => t('!Points', userpoints_translation()), 'field' => 'points'),
-    array('data' => t('Approved?'), 'field' => 'status'),
-    array('data' => t('Date'), 'field' => 'time_stamp', 'sort' => 'desc'),
-    array('data' => t('Operation'), 'field' => 'operation'),
-    array('data' => t('Category'), 'field' => 'cat'),
-    array('data' => t('Description'), 'field' => 'description'),
-  );
-  $sql  = "SELECT p.points, p.time_stamp, p.operation, p.description, p.status, p.tid,
-                  t.name as cat , p.entity_id, p.entity_type 
-           FROM {userpoints_txn} p 
-           LEFT JOIN {term_data} t on p.tid = t.tid
-           WHERE p.uid = %d";
-  $sql .= tablesort_sql($header);
-  $pager_limit = variable_get(USERPOINTS_REPORT_LIMIT, 10);
-  $result = pager_query($sql, $pager_limit, 0, NULL, $uid);
-  $stati = userpoints_txn_status();
-  
-  $num_rows = 0;
-  while ($row = db_fetch_object($result)) {
-    $num_rows++;
-    $status = $stati[$row->status];
-    if (!$row->cat) { 
-      $row->cat = t('!Uncategorized', userpoints_translation());
-    }
-    if ($row->description) {
-      $description = $row->description;
-    }
-    else {
-      $description = t('None');
-    }
-    $operation = module_invoke_all('userpoints', 'entity_type', $row);
-
-    if (!$operation) {
-      switch ($row->entity_type) {
-        case 'node' :
-          $node = node_load($row->entity_id);
-          if ($node) {
-            $operation = l($row->operation, 'node/'. $node->nid, array('title' => $node->title));
-          }
-          else {
-            $operation = $row->operation;
-          }
-          break;
-        case 'comment' :
-          if (module_exists('comment')) {
-            //We have to load the comment to get the nid for the comment
-            $comment = _comment_load($row->entity_id);
-            if ($comment) {
-              $operation = l($row->operation, 'node/'. $comment->nid, array('title' => $comment->subject), NULL, 'comment-'. $comment->cid);
-            }
-            else {
-              $operation = $row->operation;
-            }
-          }
-          break;
-        default:
-          $operation = $row->operation;
-      }
-    }
-    $rows[] = array(
-        array('data' => $row->points, 'align' => 'center'),
-        array('data' => $status, 'align' => 'center'),
-        array('data' => format_date($row->time_stamp, 'small'), 'align' => 'center'),
-        array('data' => $operation),
-        array('data' => $row->cat),
-        array('data' => $description),
-    );
-  }
-  if ($num_rows <= 0) {
-    $rows[] = array(
-          array('data' => t('No !Points earned', userpoints_translation()), 'colspan' => 5, 'align' => 'center')
-    );
-  }
-
-
-  return theme('userpoints_my_userpoints', $args, $header, $rows);
-}
-
-/*
- *  Returns the Vocabulary ID (vid) used by userpoints for categorization
- *  if no vocab exists it will create one
+/**
+ *  Returns the Vocabulary ID (vid) used by userpoints for categorization.
+ *
+ *  If no vocab exists it will create one.
  */
 function userpoints_get_vid() {
-  //code lovingly inspired by the image.module w/ code by drewish
+  if (!module_exists('taxonomy')) {
+    return FALSE;
+  }
+  // Code lovingly inspired by the image.module w/ code by drewish.
   $vid = variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, '');
-  var_dump($vid);
   if (empty($vid) || !taxonomy_vocabulary_load($vid)) {
-    $sql = "SELECT vid FROM {vocabulary} WHERE module='userpoints'";
-    $vid = db_result(db_query($sql));
+    $sql = "SELECT vid FROM {taxonomy_vocabulary} WHERE module='userpoints'";
+    $vid = db_query($sql)->fetchField();
     if (!$vid) {
       drupal_set_message(t("Created Userpoints vocabulary"));
-      //No vocabulary exists, we'll create one 
-      $vocab = array(
-        'name' => t(USERPOINTS_CATEGORY_NAME),
-        'description' => t('Automatically created by the userpoints module'),
-        'multiple' => '0',
-        'required' => '0',
-        'hierarchy' => '1',
-        'relations' => '0',
-        'module' => 'userpoints',
+      // No vocabulary exists, we'll create one.
+      $vocab = (object) array(
+          'name' => USERPOINTS_CATEGORY_NAME,
+          'description' => t('Automatically created by the userpoints module'),
+          'machine_name' => 'userpoints',
+          'multiple' => '0',
+          'required' => '0',
+          'hierarchy' => '1',
+          'relations' => '0',
+          'module' => 'userpoints',
       );
-      taxonomy_save_vocabulary($vocab);
-      $vid = $vocab['vid'];
+      taxonomy_vocabulary_save($vocab);
+      $vid = $vocab->vid;
     }
     variable_set(USERPOINTS_CATEGORY_DEFAULT_VID, $vid);
   }
   if (!is_numeric($vid)) {
-    watchdog('userpoints', t('userpoints module was unable to select or create a vocabulary. Points will be uncategorized'), WATCHDOG_ERROR);
+    watchdog('userpoints', 'userpoints module was unable to select or create a vocabulary. !Points will be uncategorized', array(), WATCHDOG_ERROR);
   }
   return $vid;
 }
 
-/*
- * Purposes: returns an array of possible categories, suitable for inclusion in FAPI
+/**
+ * Returns an array of possible categories, suitable for inclusion in FAPI.
  */
 function userpoints_get_categories() {
-  //Create the "Uncategorized" category
+  // Create the "Uncategorized" category.
   $options = array();
   $options[0] = t('!Uncategorized', userpoints_translation());
   if (module_exists('taxonomy')) {
     $vid = userpoints_get_vid();
     if ($vid) {
-      $tree = taxonomy_get_tree($vid, 0, -1, 1);
+      $tree = taxonomy_get_tree($vid);
       foreach ($tree as $term) {
-        $options[$term->tid] = $term->name;  
+        $options[$term->tid] = $term->name;
       }
     }
   }
   return $options;
 }
 
-/*
+/**
  * Wrapper function to return the default tid via API call
  */
 function userpoints_get_default_tid() {
-  variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, NULL);
+  return (int) variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, 0);
 }
 
-/*
- * Purpose: Allow my_userpoints to be themeable
- */
-function theme_userpoints_my_userpoints($args, $header, $rows) {
-  $pager_limit = variable_get(USERPOINTS_REPORT_LIMIT, 10);
-  $output  = theme('table', $header, $rows);
-  $output .= "<p>";
-  if ($args['subtotals']) {
-    foreach ($args['subtotals'] as $tid => $data) {
-      $output .= '<strong>'. $data['name'] .' '. t('!points Balance', userpoints_translation()) .':</strong> '. $data['total'] .'<br />';
-    }
-  }
-  $output .= "</p>";
-  $output .= "<p>";
-  $output .= '<strong>'. t('Approved !points Balance', userpoints_translation()) .':</strong> '. $args['approved_total'] .'<br />';
-  $output .= '<strong>'. t('!Points awaiting moderation', userpoints_translation()) .':</strong> '. $args['unapproved_total'] .'<br />';
-  $output .= '<strong>'. t('Net !points Balance', userpoints_translation()) .':</strong> '. $args['overall_total'] .'<br />';
-  $output .= "</p>";
-  $output .= theme('pager', NULL, $pager_limit, 0);
 
-  return $output;
+/**
+ * Implements hook_views_api().
+ */
+function userpoints_views_api() {
+  return array(
+      'api' => 2.0,
+  );
 }

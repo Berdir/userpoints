@@ -1,5 +1,8 @@
 ; $Id$
 name = Userpoints
-description = Users earn points as they post nodes, comments, and vote on nodes.
+description = Userpoints core: API module for recording points for other modules.
 package = Userpoints
-core = 6.x
+core = 7.x
+files[]=userpoints.views.inc
+files[]=userpoints.module
+files[]=tests/userpoints_api.test

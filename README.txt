@@ -4,7 +4,7 @@ Copyright 2005-2008 http://2bits.com
 
 Description
 -----------
-The userpoints and userpoints_basic module provides the ability for users to gain
+The userpoints and userpoints_nc module provides the ability for users to gain
 points with the do certain actions, such as:
 
 - posting a node (different points can be awarded for different
@@ -140,7 +140,7 @@ userpoints_userpointsapi()
 
   
 //---Hooks
-hook_userpoints($op, $points, $uid, $event) 
+hook_userpoints($op, $params = array()) 
 
   Use this hook to act upon certain operations. When other modules award
   points to a user, your hook will be called, among others.
@@ -163,8 +163,7 @@ hook_userpoints($op, $points, $uid, $event)
       Calls your module, and others, after points are processed. You can take
       certain actions if you so wish. Return value is ignored.
 
-   The rest of the arguments are the same as the userpoints_userpointsapi()
-   function.
+   The $params variable is the original $params array as sent to userpoints_userpointsapi
  
 //---Other useful functions
 
