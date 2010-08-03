@@ -121,6 +121,7 @@ function userpoints_menu() {
       'page callback' => 'drupal_get_form',
       'page arguments' => array('userpoints_admin_txn', 4, 5),
       'access arguments' => array('administer userpoints'),
+      'file' => 'userpoints.admin.inc',
       'type' => MENU_CALLBACK
   );
 
