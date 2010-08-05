@@ -188,7 +188,7 @@ function userpoints_access_my_points() {
   if ($user->uid === 1 || user_access('administer userpoints')) {
     return TRUE;
   }
-  return _userpoints_user_exists($user->uid) && ((user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints'));
+  return (user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints');
 }
 
 /**
