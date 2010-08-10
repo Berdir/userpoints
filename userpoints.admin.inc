@@ -377,7 +377,7 @@ function userpoints_admin_manage($tid = NULL) {
     if (!$data->cat) {
       $data->cat = t('!Uncategorized', userpoints_translation());
     }
-    $operations = module_invoke_all('userpoints', 'entity_type', $data);
+    $operations = userpoints_invoke_all('entity_type', $data);
     if (is_array($operations) && isset($operations[0])) {
       $operation = $operations[0];
     }
@@ -669,6 +669,6 @@ function userpoints_admin_settings($form, &$form_state) {
       '#description' => t('Sets if the transaction timestamp should obey current time, or can be modified by the API operations. Unchecking this option will allow customization of timetamp for the transactions.'),
   );
 
-  $form['setting'] = module_invoke_all('userpoints', 'setting');
+  $form['setting'] = userpoints_invoke_all('setting');
   return system_settings_form($form);
 }
