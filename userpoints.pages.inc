@@ -101,7 +101,7 @@ function userpoints_list_my_userpoints($uid = NULL) {
     else {
       $description = t('None');
     }
-    $operations = module_invoke_all('userpoints', 'entity_type', $row);
+    $operations = userpoints_invoke_all('entity_type', $row);
     if (is_array($operations) && isset($operations[0])) {
       $operation = $operations[0];
     }

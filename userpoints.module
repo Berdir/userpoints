@@ -423,7 +423,7 @@ function userpoints_userpointsapi($params) {
   }
 
   // Call the _userpoints hook, and stop if one of them returns FALSE.
-  $rc = module_invoke_all('userpoints', 'points before', $params);
+  $rc = userpoints_invoke_all('points before', $params);
 
   foreach ($rc as $key => $value) {
     if ($value == FALSE) {
@@ -482,7 +482,7 @@ function userpoints_userpointsapi($params) {
     }
   }
   // Call the _userpoints hook to allow modules to act after points are awarded.
-  module_invoke_all('userpoints', 'points after', $params);
+  userpoints_invoke_all('points after', $params);
   return array(
       'status' => TRUE,
   );
@@ -986,4 +986,31 @@ function userpoints_views_api() {
   return array(
       'api' => 2.0,
   );
+}
+
+/**
+ * Invokes hook_userpoints() with params passed by references.
+ *
+ * @param $op
+ *   The operation being performed.
+ * @param &$params
+ *   Parameters to be passed to the hook.
+ * 
+ * @return
+ *   An array of return values of the hook implementations. If modules return
+ *   arrays from their implementations, those are merged into one array.
+ */
+function userpoints_invoke_all($op, &$params) {
+  $return = array();
+  foreach (module_implements('userpoints') as $module) {
+    $function = $module .'_userpoints';
+    $result = $function($op, $params);
+    if (isset($result) && is_array($result)) {
+      $return = array_merge_recursive($return, $result);
+    }
+    else if (isset($result)) {
+      $return[] = $result;
+    }
+  }
+  return $return;
 }
