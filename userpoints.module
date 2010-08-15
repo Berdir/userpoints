@@ -1000,7 +1000,7 @@ function userpoints_views_api() {
  *   An array of return values of the hook implementations. If modules return
  *   arrays from their implementations, those are merged into one array.
  */
-function userpoints_invoke_all($op, &$params) {
+function userpoints_invoke_all($op, array &$params = array()) {
   $return = array();
   foreach (module_implements('userpoints') as $module) {
     $function = $module .'_userpoints';
