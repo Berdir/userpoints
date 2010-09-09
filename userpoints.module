@@ -355,6 +355,8 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
  *     'reason' => (string) error message to indicate reason for failure
  */
 function userpoints_userpointsapi($params) {
+  global $user;
+
   // Test for the existence of parameters and set defaults if necessary.
   if (!isset($params['txn_id'])) {
     // If a txn_id is passed in we'll do an UPDATE thus the std checks don't apply.
@@ -371,7 +373,6 @@ function userpoints_userpointsapi($params) {
       );
     }
     if (!isset($params['uid'])) {
-      global $user;
       $params['uid'] = $user->uid;
     }
 
@@ -414,8 +415,8 @@ function userpoints_userpointsapi($params) {
     $params['uid'] = db_query('SELECT uid from {userpoints_txn} WHERE txn_id = :txn_id', array(':txn_id' => $params['txn_id']))->fetchField();
   } // If txn_id.
   // Load the user object that will be awarded the points.
-  $name = db_query('SELECT name FROM {users} WHERE uid = :uid', array(':uid' => $params['uid']))->fetchField();
-  if (!$name) {
+  $account = user_load($params['uid']);
+  if (!$account) {
     return array(
         'status' => FALSE,
         'reason' => 'invalid uid or user account could not be loaded',
@@ -434,19 +435,6 @@ function userpoints_userpointsapi($params) {
       );
     }
   }
-  $msg = '';
-  if (isset($params['points'])) {
-    if ($params['points'] < 0) {
-      $msg = t('lost');
-    }
-    elseif ($params['status'] == 2) {
-      // Points have been declined.
-      $msg = t('was declined');
-    }
-    else {
-      $msg = t('earned');
-    }
-  }
 
   $ret = _userpoints_transaction($params);
   if ($ret == FALSE) {
@@ -456,29 +444,76 @@ function userpoints_userpointsapi($params) {
     );
   }
 
-  if (isset($params['display']) || variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1) {
-    if ($params['status'] == 1) {
-      $mesg = (t('User %uname %op %pointsvalue !points, pending administrator approval.',
-                      array_merge(userpoints_translation(), array(
-                          '%uname' => $name,
-                          '%op' => $msg,
-                          '%pointsvalue' => abs($params['points']),
-                          '%total' => userpoints_get_current_points($params['uid'], $params['tid']),
-                      ))
-              ));
+  // Allow modules to define custom messages.
+  if (!empty($params['message'])) {
+    $message = $params['message'];
+  }
+  // Display message if either display property is not set and messages should
+  // be displayed by default or display property is not FALSE.
+  elseif (!empty($params['display']) || (!isset($params['display']) && variable_get(USERPOINTS_DISPLAY_MESSAGE, 1))) {
+    // Prepare arguments. They are the same for all string combinations.
+    $categories = userpoints_get_categories();
+    $arguments = array_merge(userpoints_translation(), array(
+      '!username' => theme('username', array('account' => $account)),
+      '%total' => userpoints_get_current_points($params['uid'], $params['tid']),
+      '%category' => isset($categories[$params['tid']]) ? $categories[$params['tid']] : $categories[0],
+    ));
+
+    $view_own_points = user_access('view own userpoints') || user_access('view userpoints') || user_access('administer userpoints');
+    $view_all_points = user_access('view userpoints') || user_access('administer userpoints');
+
+    if (isset($params['points']) && $params['points'] < 0) {
+      if ($params['status'] == 1) {
+        if ($account->uid == $user->uid && $view_own_points) {
+          // Directly address the user if he is loosing points.
+          $message = format_plural(abs($params['points']), 'You just had a !point deducted, pending administrator approval.', 'You just had @count !points deducted, pending administrator approval.', $arguments);
+        }
+        elseif ($view_all_points) {
+          // Only display message about other users if user has permission to view userpoints.
+          $message = format_plural(abs($params['points']), '!username just had a !point deducted, pending administrator approval.', '!username just had @count !points deducted, pending administrator approval.', $arguments);
+        }
+      }
+      else {
+        if ($account->uid == $user->uid && $view_own_points) {
+          $message = format_plural(abs($params['points']), 'You just had a !point deducted and have now %total !points in the %category category.', 'You just had @count !points deducted and now have %total !points in the %category category.', $arguments);
+        }
+        elseif ($view_all_points) {
+          $message = format_plural(abs($params['points']), '!username just had a !point deducted and now has %total !points in the %category category.', '!username just had @count !points deducted and now has %total !points in the %category category.', $arguments);
+        }
+      }
     }
-    else {
-      $mesg = (t('User %uname %op %pointsvalue !points Total now is %total !points.',
-                      array_merge(userpoints_translation(), array(
-                          '%uname' => $name,
-                          '%op' => $msg,
-                          '%pointsvalue' => abs($params['points']),
-                          '%total' => userpoints_get_current_points($params['uid'], $params['tid'])
-                      ))));
+    elseif ($params['status'] == 2) {
+      // Points have been declined.
+      if ($account->uid == $user->uid && $view_own_points) {
+        $message = format_plural(abs($params['points']), 'You were declined a !point in the %category category.', 'You were declined @count !points in the %category category.', $arguments);
+      }
+      elseif ($view_all_points) {
+        $message = format_plural(abs($params['points']), '!username was declined a !point in the %category category.', '!username was declined @count !points in the %category category.', $arguments);
+      }
+    }
+    elseif (!empty($params['points'])) {
+      if ($params['status'] == 1) {
+        if ($account->uid == $user->uid && $view_own_points) {
+          // Directly address the user if he is loosing points.
+          $message = format_plural(abs($params['points']), 'You just earned a !point, pending administrator approval.', 'You just earned @count !points, pending administrator approval.', $arguments);
+        }
+        elseif ($view_all_points) {
+          // Only display message about other users if user has permission to view userpoints.
+          $message = format_plural(abs($params['points']), '!username just earned a !point, pending administrator approval.', '!username just earned @count !points, pending administrator approval.', $arguments);
+        }
+      }
+      else {
+        if ($account->uid == $user->uid && $view_own_points) {
+          $message = format_plural(abs($params['points']), 'You just earned a !point and have now %total !points in the %category category.', 'You just earned @count !points and have now %total !points in the %category category.', $arguments);
+        }
+        elseif ($view_all_points) {
+          $message = format_plural(abs($params['points']), '!username just earned a !point and now has %total !points in the %category category.', '!username just earned @count !points and now has %total !points in the %category category.', $arguments);
+        }
+      }
     }
 
-    if ($mesg) {
-      drupal_set_message($mesg);
+    if (isset($message)) {
+      drupal_set_message($message);
     }
   }
   // Call the _userpoints hook to allow modules to act after points are awarded.
