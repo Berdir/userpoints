@@ -167,7 +167,7 @@ function userpoints_list_users($tid = NULL) {
                   ->orderByHeader($header)
                   ->limit(variable_get(USERPOINTS_REPORT_USERCOUNT, 30));
 
-  $query->join('users', 'u', 'p.uid = u.uid');
+  $query->join('users', 'u', 'p.uid = u.uid AND u.status = 1');
   $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
   $query->addField('t', 'name', 'cat');
 

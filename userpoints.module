@@ -823,6 +823,9 @@ function userpoints_block_view($delta) {
       $query->condition('p.tid', $delta);
     }
 
+    // Exclude blocked users.
+    $query->join('users', 'u', 'u.uid = p.uid AND u.status = 1');
+
     $rows = array();
     foreach ($query->execute() as $data) {
       $rows[] =
