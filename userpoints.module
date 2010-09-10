@@ -164,11 +164,13 @@ function userpoints_menu() {
       'type' => MENU_NORMAL_ITEM,
   );
 
-  $items['myuserpoints'] = array(
+  $items['myuserpoints/%user_uid_only_optional'] = array(
       'title' => 'My !points',
       'title arguments' => userpoints_translation(),
       'page callback' => 'userpoints_list_my_userpoints',
+      'page arguments' => array(1),
       'access callback' => 'userpoints_access_my_points',
+      'access arguments' => array(1),
       'file' => 'userpoints.pages.inc',
       'type' => MENU_NORMAL_ITEM,
       'menu_name' => 'user-menu',
@@ -183,10 +185,10 @@ function userpoints_menu() {
  *   TRUE if user has permissions to view userpoints and if the user is logged
  *   in.
  */
-function userpoints_access_my_points() {
+function userpoints_access_my_points($uid = NULL) {
   global $user;
-  if ($user->uid === 1 || user_access('administer userpoints')) {
-    return TRUE;
+  if ($user->uid != $uid) {
+    return user_access('administer userpoints');
   }
   return (user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints');
 }
@@ -720,7 +722,7 @@ function userpoints_user_view($account, $view_mode) {
   global $user;
   if (user_access('view userpoints') || (user_access('view own userpoints') && $user->uid == $account->uid )) {
     $details = NULL;
-    if (userpoints_access_my_points ()) {
+    if (userpoints_access_my_points($account->uid)) {
       $details .= l(t('View'), 'myuserpoints/' . $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
     }
     if (user_access('administer userpoints')) {

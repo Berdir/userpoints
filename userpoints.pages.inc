@@ -13,33 +13,12 @@
  * @param $uid
  *   User id, defaults to current user.
  */
-function userpoints_list_my_userpoints($uid = NULL) {
+function userpoints_list_my_userpoints($uid) {
   $overall_total = 0;
   $unapproved_total = 0;
   $approved_total = 0;
 
-  global $user;
-
-  // User which are displaying points for.
-  if ($uid) {
-    if ($uid != $user->uid && !user_access('administer userpoints')) {
-      // If not the same as logged in user.
-      drupal_access_denied();
-      return;
-    }
-  }
-  else {
-    // Default to currently logged in user.
-    $uid = $user->uid;
-  }
   $point_user = user_load($uid);
-
-  // Check permissions.
-  if (!user_access('view userpoints') && !user_access('view own userpoints')) {
-    // User has no access to view points.
-    drupal_access_denied();
-    return;
-  }
 
   $title = t('!Points for @username', userpoints_translation() + array('@username' => $point_user->name));
   drupal_set_title($title);
