@@ -1422,7 +1422,7 @@ function userpoints_list_users() {
  * @return
  *   HTML of the table and a pager
  */
-function theme_userpoints_list_users($header, &$rows, &$tid, &$pager_limit) {
+function theme_userpoints_list_users($header, $rows, $tid, $pager_limit) {
   // If there is only one category, there is no sense in display the category filter dropdown
   if (count(userpoints_get_categories()) > 1) {
     $output = drupal_get_form('userpoints_filter_cat_select', 'userpoints/', $tid);
@@ -1454,7 +1454,7 @@ function theme_userpoints_list_users_header() {
  * @return
  *   Array for a single row, suitable for inclusion with theme_table
  */
-function theme_userpoints_list_users_row(&$row) {
+function theme_userpoints_list_users_row($row) {
   global $user;
 
   if (!$row->cat) {
