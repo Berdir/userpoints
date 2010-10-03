@@ -44,7 +44,7 @@ function userpoints_translation() {
         '!points' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
         '!Point' => variable_get(USERPOINTS_TRANS_UCPOINT, 'Point'),
         '!point' => variable_get(USERPOINTS_TRANS_LCPOINT, 'point'),
-        '!Uncategorized' => variable_get(USERPOINTS_TRANS_UNCAT, 'Uncategorized'),
+        '!Uncategorized' => variable_get(USERPOINTS_TRANS_UNCAT, 'General'),
     );
   }
   return $trans;

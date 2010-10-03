@@ -498,8 +498,8 @@ function userpoints_admin_settings($form, &$form_state) {
   );
   $form[$group][USERPOINTS_TRANS_UNCAT] = array(
       '#type' => 'textfield',
-      '#title' => t('Word to use for the uncategorized category'),
-      '#default_value' => variable_get(USERPOINTS_TRANS_UNCAT, 'Uncategorized'),
+      '#title' => t('Word to use for the general category'),
+      '#default_value' => variable_get(USERPOINTS_TRANS_UNCAT, 'General'),
       '#size' => 20,
       '#maxlength' => 20,
   );

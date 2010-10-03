@@ -187,7 +187,7 @@ userpoints_get_default_tid()
 
 userpoints_get_categories()
   Returns an array of the possible categories including
-  the special "Uncategorized" category (id=0). This is a keyed
+  the special "General" category (id=0). This is a keyed
   array that works perfectly with FAPI. If you're creating a 
   settings page wherein a user would select the category to 
   place points into, this will give you exactly what you need.
