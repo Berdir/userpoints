@@ -388,15 +388,10 @@ function userpoints_userpointsapi($params) {
 
     if (!isset($params['moderate'])) {
       // If not passed then site default is used.
-      $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, 0);
+      $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, USERPOINTS_TXN_STATUS_APPROVED);
     }
     else {
-      if ($params['moderate'] == TRUE) {
-        $params['status'] = 1;
-      }
-      else {
-        $params['status'] = 0;
-      }
+      $params['status'] = $params['moderate'] ? USERPOINTS_TXN_STATUS_PENDING : USERPOINTS_TXN_STATUS_APPROVED;
     }
     if (!isset($params['tid']) || !is_numeric($params['tid'])) {
       // If not passed then site default is used.
@@ -465,7 +460,7 @@ function userpoints_userpointsapi($params) {
     $view_all_points = user_access('view userpoints') || user_access('administer userpoints');
 
     if (isset($params['points']) && $params['points'] < 0) {
-      if ($params['status'] == 1) {
+      if ($params['status'] == USERPOINTS_TXN_STATUS_PENDING) {
         if ($account->uid == $user->uid && $view_own_points) {
           // Directly address the user if he is loosing points.
           $message = format_plural(abs($params['points']), 'You just had a !point deducted, pending administrator approval.', 'You just had @count !points deducted, pending administrator approval.', $arguments);
@@ -484,7 +479,7 @@ function userpoints_userpointsapi($params) {
         }
       }
     }
-    elseif ($params['status'] == 2) {
+    elseif ($params['status'] == USERPOINTS_TXN_STATUS_DECLINED) {
       // Points have been declined.
       if ($account->uid == $user->uid && $view_own_points) {
         $message = format_plural(abs($params['points']), 'You were declined a !point in the %category category.', 'You were declined @count !points in the %category category.', $arguments);
@@ -494,7 +489,7 @@ function userpoints_userpointsapi($params) {
       }
     }
     elseif (!empty($params['points'])) {
-      if ($params['status'] == 1) {
+      if ($params['status'] == USERPOINTS_TXN_STATUS_PENDING) {
         if ($account->uid == $user->uid && $view_own_points) {
           // Directly address the user if he is loosing points.
           $message = format_plural(abs($params['points']), 'You just earned a !point, pending administrator approval.', 'You just earned @count !points, pending administrator approval.', $arguments);
@@ -545,18 +540,6 @@ function _userpoints_transaction(&$params) {
       // There must be a UID, anonymous does not receive points.
       if (!$params['uid'] > 0) {
         return FALSE;
-      }
-    }
-    if (!isset($params['moderate'])) {
-      // If not passed then site default is used.
-      $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, 0);
-    }
-    else {
-      if ($params['moderate'] == TRUE) {
-        $params['status'] = 1;
-      }
-      else {
-        $params['status'] = 0;
       }
     }
     if (isset($params['expirydate']) && !is_numeric($params['expirydate'])) {
@@ -625,7 +608,7 @@ function _userpoints_transaction(&$params) {
  * Update the caching table
  */
 function _userpoints_update_cache(&$params) {
-  if ($params['status'] != 0 || $params['expired'] == 1) {
+  if ($params['status'] != USERPOINTS_TXN_STATUS_APPROVED || $params['expired'] == 1) {
     // Only update the cache for fully approved non-expired points.
     return FALSE;
   }
