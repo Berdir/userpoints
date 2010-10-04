@@ -459,12 +459,22 @@ function userpoints_confirm_approve($form, $form_state, $operation, $txn_id) {
  * Menu callback for settings form.
  */
 function userpoints_admin_settings($form, &$form_state) {
+
+  drupal_set_title(t('!Points settings', userpoints_translation()));
+
+  drupal_add_js(drupal_get_path('module', 'userpoints') . '/userpoints_admin.js');
+
+  $form['settings'] = array(
+    '#prefix' => '<h3>' . t('Core !points settings', userpoints_translation()) . '</h3>',
+    '#type' => 'vertical_tabs',
+  );
   $group = 'renaming';
   $form[$group] = array(
       '#type' => 'fieldset',
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#title' => t('Points branding'),
+      '#title' => t('Branding'),
+      '#group' => 'settings',
   );
 
   $form[$group][USERPOINTS_TRANS_UCPOINTS] = array(
@@ -496,13 +506,6 @@ function userpoints_admin_settings($form, &$form_state) {
       '#size' => 20,
       '#maxlength' => 20,
   );
-  $form[$group][USERPOINTS_TRANS_UNCAT] = array(
-      '#type' => 'textfield',
-      '#title' => t('Word to use for the general category'),
-      '#default_value' => variable_get(USERPOINTS_TRANS_UNCAT, 'General'),
-      '#size' => 20,
-      '#maxlength' => 20,
-  );
 
   $group = 'status';
   $form[$group] = array(
@@ -511,6 +514,7 @@ function userpoints_admin_settings($form, &$form_state) {
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#weight' => -1,
+      '#group' => 'settings',
   );
 
   $form[$group][USERPOINTS_POINTS_MODERATION] = array(
@@ -526,8 +530,9 @@ function userpoints_admin_settings($form, &$form_state) {
       '#type' => 'fieldset',
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#title' => t('!Points expiration', userpoints_translation()),
+      '#title' => t('Expiration', userpoints_translation()),
       '#description' => t('These settings affect new !points only, they are not retroactive. !Points expiration depends upon cron.', userpoints_translation()),
+      '#group' => 'settings',
   );
 
   $form[$group][USERPOINTS_EXPIREAFTER_DATE] = array(
@@ -582,6 +587,7 @@ function userpoints_admin_settings($form, &$form_state) {
       '#collapsed' => TRUE,
       '#title' => t('Messages'),
       '#description' => t('Control the behavior of messages users see.'),
+      '#group' => 'settings',
   );
 
   $form[$group][USERPOINTS_DISPLAY_MESSAGE] = array(
@@ -596,8 +602,8 @@ function userpoints_admin_settings($form, &$form_state) {
       '#type' => 'fieldset',
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#title' => t('Report Settings'),
-      '#description' => t(''),
+      '#title' => t('Listings'),
+      '#group' => 'settings',
   );
 
   $form[$group][USERPOINTS_REPORT_LIMIT] = array(
@@ -632,7 +638,8 @@ function userpoints_admin_settings($form, &$form_state) {
         '#type' => 'fieldset',
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
-        '#title' => t('!Points Categorization', userpoints_translation()),
+        '#title' => t('Categorization', userpoints_translation()),
+      '#group' => 'settings',
     );
     $form[$group][USERPOINTS_CATEGORY_DEFAULT_TID] = array(
         '#type' => 'select',
@@ -652,6 +659,15 @@ function userpoints_admin_settings($form, &$form_state) {
         '#options' => $options,
         '#description' => t('Select which category of !points to display on the user profile page. Select "All" to display a sum total of all categories', userpoints_translation()),
     );
+
+    $form[$group][USERPOINTS_TRANS_UNCAT] = array(
+      '#type' => 'textfield',
+      '#title' => t('Word to use for the general category'),
+      '#default_value' => variable_get(USERPOINTS_TRANS_UNCAT, 'General'),
+      '#description' => t("By default, %default is the name used for the module's umbrella category. You may change this here.", array('%default' => t('General'))),
+      '#size' => 20,
+      '#maxlength' => 20,
+    );
   }
   // New configuration options to overide current timestamp.
   $group = "stamping";
@@ -660,7 +676,7 @@ function userpoints_admin_settings($form, &$form_state) {
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#title' => t('Transaction stamping'),
-      '#description' => t(''),
+      '#group' => 'settings',
   );
   $form[$group][USERPOINTS_TRANSACTION_TIMESTAMP] = array(
       '#type' => 'checkbox',
@@ -669,6 +685,18 @@ function userpoints_admin_settings($form, &$form_state) {
       '#description' => t('Sets if the transaction timestamp should obey current time, or can be modified by the API operations. Unchecking this option will allow customization of timetamp for the transactions.'),
   );
 
+  $form['settings_additional'] = array(
+    '#prefix' => '<h3>' . t('Additional !points settings', userpoints_translation()) . '</h3>',
+    '#type' => 'vertical_tabs',
+  );
+
   $form['setting'] = userpoints_invoke_all('setting');
+
+  // Hide the additional vertical_tabs element if nothing is being displayed in
+  // it.
+  if (isset($form['settings']) && empty($form['settings'])) {
+    $form['settings_additional']['#access'] = FALSE;
+  }
+
   return system_settings_form($form);
 }
