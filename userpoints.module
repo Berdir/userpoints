@@ -565,17 +565,17 @@ function _userpoints_transaction(&$params) {
     if (!isset($params['expirydate'])) {
       $params['expirydate'] = userpoints_get_default_expiry_date();
     }
-  } // If txn_id.
-  // Control time_stamp functionality, by default with current timestamp.
-  $time = REQUEST_TIME;
-  // Overide system time if meeting criteria matches: Don't let future timestamps, Don't let bad formated timestamps.
-  if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || !is_numeric($params['time_stamp']) || $params['time_stamp'] > $time || $params['time_stamp'] < 0) {
-    $params['time_stamp'] = $time;
+
+    // Use current time for time_stamp if configured to always use the default,
+    // not set, not a positive integer or in the future.
+    if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || $params['time_stamp'] <= 0 || $params['time_stamp'] > $time) {
+      $params['time_stamp'] = REQUEST_TIME;
+    }
   }
   // Always force changed timestamp to current REQUEST_TIME for transaction tracking.
-  $params['changed'] = $time;
+  $params['changed'] = REQUEST_TIME;
 
-  if (!empty($params['txn_id']) && is_numeric($params['txn_id'])) {
+  if (!empty($params['txn_id']) && $params['txn_id'] > 0) {
     // A transaction ID was passed in so we'll update the transaction.
     $txn = db_query("SELECT txn_id, uid, approver_uid, points,
       time_stamp, status, operation, description, reference, expirydate, expired,
@@ -583,6 +583,10 @@ function _userpoints_transaction(&$params) {
       FROM {userpoints_txn}
       WHERE txn_id = :txn_id",
                     array(':txn_id' => $params['txn_id']))->fetchAssoc();
+
+    if (!$txn) {
+      return FALSE;
+    }
 
     // Don't superseed existing keys, just complete missing keys.
     $params += $txn;
@@ -596,8 +600,8 @@ function _userpoints_transaction(&$params) {
   else {
     // Create new transaction record.
     $ret = drupal_write_record('userpoints_txn', $params);
-    // Don't cache entry if it's pending.
-    if ($params['status'] != TRUE && $ret != FALSE) {
+    // Don't update cache if it's pending.
+    if ($params['status'] != USERPOINTS_TXN_STATUS_PENDING && $ret != FALSE) {
       _userpoints_update_cache($params);
     }
   }
@@ -909,14 +913,15 @@ function userpoints_expire_transactions() {
     $description = t(variable_get(USERPOINTS_EXPIRY_DESCRIPTION, NULL), $arguments);
 
     $params = array(
-        'points' => -$line->points,
-        'uid' => $line->uid,
-        'operation' => 'expiry',
-        'description' => $description,
-        'parent_txn_id' => $line->txn_id,
-        'moderate' => FALSE,
-        'tid' => $line->tid,
-        'time_stamp' => $line->time_stamp,
+      'points' => -$line->points,
+      'uid' => $line->uid,
+      'operation' => 'expiry',
+      'description' => $description,
+      'parent_txn_id' => $line->txn_id,
+      'moderate' => FALSE,
+      'tid' => $line->tid,
+      'time_stamp' => $line->time_stamp,
+      'expirydate' => 0,
     );
     userpoints_userpointsapi($params);
     // Ok we've expired the entry lets update the original entry to set the
