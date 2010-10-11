@@ -6,31 +6,6 @@
  * Theme functions for userpoints.module
  */
 
-/**
- * Allows my_userpoints to be themeable.
- */
-function theme_userpoints_list_my_userpoints($attributes) {
-  $args = $attributes['args'];
-  $header = $attributes['header'];
-  $rows = $attributes['rows'];
-  $output = theme('table', array('header' => $header, 'rows' => $rows));
-  $output .= "<p>";
-  if (isset($args) && isset($args['subtotals'])) {
-    foreach ($args['subtotals'] as $tid => $data) {
-      $output .= '<strong>' . $data->name . ' ' . t('!points Balance', userpoints_translation()) . ':</strong> ' . $data->total . '<br />';
-    }
-  }
-  $output .= "</p>";
-  $output .= "<p>";
-  $output .= '<strong>' . t('Approved !points Balance', userpoints_translation()) . ':</strong> ' . $args['approved_total'] . '<br />';
-  $output .= '<strong>' . t('!Points awaiting moderation', userpoints_translation()) . ':</strong> ' . $args['unapproved_total'] . '<br />';
-  $output .= '<strong>' . t('Net !points Balance', userpoints_translation()) . ':</strong> ' . $args['overall_total'] . '<br />';
-  $output .= "</p>";
-  $output .= theme('pager');
-
-  return $output;
-}
-
 /*
  * Themes the output of users by points page.
  *
@@ -47,7 +22,7 @@ function theme_userpoints_list_users($attributes) {
   // If there is only one category, there is no sense in display the category filter dropdown
   $output = array();
   if (count(userpoints_get_categories()) > 1) {
-    $output = drupal_get_form('userpoints_filter_cat_select', 'userpoints/', $tid);
+    $output['form'] = drupal_get_form('userpoints_filter_cat_select', 'userpoints/', $tid);
   }
   $output['table'] = array(
     '#markup' => theme('table', array('header' => $header, 'rows' => $rows)),

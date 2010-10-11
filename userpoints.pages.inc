@@ -10,122 +10,158 @@
 /**
  * Displays a detailed transaction report for an individual user.
  *
- * @param $uid
- *   User id, defaults to current user.
+ * @param $account
+ *   For which account to display.
  */
-function userpoints_list_my_userpoints($uid) {
-  $overall_total = 0;
-  $unapproved_total = 0;
-  $approved_total = 0;
+function userpoints_list_my_userpoints($account, $tid = NULL) {
 
-  $point_user = user_load($uid);
+  // Load the categories and check if there are multiples or only a single one.
+  $categories = userpoints_get_categories();
+  $multiple_categories = count($categories) > 1;
 
-  $title = t('!Points for @username', userpoints_translation() + array('@username' => $point_user->name));
-  drupal_set_title($title);
-
-  //Grab all tids for this user.
-  $sql = "SELECT p.tid, t.name
-    FROM {userpoints_txn} p
-    LEFT JOIN {taxonomy_term_data} t on p.tid = t.tid
-    WHERE uid = :uid
-    GROUP BY p.tid, t.name";
-  $results = db_query($sql, array(':uid' => $uid));
-  $grand_total = 0;
-  foreach ($results as $result) {
-    if ($result->name == NULL) {
-      $result->name = t('!Uncategorized', userpoints_translation());
-    }
-    // Pull the sum from the caching table for resource reason and b/c the.
-    $result->total = userpoints_get_current_points($uid, $result->tid);
-    $args['subtotals'][$result->tid] = $result;
-
-    // Maintain a grand total.
-    $grand_total += $result->total;
-  }
-  $args['approved_total'] = $grand_total;
-
-  // Grab the unmoderated point total.
-  $args['unapproved_total'] = (int) db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = :uid AND status = 1", array(':uid' => $uid))->fetchField();
-  $args['overall_total'] = ($args['approved_total'] + $args['unapproved_total']);
-
-  $header = array(
-      array('data' => t('!Points', userpoints_translation()), 'field' => 'points'),
-      array('data' => t('Approved?'), 'field' => 'status'),
-      array('data' => t('Date'), 'field' => 'time_stamp', 'sort' => 'desc'),
-      array('data' => t('Operation'), 'field' => 'operation'),
-      array('data' => t('Category'), 'field' => 'cat'),
-      array('data' => t('Description'), 'field' => 'description'),
+  // Store context in the output array so that modules have access to it.
+  $output = array(
+    '#account' => $account,
+    '#tid' => $tid,
+    '#attached' => array(
+      'css' => array(
+        drupal_get_path('module', 'userpoints') . '/userpoints_myuserpoints.css',
+      ),
+    ),
   );
 
-  $query = db_select('userpoints_txn', 'p')->extend('PagerDefault')->extend('TableSort')
-                  ->fields('p', array('txn_id', 'uid', 'time_stamp', 'points', 'operation', 'status', 'entity_type', 'entity_id', 'description'))
-                  ->condition('p.uid', $uid)
-                  ->orderByHeader($header)
-                  ->limit(variable_get(USERPOINTS_REPORT_LIMIT, 10));
+  // Only display the category selection if there is more than one category
+  // to select from. This check is specific to the categories the user has
+  // points in.
+  if (count(userpoints_get_categories($account)) > 1) {
+    $output['form'] = drupal_get_form('userpoints_filter_cat_select', 'myuserpoints/' . $account->uid . '/', $tid, $account);
+    $output['form']['#weight'] = -10;
+  }
 
-  $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
-  $query->addField('t', 'name', 'cat');
+  // Prepare the table header.
+  $header = array(
+    array('data' => t('!Points', userpoints_translation()), 'field' => 'points', 'class' => array('userpoints-myuserpoints-header-points')),
+    array('data' => t('Status'), 'field' => 'status', 'class' => array('userpoints-myuserpoints-header-status')),
+    array('data' => t('Date'), 'field' => 'time_stamp', 'sort' => 'desc', 'class' => array('userpoints-myuserpoints-header-timestamp')),
+    array('data' => t('Reason'), 'class' => array('userpoints-myuserpoints-header-reason')),
+  );
+
+  // Only display category if there is more than one category. In contrast to
+  // the filter, this is not specific for the categories. If there are
+  // categories, we want tell the user in which he has points, even if he
+  // only has points in a single category.
+  if ($multiple_categories) {
+    $header[] = array('data' => t('Category'), 'field' => 'cat', 'class' => array('userpoints-myuserpoints-header-category'));
+  }
+
+  $query = db_select('userpoints_txn', 'p')->extend('PagerDefault')->extend('TableSort')
+    ->fields('p')
+    ->condition('p.uid', $account->uid)
+    ->orderByHeader($header)
+    ->limit(variable_get(USERPOINTS_REPORT_LIMIT, 10));
+
+  $unapproved_query = db_select('userpoints_txn')
+    ->condition('uid', $account->uid)
+    ->condition('status', USERPOINTS_TXN_STATUS_PENDING);
+  $unapproved_query->addExpression('SUM(points)');
+
+  // Check for filtering. isset() is used because 0 is a valid value
+  // (Uncategorized).
+  if (isset($tid)) {
+    // If a category is selected, limit both the default query and the query
+    // that displays pending points to this category.
+    $query->condition('p.tid', (int)$tid);
+    $active_category = $categories[$tid];
+    $unapproved_query->condition('tid', (int)$tid);
+  }
+
+  if (isset($active_category)) {
+    drupal_set_title(t('!Points for @username (%category category)', userpoints_translation() + array('%category' => $active_category, '@username' => format_username($account))), PASS_THROUGH);
+    $total_title = t('Total !points (%category category)', userpoints_translation() + array('%category' => $active_category));
+  }
+  else {
+    drupal_set_title(t('!Points for @username', userpoints_translation() + array('@username' => format_username($account))));
+    $total_title = t('Total !points', userpoints_translation());
+  }
+
   $stati = userpoints_txn_status();
-  $num_rows = 0;
   $rows = array();
-  foreach ($query->execute() as $row) {
-    $num_rows++;
-    $status = $stati[$row->status];
-    if (!$row->cat) {
-      $row->cat = t('!Uncategorized', userpoints_translation());
-    }
-    if (!empty($row->description)) {
-      $description = $row->description;
-    }
-    else {
-      $description = t('None');
-    }
-    $operations = userpoints_invoke_all('entity_type', $row);
-    if (is_array($operations) && isset($operations[0])) {
-      $operation = $operations[0];
-    }
-    else {
-      switch ($row->entity_type) {
-        case 'node':
-          $node = node_load($row->entity_id);
-          if ($node) {
-            $operation = l($row->operation, 'node/' . $node->nid, array('attributes' => array('title' => $node->title)));
-          }
-          else {
-            $operation = $row->operation;
-          }
-          break;
-        case 'comment':
-          if (module_exists('comment')) {
-            // We have to load the comment to get the nid for the comment.
-            $comment = comment_load($row->entity_id);
-            if ($comment) {
-              $operation = l($row->operation, 'node/' . $comment->nid, array('attributes' => array('title' => $comment->subject), 'fragment' => 'comment-' . $comment->cid));
-            }
-            else {
-              $operation = $row->operation;
-            }
-          }
-          break;
-        default:
-          $operation = $row->operation;
-      }
-    }
-    $rows[] = array(
-        array('data' => $row->points, 'align' => 'center'),
-        array('data' => $status, 'align' => 'center'),
-        array('data' => format_date($row->time_stamp, 'small'), 'align' => 'center'),
-        array('data' => $operation),
-        array('data' => $row->cat),
-        array('data' => $description),
+  foreach ($query->execute() as $transaction) {
+    $status = $stati[$transaction->status];
+    $row = array(
+      array(
+        'data' => $transaction->points,
+        'class' => array('userpoints-myuserpoints-field-points'),
+      ),
+      array(
+        'data' => $status,
+        'class' => array('userpoints-myuserpoints-field-status'),
+      ),
+      array(
+        'data' => format_date($transaction->time_stamp, 'small'),
+        'class' => array('userpoints-myuserpoints-field-timestamp'),
+      ),
+      array(
+        'data' => userpoints_create_description($transaction),
+        'class' => array('userpoints-myuserpoints-field-reason'),
+      ),
     );
-    if ($num_rows <= 0) {
-      $rows[] = array(
-          array('data' => t('No !Points earned', userpoints_translation()), 'colspan' => 5, 'align' => 'center')
+    if ($multiple_categories) {
+      $row[] = array(
+        'data' => isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[0],
+        'class' => array('userpoints-myuserpoints-field-category'),
       );
     }
+    $rows[] = $row;
   }
-  return theme('userpoints_list_my_userpoints', array('args' => $args, 'header' => $header, 'rows' => $rows));
+
+  $output['table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('No !Points earned', userpoints_translation()),
+    '#weight' => -5,
+    '#attributes' => array('class' => array('userpoints-myuserpoints-list')),
+  );
+  $output['pager'] = array(
+    '#theme' => 'pager',
+    '#weight' => 0,
+  );
+
+  // Fetch pending (not yet approved) points according to the category filter.
+  $pending = (int)$unapproved_query
+    ->execute()
+    ->fetchField();
+
+  // Display both pending and approved points in a simple table.
+  $output['summary_table'] = array(
+    '#theme' => 'table',
+    '#header' => array(
+      array(
+        'data' => $total_title,
+        'colspan' => 2,
+      ),
+    ),
+    '#rows' => array(
+      array(
+        'data' => array(t('Approved !points', userpoints_translation()), userpoints_get_current_points($account->uid, isset($tid) ? $tid : 'all')),
+        'class' => array('userpoints-myuserpoints-total-approved'),
+      ),
+      array(
+        'data' => array(t('Pending !points', userpoints_translation()), $pending),
+        'class' => array('userpoints-myuserpoints-total-pending'),
+      ),
+    ),
+    '#weight' => 10,
+    '#attributes' => array('class' => array('userpoints-myuserpoints-total')),
+  );
+
+  // For simplicity, the generated output is passed to a custom alter function.
+  // This would also be possible through hook_page_alter(), but that hook is
+  // hard to use.
+  drupal_alter('userpoints_myuserpoints', $output);
+
+  return $output;
 }
 
 

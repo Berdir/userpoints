@@ -341,7 +341,7 @@ function userpoints_admin_manage($tid = NULL) {
       array('data' => t('User'), 'field' => 'uid'),
       array('data' => t('Time stamp'), 'field' => 'time_stamp', 'sort' => 'desc'),
       array('data' => t('!Points', userpoints_translation()), 'field' => 'points'),
-      array('data' => t('Operation'), 'field' => 'operation'),
+      array('data' => t('Reason'), 'field' => 'operation'),
       array('data' => t('Category'), 'field' => 'cat'),
       array('data' => t('Operation')),
   );
@@ -377,42 +377,11 @@ function userpoints_admin_manage($tid = NULL) {
     if (!$data->cat) {
       $data->cat = t('!Uncategorized', userpoints_translation());
     }
-    $operations = userpoints_invoke_all('entity_type', $data);
-    if (is_array($operations) && isset($operations[0])) {
-      $operation = $operations[0];
-    }
-    else {
-      switch ($data->entity_type) {
-        case 'node' :
-          $node = node_load($data->entity_id);
-          if ($node) {
-            $operation = l($data->operation, 'node/' . $node->nid, array('attributes' => array('title' => $node->title)));
-          }
-          else {
-            $operation = $data->operation;
-          }
-          break;
-        case 'comment' :
-          if (module_exists('comment')) {
-            //We have to load the comment to get the nid for the comment
-            $comment = comment_load($data->entity_id);
-            if ($comment) {
-              $operation = l($data->operation, 'node/' . $comment->nid, array('attributes' => array('title' => $comment->subject), 'fragment' => 'comment-' . $comment->cid));
-            }
-            else {
-              $operation = $data->operation;
-            }
-          }
-          break;
-        default:
-          $operation = $data->operation;
-      }
-    }
     $rows[] = array(
         array('data' => theme('username', array('account' => $account))),
         array('data' => format_date($data->time_stamp, 'custom', 'Y-m-d H:i')),
         array('data' => $data->points, 'align' => 'right'),
-        array('data' => $operation),
+        array('data' => userpoints_create_description($data)),
         array('data' => $data->cat),
         array('data' => l('approve', "admin/config/people/userpoints/approve/$data->txn_id") .
             ' ' . l('decline', "admin/config/people/userpoints/decline/$data->txn_id") .
@@ -563,20 +532,15 @@ function userpoints_admin_settings($form, &$form_state) {
   $form[$group][USERPOINTS_EXPIRY_DESCRIPTION] = array(
       '#type' => 'textarea',
       '#title' => t('Expiration entry description'),
-      '#description' => t('A negating expiration entry is made to expire
-                         !points leaving the original entry intact
-                         (e.g. original !points + expiration !points = 0).
-                         When the expiration entry is made this description will
-                         be placed on the entry. This is useful so the users will
-                         know what happened to their !point balance. In crafting
-                         your message you can use the following variables.',
-              userpoints_translation()) . t('
-                         <br /> !points = The name used in branding
-                         above (also use !Points and !point)') . t('
-                         <br /> !operation = Original operation that granted the !points
-                         <br /> !description = Original description for the !point
-                         <br /> !txn_id Original transaction ID
-                         <br /> !date = Date of the original entry', userpoints_translation()),
+      '#description' => t('When !points expire, you may include a description that explains to the user why his !points balance has changed. You may include the following variables in your description:', userpoints_translation()) .
+                         '<br /><br />' . t('!points = Brand name used for points (lowercase, plural)
+                         <br />!point = Brand name used for point (lowercase, singular)
+                         <br />!Points = Brand name used for Points (capitalized, plural)
+                         <br />!Point = Brand name used for Point (capitalized, singular)
+                         <br />!operation = Operation that granted the original points transaction
+                         <br />!description = Description of the original points transaction
+                         <br />!txn_id = Transaction ID for the original points transaction
+                         <br />!date = Date and time of the original points transaction'),
       '#default_value' => variable_get(USERPOINTS_EXPIRY_DESCRIPTION, ''),
   );
 

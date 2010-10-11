@@ -164,7 +164,7 @@ function userpoints_menu() {
       'type' => MENU_NORMAL_ITEM,
   );
 
-  $items['myuserpoints/%user_uid_only_optional'] = array(
+  $items['myuserpoints/%user_uid_optional'] = array(
       'title' => 'My !points',
       'title arguments' => userpoints_translation(),
       'page callback' => 'userpoints_list_my_userpoints',
@@ -185,9 +185,9 @@ function userpoints_menu() {
  *   TRUE if user has permissions to view userpoints and if the user is logged
  *   in.
  */
-function userpoints_access_my_points($uid = NULL) {
+function userpoints_access_my_points($account = NULL) {
   global $user;
-  if ($user->uid != $uid) {
+  if ($account && $user->uid != $account->uid) {
     return user_access('administer userpoints');
   }
   return (user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints');
@@ -233,14 +233,6 @@ function userpoints_theme() {
           ),
           'file' => 'userpoints.theme.inc',
       ),
-      'userpoints_list_my_userpoints' => array(
-          'variables' => array(
-              'args' => NULL,
-              'header' => NULL,
-              'rows' => NULL,
-          ),
-          'file' => 'userpoints.theme.inc',
-      ),
   );
 }
 
@@ -281,7 +273,8 @@ function userpoints_get_current_points($uid = NULL, $tid = NULL) {
     global $user;
     $uid = $user->uid;
   }
-  if (!$tid) {
+  // 0 is a valid value for the Uncategorized category.
+  if (!isset($tid)) {
     $tid = userpoints_get_default_tid();
   }
   elseif ($tid == 'all') {
@@ -709,7 +702,7 @@ function userpoints_user_view($account, $view_mode) {
   global $user;
   if (user_access('view userpoints') || (user_access('view own userpoints') && $user->uid == $account->uid )) {
     $details = NULL;
-    if (userpoints_access_my_points($account->uid)) {
+    if (userpoints_access_my_points($account)) {
       $details .= l(t('View'), 'myuserpoints/' . $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
     }
     if (user_access('administer userpoints')) {
@@ -737,14 +730,12 @@ function userpoints_user_view($account, $view_mode) {
 /**
  * Provides a dropdown to filter by category.
  */
-function userpoints_filter_cat_select($form, &$form_state, $path, $tid) {
+function userpoints_filter_cat_select($form, &$form_state, $path, $tid, $account = NULL) {
   $current_cat = url($path . $tid);
   $form = array();
   $formname = 'catselect';
-  $sql = "SELECT DISTINCT p.tid, t.name
-          FROM {userpoints_txn} p
-          LEFT JOIN {taxonomy_term_data} t on p.tid = t.tid";
-  $cats = userpoints_get_categories();
+
+  $cats = userpoints_get_categories($account);
   $options = array();
   $options[url($path)] = t('Display all');
   foreach ($cats as $key => $value) {
@@ -983,15 +974,28 @@ function userpoints_get_vid() {
 /**
  * Returns an array of possible categories, suitable for inclusion in FAPI.
  */
-function userpoints_get_categories() {
+function userpoints_get_categories($account = NULL) {
   // Create the "Uncategorized" category.
   $options = array();
   $options[0] = t('!Uncategorized', userpoints_translation());
   if (module_exists('taxonomy')) {
     $vid = userpoints_get_vid();
     if ($vid) {
-      $tree = taxonomy_get_tree($vid);
-      foreach ($tree as $term) {
+      // If an account is passed, load the terms directly from the database.
+      if ($account) {
+        $query = db_select('taxonomy_term_data', 't')
+          ->fields('t', array('tid', 'name'))
+          ->condition('t.vid', userpoints_get_vid())
+          ->groupBy('t.tid')
+          ->groupBy('t.name')
+          ->orderBy('t.weight');
+        $query->join('userpoints_txn', 'p', 't.tid = p.tid AND p.uid = :uid', array(':uid' => $account->uid));
+        $terms = $query->execute();
+      }
+      else {
+        $terms = taxonomy_get_tree($vid);
+      }
+      foreach ($terms as $term) {
         $options[$term->tid] = $term->name;
       }
     }
@@ -1042,3 +1046,96 @@ function userpoints_invoke_all($op, &$params = array()) {
   }
   return $return;
 }
+
+/**
+ * Returns information about point-providing modules and operations.
+ *
+ * @see hook_userpoints_info()
+ */
+function userpoints_get_info($operation = NULL) {
+  static $info = NULL;
+
+  if (!isset($info)) {
+    // Collect information.
+    $info = module_invoke_all('userpoints_info');
+
+    // Allow other modules to alter that information.
+    drupal_alter('userpoints_info', $info);
+  }
+
+  if ($operation) {
+    if (isset($info[$operation])) {
+      return $info[$operation];
+    }
+    return NULL;
+  }
+  return $info;
+}
+
+/**
+ * Creates a descriptive reason for a userpoints_transaction.
+ *
+ * The following resources are considered, in this order:
+ *
+ *  * description key in the information array for that operation.
+ *  * description of the transaction.
+ *  * name of the operation.
+ *
+ * @return
+ *   The reason for that transaction, linked to the referenced
+ *   entity if available.
+ */
+function userpoints_create_description($transaction) {
+  // Check if there is a valid entity referenced and which can be linked to.
+  $entity = NULL;
+  if ($transaction->entity_type && entity_get_info($transaction->entity_type)) {
+    $entity = reset(entity_load($transaction->entity_type, array($transaction->entity_id)));
+  }
+
+  // The info hook is preferred because that is the only source that can be
+  // translated.
+  $info = userpoints_get_info($transaction->operation);
+  // First, check if there is a valid description callback defined for this
+  // operation.
+  $safe = FALSE;
+  if (!empty($info['description callback']) && function_exists($info['description callback'])) {
+    $description = $info['description callback']($transaction, $entity);
+    $safe = TRUE;
+  }
+  // Second, try static description key.
+  elseif (!empty($info['description'])) {
+    $description = $info['description'];
+    $safe = TRUE;
+  }
+  // Third, check the description of the transaction.
+  elseif (!empty($transaction->description)) {
+    $description = $transaction->description;
+  }
+  // Fallback to the operation name if there is no description.
+  else {
+    $description = $transaction->operation;
+  }
+  if ($entity) {
+    $uri = entity_uri($transaction->entity_type, $entity);
+    if ($uri) {
+      $description = l($description, $uri['path'], $uri['options'] + array('html' => $safe));
+    }
+  }
+  if ((empty($entity) || empty($uri)) && $safe) {
+    // Escape possible user provided reason.
+    $description = check_plain($description);
+  }
+  return $description;
+}
+
+/**
+ * Implements hook_userpoints_info().
+ */
+function userpoints_userpoints_info() {
+  return array(
+    'expiry' => array(
+      'description' => t('!Points have expired.', userpoints_translation()),
+    )
+  );
+}
+

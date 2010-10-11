@@ -1,0 +1,15 @@
+/* $Id$ */
+
+td.userpoints-myuserpoints-field-points {
+  text-align: right;
+}
+
+table.userpoints-myuserpoints-total td {
+  width: 50%;
+}
+
+table.userpoints-myuserpoints-total {
+  width: 50%;
+  min-width: 300px;
+}
+
