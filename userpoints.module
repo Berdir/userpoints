@@ -472,7 +472,7 @@ function userpoints_userpointsapi($params) {
       }
       else {
         if ($account->uid == $user->uid && $view_own_points) {
-          $message = format_plural(abs($params['points']), 'You just had a !point deducted and have now %total !points in the %category category.', 'You just had @count !points deducted and now have %total !points in the %category category.', $arguments);
+          $message = format_plural(abs($params['points']), 'You just had a !point deducted and now have %total !points in the %category category.', 'You just had @count !points deducted and now have %total !points in the %category category.', $arguments);
         }
         elseif ($view_all_points) {
           $message = format_plural(abs($params['points']), '!username just had a !point deducted and now has %total !points in the %category category.', '!username just had @count !points deducted and now has %total !points in the %category category.', $arguments);
@@ -501,7 +501,7 @@ function userpoints_userpointsapi($params) {
       }
       else {
         if ($account->uid == $user->uid && $view_own_points) {
-          $message = format_plural(abs($params['points']), 'You just earned a !point and have now %total !points in the %category category.', 'You just earned @count !points and have now %total !points in the %category category.', $arguments);
+          $message = format_plural(abs($params['points']), 'You just earned a !point and now have %total !points in the %category category.', 'You just earned @count !points and now have %total !points in the %category category.', $arguments);
         }
         elseif ($view_all_points) {
           $message = format_plural(abs($params['points']), '!username just earned a !point and now has %total !points in the %category category.', '!username just earned @count !points and now has %total !points in the %category category.', $arguments);
