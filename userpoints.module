@@ -1121,7 +1121,7 @@ function userpoints_create_description($transaction) {
       $description = l($description, $uri['path'], $uri['options'] + array('html' => $safe));
     }
   }
-  if ((empty($entity) || empty($uri)) && $safe) {
+  if ((empty($entity) || empty($uri)) && !$safe) {
     // Escape possible user provided reason.
     $description = check_plain($description);
   }
