@@ -38,19 +38,36 @@ function userpoints_confirm_approve_submit($form, &$form_state) {
   $form_state['redirect'] = 'admin/config/people/userpoints/moderate';
 }
 
-
-function userpoints_admin_txn($form, &$form_state, $mode, $txn_id) {
+/**
+ * Form builder for add/edit userpoints transaction form.
+ */
+function userpoints_admin_txn($form, &$form_state, $mode, $txn_id = NULL) {
   global $user;
 
   $timestamp = format_date(REQUEST_TIME, 'custom', 'Y-m-d H:i O');
-
   if ($mode == 'edit' && $txn_id) {
     $txn = db_query('SELECT * FROM {userpoints_txn} WHERE txn_id = :txn_id', array(':txn_id' => $txn_id))->fetch();
+
+    if (!$txn) {
+      // Failed to load transaction, display not found page.
+      drupal_not_found();
+      drupal_exit();
+    }
+
     $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i O');
     $txn_user = user_load($txn->uid);
+
+    $form['txn'] = array(
+      '#type' => 'value',
+      '#value' => $txn,
+    );
   }
   elseif ($mode == 'add' && $txn_id) {
     $txn_user = user_load($txn_id);
+  } elseif ($mode == 'edit') {
+    // Edit but now transaction id given, display not found page.
+    drupal_not_found();
+    drupal_exit();
   }
 
   $form['txn_user'] = array(
@@ -59,9 +76,11 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn_id) {
       '#size' => 30,
       '#maxlength' => 60,
       '#default_value' => isset($txn_user) ? $txn_user->name : '',
-      '#autocomplete_path' => 'user/autocomplete',
-      '#description' => t('User Name for the user you want the !points to affect', userpoints_translation()),
+      '#autocomplete_path' => $mode == 'edit' ? NULL : 'user/autocomplete',
+      '#description' => t('The name of the user who should gain or lose !points.', userpoints_translation()),
       '#required' => TRUE,
+      '#weight' => -20,
+      '#disabled' => $mode == 'edit',
   );
 
   $form['points'] = array(
@@ -70,17 +89,43 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn_id) {
       '#size' => 10,
       '#maxlength' => 10,
       '#default_value' => isset($txn->points) ? $txn->points : 0,
-      '#description' => t('Number of !points to add/subtract from the user. For example, 25 (to add !points) or -25 (to subtract !points).', userpoints_translation()),
+      '#description' => t('The number of !points to add or subtract.  For example, enter %positive to add !points or %negative to deduct !points.', array('%positive' => 25, '%negative' => -25) + userpoints_translation()),
       '#required' => TRUE,
+      '#weight' => -15,
   );
 
+  if ($mode == 'add') {
+    $form['moderate'] = array(
+      '#title' => t('Moderated'),
+      '#type' => 'checkbox',
+      '#description' => t('If checked, this !points transaction must be approved, through the moderation process.', userpoints_translation()),
+      '#default_value' => variable_get(USERPOINTS_POINTS_MODERATION, 0),
+      '#access' => userpoints_admin_access('moderate'),
+      '#weight' => -10,
+    );
+  }
+  else {
+    $form['status'] = array(
+      '#title' => t('Approval status'),
+      '#type' => 'radios',
+      '#options' => userpoints_txn_status(),
+      '#description' => t('Approval status of the transaction.'),
+      '#default_value' => $txn->status,
+      '#access' => userpoints_admin_access('moderate'),
+      '#weight' => -10,
+    );
+  }
+
   $form['time_stamp'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Date/Time'),
-      '#default_value' => $timestamp,
-      '#size' => 30,
-      '#maxlength' => 30,
-      '#description' => t('Date and time of this transaction, in the form YYYY-MM-DD HH:MM +ZZZZ'),
+    '#type' => 'textfield',
+    '#title' => t('Date/Time'),
+    '#default_value' => $timestamp,
+    '#size' => 30,
+    '#maxlength' => 30,
+    '#description' => t('The date and time recorded for this transaction. Use this format: YYYY-MM-DD HH:MM +ZZZZ.'),
+    '#weight' => -5,
+    // Do not show this if it is not allowed to change the timestamp anyway.
+    '#access' => !variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1),
   );
 
   $expirydate = 0;
@@ -99,21 +144,46 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn_id) {
   $form['expirydate'] = array(
       '#type' => 'textfield',
       '#title' => t('Expiration date'),
-      '#default_value' => $expirydate,
+      '#default_value' => $expirydate ? $expirydate : '',
       '#size' => 30,
       '#maxlength' => 30,
-      '#description' => t('Date and time to expire these !points, in the form YYYY-MM-DD HH:MM +ZZZZ', userpoints_translation()) .
-      '<br />' . t('Leave blank for non-expiring !points', userpoints_translation()),
+      '#description' => t('The date and time that the !points should expire. Use this format: YYYY-MM-DD HH:MM +ZZZZ. Leave this field blank if the !points should never expire.', userpoints_translation()),
+      '#weight' => 25,
   );
   if (module_exists('taxonomy')) {
+    $options = userpoints_get_categories();
     $form['tid'] = array(
-        '#type' => 'select',
-        '#title' => t('Category'),
-        '#default_value' => variable_get(USERPOINTS_CATEGORY_DEFAULT_TID, 0),
-        '#options' => userpoints_get_categories(),
-        '#description' => t('Category to apply these !points to', userpoints_translation()),
+      '#type' => 'select',
+      '#title' => t('Category'),
+      '#default_value' => isset($txn->tid) ? $txn->tid : userpoints_get_default_tid(),
+      '#options' => $options,
+      '#description' => t('The !points category that should apply to this transaction.', userpoints_translation()),
+      '#weight' => 0,
+      // Only show the category if there are actually categories to choose from.
+      '#access' => count($options) > 1,
     );
   }
+  
+  $form['operation'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Operation'),
+      '#default_value' => isset($txn->operation) ? $txn->operation : t('admin'),
+      '#size' => 20,
+      '#maxlength' => 20,
+      '#description' => t('The operation type for this transaction (default is %admin).', array('%admin' => t('admin'))),
+      '#weight' => 5,
+      '#required' => FALSE,
+  );
+
+  $form['description'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Description'),
+      '#default_value' => isset($txn->description) ? $txn->description : '',
+      '#rows' => 7,
+      '#cols' => 40,
+      '#description' => t('Enter an optional description for this transaction, such as the reason !points were added or subtracted.', userpoints_translation()),
+      '#weight' => 10,
+  );
 
   $form['reference'] = array(
       '#type' => 'textfield',
@@ -121,81 +191,21 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn_id) {
       '#default_value' => isset($txn->reference) ? $txn->reference : '',
       '#size' => 30,
       '#maxlength' => 128,
-      '#description' => t('Enter optional reference for this transaction. This field will be indexed and searchable.'),
+      '#description' => t('Enter an optional reference code for this transaction. This is for internal tracking and is not shown to the end user.', userpoints_translation()),
+      '#weight' => 15,
   );
 
-  $form['description'] = array(
-      '#type' => 'textarea',
-      '#title' => t('Description'),
-      '#default_value' => isset($txn->description) ? $txn->description : '',
-      '#width' => 70,
-      '#lines' => 5,
-      '#description' => t('Enter an optional description for this transaction, such as the reason it is created.'),
-  );
-
-
-  switch ($mode) {
-    case 'add':
-      $form['approver_uid'] = array(
-          '#type' => 'hidden',
-          '#value' => $user->uid,
-      );
-
-      $form['operation'] = array(
-          '#type' => 'hidden',
-          '#value' => 'admin',
-      );
-
-      $form['status'] = array(
-          '#type' => 'hidden',
-          '#value' => USERPOINTS_TXN_STATUS_PENDING,
-      );
-
-      $form['mode'] = array(
-          '#type' => 'hidden',
-          '#value' => $mode,
-      );
-      break;
-
-    case 'edit':
-
-      $form['txn_user']['#disabled'] = TRUE;
-      unset($form['txn_user']['#autocomplete_path']);
-
-      $form['txn_uid'] = array(
-          '#type' => 'value',
-          '#value' => $txn->uid,
-      );
-      $form['txn_id'] = array(
-          '#type' => 'value',
-          '#value' => $txn_id,
-      );
-      $form['approver_uid'] = array(
-          '#type' => 'textfield',
-          '#description' => t('Approver ID'),
-          '#default_value' => $txn->approver_uid,
-          '#size' => 10,
-          '#maxlength' => 7,
-          '#description' => t('The user ID of the person who approved this transaction. 0 means not yet approved.'),
-      );
-
-      $form['operation'] = array(
-          '#type' => 'textfield',
-          '#description' => t('Operation'),
-          '#default_value' => $txn->operation,
-          '#size' => 20,
-          '#maxlength' => 20,
-          '#description' => t('The operation type for this transaction. Normally, it is "admin".'),
-      );
-
-      $form['status'] = array(
-          '#title' => t('Approval status'),
-          '#type' => 'radios',
-          '#options' => userpoints_txn_status(),
-          '#description' => t('Approval status of the transaction.'),
-          '#default_value' => $txn->status,
-      );
-      break;
+  $approved_by = !empty($txn->approver_uid) ? user_load($txn->approver_uid) : NULL;
+  if ($approved_by) {
+    $form['approver'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Moderator'),
+      '#default_value' => $approved_by->name,
+      '#size' => 30,
+      '#maxlength' => 30,
+      '#description' => t('The user who gave the transaction its current status.'),
+      '#weight' => 30,
+    );
   }
 
   $form['mode'] = array(
@@ -206,57 +216,87 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn_id) {
   $form['submit'] = array(
       '#type' => 'submit',
       '#value' => t('Save'),
+      '#weight' => 50,
   );
-
   return $form;
 }
 
-function userpoints_admin_txn_submit($form, &$form_state) {
-  if ($form_state['values']['form_id'] != 'userpoints_admin_txn') {
-    return;
-  }
-
+/**
+ * Validate function for userpoints transaction form.
+ */
+function userpoints_admin_txn_validate($form, &$form_state) {
   $txn_user = user_load_by_name($form_state['values']['txn_user']);
   if (!is_object($txn_user)) {
-    return;
+    form_set_error('txn_user', t('Specified user does not exist.'));
   }
-  switch ($form_state['values']['mode']) {
-    case 'add':
-      $params = array(
-          'points' => $form_state['values']['points'],
-          'uid' => $txn_user->uid,
-          'operation' => 'admin',
-          'description' => $form_state['values']['description'],
-          'reference' => $form_state['values']['reference'],
-          'tid' => $form_state['values']['tid'],
-          'time_stamp' => strtotime($form_state['values']['time_stamp']),
-      );
-      if ($form_state['values']['expirydate']) {
-        // Check for the existence of an expirydate.
-        $params['expirydate'] = strtotime($form_state['values']['expirydate']);
-      }
-      userpoints_userpointsapi($params);
-      break;
+  else {
+    form_set_value($form['txn_user'], $txn_user, $form_state);
+  }
 
-    case 'edit':
-      $expirydate = 0;
-      if (!empty($form_state['values']['expirydate'])) {
-        $expirydate = strtotime($form_state['values']['expirydate']);
-      }
-      $params = array(
-          'uid' => $form_state['values']['txn_uid'],
-          'approver_id' => $form_state['values']['approver_uid'],
-          'points' => $form_state['values']['points'],
-          'time_stamp' => strtotime($form_state['values']['time_stamp']),
-          'operation' => $form_state['values']['operation'],
-          'description' => $form_state['values']['description'],
-          'reference' => $form_state['values']['reference'],
-          'status' => $form_state['values']['status'],
-          'expirydate' => $expirydate,
-          'txn_id' => $form_state['values']['txn_id']
-      );
-      userpoints_userpointsapi($params);
+  if ((int)$form_state['values']['points'] == 0) {
+    form_set_error('points', t('Amount of !points must be a positive or negative number.', userpoints_translation()));
   }
+
+  if (!strtotime($form_state['values']['time_stamp'])) {
+    form_set_error('time_stamp', t('The provided timestamp is not a valid date.'));
+  }
+
+}
+
+/**
+ * Submit function for userpoints transaction form.
+ */
+function userpoints_admin_txn_submit($form, &$form_state) {
+  global $user;
+  if ($form_state['values']['mode'] == 'add') {
+    $params = array(
+      'points' => $form_state['values']['points'],
+      'uid' => $form_state['values']['txn_user']->uid,
+      'operation' => $form_state['values']['operation'],
+      'description' => $form_state['values']['description'],
+      'reference' => $form_state['values']['reference'],
+      'tid' => $form_state['values']['tid'],
+      'time_stamp' => strtotime($form_state['values']['time_stamp']),
+      'moderate' => (bool)$form_state['values']['moderate'],
+      'approver_uid' => $user->uid,
+    );
+    if ($form_state['values']['expirydate']) {
+      // Check for the existence of an expirydate.
+      $params['expirydate'] = strtotime($form_state['values']['expirydate']);
+    }
+  }
+  else {
+    $expirydate = 0;
+    if (!empty($form_state['values']['expirydate'])) {
+      $expirydate = strtotime($form_state['values']['expirydate']);
+    }
+
+    // If status changed, the current user is the new approver, when not
+    // changed, then the current approver is kept.
+    if ($form_state['values']['txn']->status == $form_state['values']['status']) {
+      $approver_uid = $form_state['values']['txn']->approver_uid;
+    }
+    else {
+      $approver_uid = $user->uid;
+    }
+
+    $params = array(
+      'uid' => $form_state['values']['txn']->uid,
+      'approver_uid' => $approver_uid,
+      'points' => $form_state['values']['points'],
+      'tid' => $form_state['values']['tid'],
+      'time_stamp' => strtotime($form_state['values']['time_stamp']),
+      'operation' => $form_state['values']['operation'],
+      'description' => $form_state['values']['description'],
+      'reference' => $form_state['values']['reference'],
+      'status' => $form_state['values']['status'],
+      'expirydate' => $expirydate,
+      'txn_id' => $form_state['values']['txn']->txn_id,
+      'display' => FALSE,
+    );
+    drupal_set_message(t('Changes to the !points transaction have been saved.', userpoints_translation()));
+  }
+  userpoints_userpointsapi($params);
 
   $form_state['redirect'] = 'admin/config/people/userpoints';
 }
@@ -312,8 +352,9 @@ function userpoints_admin_points($tid = NULL) {
     if (!$data->cat) {
       $data->cat = t('!Uncategorized', userpoints_translation());
     }
+    $link = userpoints_admin_access('edit') ? l(t("(details)"), "myuserpoints/$data->uid") : '';
     $rows[] = array(
-        array('data' => theme('username', array('account' => $data)) . "&nbsp;&nbsp;" . l(t("(details)"), "myuserpoints/$data->uid")),
+        array('data' => trim(theme('username', array('account' => $data)) . ' ' . $link)),
         array('data' => $data->cat, 'align' => 'right'),
         array('data' => $data->points, 'align' => 'right'),
     );
@@ -377,6 +418,9 @@ function userpoints_admin_manage($tid = NULL) {
     if (!$data->cat) {
       $data->cat = t('!Uncategorized', userpoints_translation());
     }
+
+    $edit_link = userpoints_admin_access('edit') ? l('edit', "admin/config/people/userpoints/edit/$data->txn_id") : '';
+
     $rows[] = array(
         array('data' => theme('username', array('account' => $account))),
         array('data' => format_date($data->time_stamp, 'custom', 'Y-m-d H:i')),
@@ -385,8 +429,7 @@ function userpoints_admin_manage($tid = NULL) {
         array('data' => $data->cat),
         array('data' => l('approve', "admin/config/people/userpoints/approve/$data->txn_id") .
             ' ' . l('decline', "admin/config/people/userpoints/decline/$data->txn_id") .
-            ' ' . l('edit', "admin/config/people/userpoints/edit/$data->txn_id")
-        ),
+            ' ' . $edit_link),
     );
   }
 

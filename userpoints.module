@@ -75,6 +75,60 @@ function userpoints_help($path, $arg) {
 }
 
 /**
+ * Checks access for administrative functionality.
+ *
+ * Provides simplified access checks for the administrative permissions:
+ * - administer userpoints
+ * - add userpoints
+ * - edit userpoints
+ * - moderate userpoints
+ *
+ * @param $type
+ *   The access type to check. The administer permission has access to all of
+ *   them. Supported strings:
+ *   - list: Access to the userpoints list, default local task. All
+ *           administrative permissions have access to this.
+ *   - add: Permission to add new userpoint transactions.
+ *   - edit: Permission to edit existing userpoint transactions.
+ *   - moderate: Permission to approve/decline pending transactions.
+ *   - administer: Unlimited userpoints permissions, used for settings page.
+ *
+ * @return
+ *   TRUE if the current user has access, FALSE if not.
+ */
+function userpoints_admin_access($type = 'list') {
+  // Administer userpoints permission has full access.
+  if (user_access('administer userpoints')) {
+    return TRUE;
+  }
+
+  switch ($type) {
+    // All admin permissions have access to the list page.
+    case 'list':
+      return user_access('add userpoints') || user_access('edit userpoints') || user_access('moderate userpoints');
+      break;
+
+    case 'add':
+      return user_access('add userpoints');
+      break;
+
+    case 'edit':
+      return user_access('edit userpoints');
+      break;
+
+    case 'moderate':
+      return user_access('moderate userpoints');
+      break;
+
+    case 'administer':
+      // administer permission was already checked, this exists for
+      // documentation purposes only.
+      break;
+  }
+  return FALSE;
+}
+
+/**
  * Implements hook_menu().
  */
 function userpoints_menu() {
@@ -84,14 +138,16 @@ function userpoints_menu() {
       'title arguments' => userpoints_translation(),
       'description' => strtr('Manage !points', userpoints_translation()),
       'page callback' => 'userpoints_admin_points',
-      'access arguments' => array('administer userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('list'),
       'file' => 'userpoints.admin.inc',
   );
   $items['admin/config/people/userpoints/list'] = array(
       'title' => 'List',
       'title arguments' => userpoints_translation(),
       'description' => strtr('List users by !points', userpoints_translation()),
-      'access arguments' => array('view userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('list'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_DEFAULT_LOCAL_TASK,
       'weight' => -2,
@@ -101,7 +157,8 @@ function userpoints_menu() {
       'title arguments' => userpoints_translation(),
       'description' => strtr('Review !points in moderation', userpoints_translation()),
       'page callback' => 'userpoints_admin_manage',
-      'access arguments' => array('administer userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('moderate'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_LOCAL_TASK,
       'weight' => -1,
@@ -111,7 +168,8 @@ function userpoints_menu() {
       'description' => 'Admin add/delete userpoints',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('userpoints_admin_txn', 4, 5),
-      'access arguments' => array('administer userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('add'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_LOCAL_TASK,
       'weight' => 0,
@@ -120,7 +178,8 @@ function userpoints_menu() {
       'title' => 'Edit',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('userpoints_admin_txn', 4, 5),
-      'access arguments' => array('administer userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('edit'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_CALLBACK
   );
@@ -129,7 +188,8 @@ function userpoints_menu() {
       'title' => 'Approve Userpoints',
       'page callback' => 'userpoints_admin_approve',
       'page arguments' => array(4, 5),
-      'access arguments' => array('administer userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('moderate'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_CALLBACK
   );
@@ -138,7 +198,8 @@ function userpoints_menu() {
       'title arguments' => userpoints_translation(),
       'page callback' => 'userpoints_admin_approve',
       'page arguments' => array(4, 5),
-      'access arguments' => array('administer userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('moderate'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_CALLBACK
   );
@@ -149,7 +210,8 @@ function userpoints_menu() {
       'title arguments' => userpoints_translation(),
       'page callback' => 'drupal_get_form',
       'page arguments' => array('userpoints_admin_settings'),
-      'access arguments' => array('administer userpoints'),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('administer'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_LOCAL_TASK,
       'weight' => 10,
@@ -188,25 +250,41 @@ function userpoints_menu() {
 function userpoints_access_my_points($account = NULL) {
   global $user;
   if ($account && $user->uid != $account->uid) {
-    return user_access('administer userpoints');
+    return userpoints_admin_access('edit');
   }
   return (user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints');
 }
 
 /**
- * Implements hook_perm().
+ * Implements hook_permission().
  */
 function userpoints_permission() {
   return array(
-    'view userpoints' => array(
-      'title' => t('View all UserPoints'),
-    ),
     'view own userpoints' => array(
-      'title' => t('View own UserPoints'),
+      'title' => t('View own !points', userpoints_translation()),
+      'description' => t('Allows to view own !points, including own !point transactions.', userpoints_translation()),
+    ),
+    'view userpoints' => array(
+      'title' => t('View all !points', userpoints_translation()),
+      'description' => t('Allows to view the !points of other users, but not the transactions.', userpoints_translation()),
+    ),
+    'add userpoints' => array(
+      'title' => t('Add new !point transactions', userpoints_translation()),
+      'description' => t('Allows to create new !point transactions.', userpoints_translation()),
+    ),
+    'edit userpoints' => array(
+      'title' => t('Edit !point transactions', userpoints_translation()),
+      'description' => t('Allows to modify existing !point transactions, including the ability to view transaction history for all users.', userpoints_translation()),
+    ),
+    'moderate userpoints' => array(
+      'title' => t('Moderate !point transactions', userpoints_translation()),
+      'description' => t('Allows to approve or disapprove !point transactions.', userpoints_translation()),
     ),
     'administer userpoints' => array(
-      'title' => t('Administer Userpoints')
-  ));
+      'title' => t('Administer Userpoints'),
+      'description' => t('Allows to configure the settings and includes full read and write access of all !point transactions.', userpoints_translation()),
+    ),
+  );
 }
 
 /**
