@@ -648,13 +648,7 @@ function _userpoints_transaction(&$params) {
 
   if (!empty($params['txn_id']) && $params['txn_id'] > 0) {
     // A transaction ID was passed in so we'll update the transaction.
-    $txn = db_query("SELECT txn_id, uid, approver_uid, points,
-      time_stamp, status, operation, description, reference, expirydate, expired,
-      parent_txn_id, tid, entity_id, entity_type
-      FROM {userpoints_txn}
-      WHERE txn_id = :txn_id",
-                    array(':txn_id' => $params['txn_id']))->fetchAssoc();
-
+    $txn = (array) userpoints_get_transaction($params['txn_id']);
     if (!$txn) {
       return FALSE;
     }
@@ -1217,3 +1211,23 @@ function userpoints_userpoints_info() {
   );
 }
 
+/**
+ * Load a userpoints transaction.
+ *
+ * @param $txn_id
+ *   Userpoints transaction Id.
+ *
+ * @return
+ *   A loaded userpoints transaction object.
+ */
+function userpoints_get_transaction($txn_id) {
+  $transaction = db_query('SELECT * from {userpoints_txn} WHERE txn_id = :txn', array(':txn' => $txn_id))->fetchObject();
+
+  // Load corresponding user object.
+  $transaction->user = user_load($transaction->uid);
+
+  // Load category.
+  $categories = userpoints_get_categories();
+  $transaction->category = isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[userpoints_get_default_tid()];
+  return $transaction;
+}

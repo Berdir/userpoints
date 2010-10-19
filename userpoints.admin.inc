@@ -16,23 +16,11 @@ function userpoints_admin_approve($operation, $txn_id) {
 function userpoints_confirm_approve_submit($form, &$form_state) {
   global $user;
 
-  switch ($form_state['values']['operation']) {
-    case 'approve':
-      $status = USERPOINTS_TXN_STATUS_APPROVED;
-      break;
-    case 'decline':
-      $status = USERPOINTS_TXN_STATUS_DECLINED;
-      break;
-    default:
-      return;
-  }
-
   $params = array(
-      'txn_id' => $form_state['values']['txn_id'],
-      'approver_uid' => $user->uid,
-      'status' => $status,
+    'txn_id' => $form_state['values']['txn_id'],
+    'approver_uid' => $user->uid,
+    'status' => $form_state['values']['operation'],
   );
-
   userpoints_userpointsapi($params);
 
   $form_state['redirect'] = 'admin/config/people/userpoints/moderate';
@@ -449,24 +437,35 @@ function userpoints_admin_manage($tid = NULL) {
 
 function userpoints_confirm_approve($form, $form_state, $operation, $txn_id) {
   $form = array(
-      'operation' => array(
-          '#type' => 'value',
-          '#value' => $operation,
-      ),
-      'txn_id' => array(
-          '#type' => 'value',
-          '#value' => $txn_id,
-      ),
+    'txn_id' => array(
+        '#type' => 'value',
+        '#value' => $txn_id,
+    ),
   );
 
-  return confirm_form(
-          $form,
-          t('Are you sure you want to @op txn @txn_id', array('@op' => $operation, '@txn_id' => $txn_id)),
-          'admin/config/people/userpoints/moderate'
-  );
+  $transaction = userpoints_get_transaction($txn_id);
+  $arguments = array(
+    '!user' => theme('username', array('account' => $transaction->user)),
+    '%category' => $transaction->category,
+  ) + userpoints_translation();
+
+  if ($operation == 'approve') {
+    $question = format_plural($transaction->points, 'Do you want to approve @count !point for !user in the %category category?', 'Do you want to approve @count !points for !user in the %category category?', $arguments);
+    $form['operation'] = array(
+      '#type' => 'value',
+      '#value' => USERPOINTS_TXN_STATUS_APPROVED,
+    );
+  }
+  else {
+    $question = format_plural($transaction->points, 'Do you want to decline @count !point for !user in the %category category?', 'Do you want to decline @count !points for !user in the %category category?', $arguments);
+    $form['operation'] = array(
+      '#type' => 'value',
+      '#value' => USERPOINTS_TXN_STATUS_DECLINED,
+    );
+  }
+
+  return confirm_form($form, $question, 'admin/config/people/userpoints/moderate', t('Reason: !reason', array('!reason' => userpoints_create_description($transaction))));
 }
-
-
 /**
  * Menu callback for settings form.
  */
