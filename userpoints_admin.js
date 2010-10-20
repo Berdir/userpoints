@@ -45,9 +45,23 @@
       // Category.
       $('fieldset#edit-category', context).drupalSetSummary(function (context) {
         var category = $('select#edit-userpoints-category-default-tid :selected').text();
-        var display_category = $('select#edit-userpoints-category-profile-display-tid :selected').text();
+        var display_selection = $('div.form-item-userpoints-category-profile-display-tid input:checked').siblings('label');
+        var display_categories;
+        if (display_selection.length > 0) {
+            display_categories = jQuery.trim(display_selection[0].firstChild.nodeValue);
+            for (var i = 1; i < display_selection.length; i++) {
+                if (i > 2) {
+                    display_categories += ', ...';
+                    break;
+                }
+                display_categories += ', ' + jQuery.trim(display_selection[i].firstChild.nodeValue);
+            }
+        }
+        else {
+            display_categories = Drupal.t('none');
+        }
 
-        return Drupal.t('Default category %category, %display_category displayed.', {'%category' : category, '%display_category' : display_category});
+        return Drupal.t('Default: %category<br />Displayed: %display_categories', {'%category' : category, '%display_categories' : display_categories});
       });
 
       // Stamping.

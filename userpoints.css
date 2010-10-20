@@ -1,0 +1,19 @@
+/* $Id$ */
+
+div.profile ul.userpoints-links {
+    padding-left: 0;
+}
+
+div.profile ul.userpoints-links li.first {
+    padding-left: 0;
+}
+
+div.block-userpoints div.userpoints-total {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+div.block-userpoints ul.userpoints-links li {
+    display: block;
+}
+

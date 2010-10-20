@@ -355,7 +355,7 @@ function userpoints_get_current_points($uid = NULL, $tid = NULL) {
   if (!isset($tid)) {
     $tid = userpoints_get_default_tid();
   }
-  elseif ($tid == 'all') {
+  elseif ($tid === 'all') {
     return (int) db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
   }
   return (int) db_query('SELECT points FROM {userpoints} WHERE uid = :uid AND tid = :tid', array(':uid' => $uid, ':tid' => $tid))->fetchField();
@@ -772,31 +772,91 @@ function userpoints_user_delete($account) {
  */
 function userpoints_user_view($account, $view_mode) {
   global $user;
-  if (user_access('view userpoints') || (user_access('view own userpoints') && $user->uid == $account->uid )) {
-    $details = NULL;
-    if (userpoints_access_my_points($account)) {
-      $details .= l(t('View'), 'myuserpoints/' . $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
-    }
-    if (user_access('administer userpoints')) {
-      if (!is_null($details)) {
-        $details .= ', ';
+  if (user_access('view userpoints') || (user_access('view own userpoints') && $user->uid == $account->uid)) {
+    $points_list = userpoints_get_points_list($account);
+
+    if (!empty($details) || $points_list) {
+      $account->content['userpoints']['title'] = array(
+          '#markup' => '<h3>' .  t('!Points', userpoints_translation()) . '</h3>',
+      );
+      if ($points_list) {
+        $account->content['userpoints'] += $points_list;
       }
-      $details .= l(t('Adjust'), 'admin/config/people/userpoints/add/' . $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user', userpoints_translation()))));
+    }
+  }
+}
+
+/**
+ * Returns a renderable array that displays the points and action links.
+ *
+ * @param $account
+ *   User object for which the points should be displayed.
+ * @return
+ *   Renderable array with the points and actions.
+ */
+function userpoints_get_points_list($account = NULL) {
+  if (empty($account)) {
+    global $user;
+    $account = $user;
+  }
+  $output = array();
+
+  $categories = userpoints_get_categories();
+  // 0 can not be used as a checkbox value.
+  $categories = array('uncategorized' => $categories[0]) + $categories + array('all' => t('Total !points in all categories', userpoints_translation()));
+  unset($categories[0]);
+  $tids = array_filter(variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, array_keys($categories)));
+  if (!empty($tids)) {
+    $points_list = array();
+    $total = NULL;
+    foreach ($tids as $tid) {
+      // Which points are we displaying. Special case for uncategorized.
+      $points = userpoints_get_current_points($account->uid, $tid == 'uncategorized' ? 0 : $tid);
+      if ($tid == 'all') {
+        $total = t('Total (all categories): @points', userpoints_translation() + array('@points' => $points));
+      }
+      else {
+        $points_list[] = t('%category: @points', userpoints_translation() + array('@points' => $points, '%category' => $categories[$tid]));
+      }
     }
 
-    // Which points are we displaying.
-    $points = userpoints_get_current_points($account->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
-
-    $account->content['userpoints'] = array(
-        '#type' => 'user_profile_category',
-        '#title' => t('User !points', userpoints_translation()),
+    // If there are multiple categories, create a list.
+    $output['list'] = array(
+      '#theme' => 'item_list',
+      '#items' => $points_list,
+      '#attributes' => array('class' => array('userpoints-points')),
     );
-    $account->content['userpoints']['points'] = array(
-        '#type' => 'user_profile_item',
-        '#title' => t('!Points', userpoints_translation()),
-        '#markup' => $details ? $points . ' - ' . $details : $points,
+
+    if ($total) {
+      $output['total'] = array(
+        '#markup' => '<div class="userpoints-total">' . $total . '</div>',
+      );
+    }
+  }
+
+  $links = array();
+  if (userpoints_access_my_points($account)) {
+    $links['userpoints-view'] = array(
+      'title' => t('View !points transactions', userpoints_translation()),
+      'href' => 'myuserpoints/' . $account->uid,
     );
   }
+  if (user_access('administer userpoints')) {
+    $links['userpoints-adjust'] = array(
+      'title' => t('Add or deduct !points', userpoints_translation()),
+      'href' => 'admin/config/people/userpoints/add/' . $account->uid,
+    );
+  }
+  $output['actions'] = array(
+    '#theme' => 'links__userpoints_actions',
+    '#links' => $links,
+    '#attributes' => array('class' => array('links', 'userpoints-links')),
+    '#attached' => array(
+      'css' => array(drupal_get_path('module', 'userpoints') . '/userpoints.css'),
+    ),
+  );
+
+  return $output;
 }
 
 /**
@@ -849,11 +909,9 @@ function userpoints_block_info() {
 function userpoints_block_view($delta) {
   global $user;
   if ($delta == -1 && (user_access('view userpoints') || user_access('view own userpoints'))) {
-    $title = t('!user\'s !points', array_merge(array('!user' => theme('username', array('account' => $user))), userpoints_translation()));
+    $title = t('My !points balance', userpoints_translation());
     if ($user->uid) {
-      $points = userpoints_get_current_points($user->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
-      $show_points = format_plural($points, '!point', '!points', userpoints_translation());
-      $content = t('You have %p %c', array('%p' => $points, '%c' => $show_points));
+      $content = userpoints_get_points_list();
     }
     else {
       $content = t('!Points are visible to logged in users only', userpoints_translation());

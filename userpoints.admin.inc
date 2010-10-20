@@ -655,15 +655,16 @@ function userpoints_admin_settings($form, &$form_state) {
         '#description' => t('By default all !points are assigned to this category.  You can modify what categories are available by modifying the <a href="!url">Userpoints taxonomy</a>',
                 array_merge(userpoints_translation(), array('!url' =>  url('admin/structure/taxonomy/' . taxonomy_vocabulary_load(variable_get(USERPOINTS_CATEGORY_DEFAULT_VID, ''))->machine_name)))),
     );
-    $options = userpoints_get_categories();
-    // $options doesn't include all so we'll add it.
-    $options['all'] = t('All categories');
+    $options = userpoints_get_categories(NULL);
+    // 0 can not be used as a checkbox value.
+    $options = array('uncategorized' => $options[0]) + $options + array('all' => t('Total !points in all categories', userpoints_translation()));
+    unset($options[0]);
     $form[$group][USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID] = array(
-        '#type' => 'select',
-        '#title' => t('Category to display on the user profile page'),
-        '#default_value' => variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, NULL),
+        '#type' => 'checkboxes',
+        '#title' => t("Categories to display on the user profile page and in the User's !points block", userpoints_translation()),
+        '#default_value' => variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, array_keys($options)),
         '#options' => $options,
-        '#description' => t('Select which category of !points to display on the user profile page. Select "All" to display a sum total of all categories', userpoints_translation()),
+        '#description' => t('Select the !points categories that should be displayed. Check "Total !points in all categories" to display a sum total of all individual !points categories.', userpoints_translation()),
     );
 
     $form[$group][USERPOINTS_TRANS_UNCAT] = array(

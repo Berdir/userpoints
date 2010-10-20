@@ -181,3 +181,10 @@ function userpoints_uninstall() {
     taxonomy_vocabulary_delete($vid);
   }
 }
+
+/**
+ * Update profile category setting, allow multiple categories to be displayed.
+ */
+function userpoints_update_7000() {
+  variable_set(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, array(variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0)));
+}
