@@ -530,7 +530,16 @@ function userpoints_userpointsapi($params) {
     $view_own_points = user_access('view own userpoints') || user_access('view userpoints') || user_access('administer userpoints');
     $view_all_points = user_access('view userpoints') || user_access('administer userpoints');
 
-    if (isset($params['points']) && $params['points'] < 0) {
+    if ($params['status'] == USERPOINTS_TXN_STATUS_DECLINED) {
+      // Points have been declined.
+      if ($account->uid == $user->uid && $view_own_points) {
+        $message = format_plural($params['points'], 'You did not receive approval for @count !point in the %category category.', 'You did not receive approval for @count !points in the %category category.', $arguments);
+      }
+      elseif ($view_all_points) {
+        $message = format_plural($params['points'], '!username did not receive approval for @count !point in the %category category.', '!username did not receive approval for @count !points in the %category category.', $arguments);
+      }
+    }
+    elseif (isset($params['points']) && $params['points'] < 0) {
       if ($params['status'] == USERPOINTS_TXN_STATUS_PENDING) {
         if ($account->uid == $user->uid && $view_own_points) {
           // Directly address the user if he is loosing points.
@@ -548,15 +557,6 @@ function userpoints_userpointsapi($params) {
         elseif ($view_all_points) {
           $message = format_plural(abs($params['points']), '!username just had a !point deducted and now has %total !points in the %category category.', '!username just had @count !points deducted and now has %total !points in the %category category.', $arguments);
         }
-      }
-    }
-    elseif ($params['status'] == USERPOINTS_TXN_STATUS_DECLINED) {
-      // Points have been declined.
-      if ($account->uid == $user->uid && $view_own_points) {
-        $message = format_plural(abs($params['points']), 'You were declined a !point in the %category category.', 'You were declined @count !points in the %category category.', $arguments);
-      }
-      elseif ($view_all_points) {
-        $message = format_plural(abs($params['points']), '!username was declined a !point in the %category category.', '!username was declined @count !points in the %category category.', $arguments);
       }
     }
     elseif (!empty($params['points'])) {
