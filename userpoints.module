@@ -1221,30 +1221,29 @@ function userpoints_create_description($transaction) {
   if ($transaction->entity_type && entity_get_info($transaction->entity_type)) {
     $entity = reset(entity_load($transaction->entity_type, array($transaction->entity_id)));
   }
-
-  // The info hook is preferred because that is the only source that can be
-  // translated.
-  $info = userpoints_get_info($transaction->operation);
-  // First, check if there is a valid description callback defined for this
-  // operation.
   $safe = FALSE;
-  if (!empty($info['description callback']) && function_exists($info['description callback'])) {
-    $description = $info['description callback']($transaction, $entity);
-    $safe = TRUE;
-  }
-  // Second, try static description key.
-  elseif (!empty($info['description'])) {
-    $description = $info['description'];
-    $safe = TRUE;
-  }
-  // Third, check the description of the transaction.
-  elseif (!empty($transaction->description)) {
+  // Check transaction description first to allow custom overrides.
+  if (!empty($transaction->description)) {
     $description = $transaction->description;
+  } else {
+    $info = userpoints_get_info($transaction->operation);
+    // Check if there is a valid description callback defined for this
+    // operation.
+    if (!empty($info['description callback']) && function_exists($info['description callback'])) {
+      $description = $info['description callback']($transaction, $entity);
+      $safe = TRUE;
+    }
+    // Try static description key.
+    elseif (!empty($info['description'])) {
+      $description = $info['description'];
+      $safe = TRUE;
+    }
   }
-  // Fallback to the operation name if there is no description.
-  else {
+  // Fallback to the operation name if there is no source.
+  if (empty($description)) {
     $description = $transaction->operation;
   }
+  // Link to the referenced entity, if available.
   if ($entity) {
     $uri = entity_uri($transaction->entity_type, $entity);
     if ($uri) {
