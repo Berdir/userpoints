@@ -53,13 +53,16 @@ function userpoints_translation() {
 /*
  * Returns an array of possible transaction statuses.
  */
-
 function userpoints_txn_status() {
-  return array(
+  static $stati;
+  if (empty($stati)) {
+    $stati = array(
       USERPOINTS_TXN_STATUS_APPROVED => t('Approved'),
       USERPOINTS_TXN_STATUS_PENDING => t('Pending'),
       USERPOINTS_TXN_STATUS_DECLINED => t('Declined'),
-  );
+    );
+  }
+  return $stati;
 }
 
 /**
@@ -144,13 +147,32 @@ function userpoints_menu() {
   );
   $items['admin/config/people/userpoints/list'] = array(
       'title' => 'List',
-      'title arguments' => userpoints_translation(),
       'description' => strtr('List users by !points', userpoints_translation()),
       'access callback' => 'userpoints_admin_access',
       'access arguments' => array('list'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_DEFAULT_LOCAL_TASK,
       'weight' => -2,
+  );
+  $items['admin/config/people/userpoints/list/totals'] = array(
+      'title' => 'Totals',
+      'description' => strtr('List users by !points', userpoints_translation()),
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('list'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => 0,
+  );
+  $items['admin/config/people/userpoints/list/transactions'] = array(
+      'title' => 'Transactions',
+      'title arguments' => userpoints_translation(),
+      'description' => 'List transactions',
+      'page callback' => 'userpoints_admin_transactions',
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('edit'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 2,
   );
   $items['admin/config/people/userpoints/moderate'] = array(
       'title' => 'Moderation',
@@ -869,7 +891,7 @@ function userpoints_filter_cat_select($form, &$form_state, $path, $tid, $account
 
   $cats = userpoints_get_categories($account);
   $options = array();
-  $options[url($path)] = t('Display all');
+  $options[url(substr($path, 0, strlen($path) - 1))] = t('Display all');
   foreach ($cats as $key => $value) {
     $options[url($path . $key)] = $value;
   }
@@ -1105,32 +1127,37 @@ function userpoints_get_vid() {
  * Returns an array of possible categories, suitable for inclusion in FAPI.
  */
 function userpoints_get_categories($account = NULL) {
-  // Create the "Uncategorized" category.
-  $options = array();
-  $options[0] = t('!Uncategorized', userpoints_translation());
-  if (module_exists('taxonomy')) {
-    $vid = userpoints_get_vid();
-    if ($vid) {
-      // If an account is passed, load the terms directly from the database.
-      if ($account) {
-        $query = db_select('taxonomy_term_data', 't')
-          ->fields('t', array('tid', 'name'))
-          ->condition('t.vid', userpoints_get_vid())
-          ->groupBy('t.tid')
-          ->groupBy('t.name')
-          ->orderBy('t.weight');
-        $query->join('userpoints_txn', 'p', 't.tid = p.tid AND p.uid = :uid', array(':uid' => $account->uid));
-        $terms = $query->execute();
-      }
-      else {
-        $terms = taxonomy_get_tree($vid);
-      }
-      foreach ($terms as $term) {
-        $options[$term->tid] = $term->name;
+  $cache = drupal_static(__FUNCTION__, array());
+  $key = $account ? $account->uid : 0;
+  if (!isset($cache[$key])) {
+    // Create the "Uncategorized" category.
+    $options = array();
+    $options[0] = t('!Uncategorized', userpoints_translation());
+    if (module_exists('taxonomy')) {
+      $vid = userpoints_get_vid();
+      if ($vid) {
+        // If an account is passed, load the terms directly from the database.
+        if ($account) {
+          $query = db_select('taxonomy_term_data', 't')
+            ->fields('t', array('tid', 'name'))
+            ->condition('t.vid', userpoints_get_vid())
+            ->groupBy('t.tid')
+            ->groupBy('t.name')
+            ->orderBy('t.weight');
+          $query->join('userpoints_txn', 'p', 't.tid = p.tid AND p.uid = :uid', array(':uid' => $account->uid));
+          $terms = $query->execute();
+        }
+        else {
+          $terms = taxonomy_get_tree($vid);
+        }
+        foreach ($terms as $term) {
+          $options[$term->tid] = $term->name;
+        }
       }
     }
+    $cache[$key] = $options;
   }
-  return $options;
+  return $cache[$key];
 }
 
 /**
@@ -1287,4 +1314,133 @@ function userpoints_get_transaction($txn_id) {
   $categories = userpoints_get_categories();
   $transaction->category = isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[userpoints_get_default_tid()];
   return $transaction;
+}
+
+/**
+ * Returns a list of operations as links.
+ *
+ * @param $transaction
+ *  Transaction object.
+ *
+ * @return
+ *   A string with operation links.
+ */
+function userpoints_get_transaction_operations($transaction) {
+  $operations = array();
+  $url_options = array('query' => drupal_get_destination());
+  if (userpoints_admin_access('edit')) {
+    $operations[] = l('edit', "admin/config/people/userpoints/edit/$transaction->txn_id", $url_options);
+  }
+  if (userpoints_admin_access('moderate') && $transaction->status == USERPOINTS_TXN_STATUS_PENDING) {
+    $operations[] = l('approve', "admin/config/people/userpoints/approve/$transaction->txn_id", $url_options);
+    $operations[] = l('decline', "admin/config/people/userpoints/decline/$transaction->txn_id", $url_options);
+  }
+  return implode(' ', $operations);
+}
+
+/**
+ * Returns a table header for a transaction listing.
+ *
+ * @param $settings
+ *   Array with setings about which column shall be displayed. All settings
+ *   default to TRUE.
+ *   - show_category, show category column.
+ *   - show_user, show user column.
+ *   - show_status, show status column.
+ * @return
+ *   Table header definition for theme_table() and TableSort.
+ */
+function userpoints_get_transaction_header($settings) {
+  $settings += array(
+    'show_category' => FALSE,
+    'show_user' => TRUE,
+    'show_status' => TRUE,
+  );
+  $header = array();
+  $header[] = array('data' => t('!Points', userpoints_translation()), 'field' => 'points', 'class' => array('userpoints-transactions-header-points'));
+  // Only display category if there is more than one category. In contrast to
+  // the filter, this is not specific for the categories. If there are
+  // categories, we want tell the user in which he has points, even if he
+  // only has points in a single category.
+  if ($settings['show_category']) {
+    $header[] = array('data' => t('Category'), 'field' => 't.name', 'class' => array('userpoints-transactions-header-category'));
+  }
+  if ($settings['show_user']) {
+    $header[] = array('data' => t('User'), 'field' => 'uid', 'class' => array('userpoints-transactions-header-status'));
+  }
+  $header[] = array('data' => t('Date'), 'field' => 'time_stamp', 'sort' => 'desc', 'class' => array('userpoints-transactions-header-timestamp'));
+  $header[] = array('data' => t('Reason'), 'class' => array('userpoints-transactions-header-reason'));
+  if ($settings['show_status']) {
+    $header[] = array('data' => t('Status'), 'field' => 'status', 'class' => array('userpoints-transactions-header-status'));
+  }
+  $header[] = array('data' => t('Operations'), 'class' => array('userpoints-transactions-header-operations'));
+  return $header;
+}
+
+/**
+ * Returns a single row for a transaction listing.
+ * @param $transaction
+ *   Transaction object.
+ * @param $settings
+ *   Array with setings about which column shall be displayed. All settings
+ *   default to TRUE.
+ *   - show_category, show category column.
+ *   - show_user, show user column.
+ *   - show_status, show status column.
+ * @return
+ *   A table row array for use with theme_table().
+ */
+function userpoints_get_transaction_row($transaction, $settings = array()) {
+  $settings += array(
+    'show_category' => TRUE,
+    'show_user' => TRUE,
+    'show_status' => TRUE,
+  );
+
+  $stati = userpoints_txn_status();
+  $css_stati = array(
+    USERPOINTS_TXN_STATUS_APPROVED => 'approved',
+    USERPOINTS_TXN_STATUS_DECLINED => 'declined',
+    USERPOINTS_TXN_STATUS_PENDING => 'pending',
+  );
+  $row = array('class' => array(
+    'userpoints-transaction-row-status-' . $css_stati[$transaction->status],
+    'userpoints-transaction-row-category-' . $transaction->tid),
+  );
+  $row['data'][] = array(
+    'data' => $transaction->points,
+    'class' => array('userpoints-transactions-field-points', 'userpoints-transaction-points-' . ($transaction->points > 0 ? 'positive' : 'negative')),
+  );
+  if ($settings['show_category']) {
+    $categories = userpoints_get_categories();
+    $row['data'][] = array(
+      'data' => isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[0],
+      'class' => array('userpoints-transactions-field-category'),
+    );
+  }
+  if ($settings['show_user']) {
+    $row['data'][] = array(
+      'data' => theme('username', array('account' => user_load($transaction->uid))),
+      'class' => array('userpoints-transactions-field-user'),
+    );
+  }
+  $row['data'][] = array(
+    'data' => format_date($transaction->time_stamp, 'small'),
+    'class' => array('userpoints-transactions-field-timestamp'),
+  );
+  $row['data'][] = array(
+    'data' => userpoints_create_description($transaction),
+    'class' => array('userpoints-transactions-field-reason'),
+  );
+  if ($settings['show_status']) {
+    $row['data'][] = array(
+      'data' => $stati[$transaction->status],
+      'class' => array('userpoints-transactions-field-status'),
+    );
+  }
+  $row['data'][] = array(
+    'data' => userpoints_get_transaction_operations($transaction),
+    'class' => array('userpoints-transactions-field-operations'),
+  );
+  return $row;
 }

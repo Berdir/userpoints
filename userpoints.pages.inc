@@ -17,7 +17,7 @@ function userpoints_list_my_userpoints($account, $tid = NULL) {
 
   // Load the categories and check if there are multiples or only a single one.
   $categories = userpoints_get_categories();
-  $multiple_categories = count($categories) > 1;
+  $show_category = count($categories) > 1;
 
   // Store context in the output array so that modules have access to it.
   $output = array(
@@ -25,7 +25,7 @@ function userpoints_list_my_userpoints($account, $tid = NULL) {
     '#tid' => $tid,
     '#attached' => array(
       'css' => array(
-        drupal_get_path('module', 'userpoints') . '/userpoints_myuserpoints.css',
+        drupal_get_path('module', 'userpoints') . '/userpoints.css',
       ),
     ),
   );
@@ -33,32 +33,25 @@ function userpoints_list_my_userpoints($account, $tid = NULL) {
   // Only display the category selection if there is more than one category
   // to select from. This check is specific to the categories the user has
   // points in.
-  if (count(userpoints_get_categories($account)) > 1) {
+  if ($show_category) {
     $output['form'] = drupal_get_form('userpoints_filter_cat_select', 'myuserpoints/' . $account->uid . '/', $tid, $account);
     $output['form']['#weight'] = -10;
   }
-
-  // Prepare the table header.
-  $header = array(
-    array('data' => t('!Points', userpoints_translation()), 'field' => 'points', 'class' => array('userpoints-myuserpoints-header-points')),
-    array('data' => t('Status'), 'field' => 'status', 'class' => array('userpoints-myuserpoints-header-status')),
-    array('data' => t('Date'), 'field' => 'time_stamp', 'sort' => 'desc', 'class' => array('userpoints-myuserpoints-header-timestamp')),
-    array('data' => t('Reason'), 'class' => array('userpoints-myuserpoints-header-reason')),
+  $settings = array(
+    'show_category' => $show_category,
+    'show_user' => FALSE,
   );
-
-  // Only display category if there is more than one category. In contrast to
-  // the filter, this is not specific for the categories. If there are
-  // categories, we want tell the user in which he has points, even if he
-  // only has points in a single category.
-  if ($multiple_categories) {
-    $header[] = array('data' => t('Category'), 'field' => 'cat', 'class' => array('userpoints-myuserpoints-header-category'));
-  }
+  $header = userpoints_get_transaction_header($settings);
 
   $query = db_select('userpoints_txn', 'p')->extend('PagerDefault')->extend('TableSort')
     ->fields('p')
     ->condition('p.uid', $account->uid)
     ->orderByHeader($header)
+    // Enforce consistent sort order.
+    ->orderBy('p.txn_id', 'DESC')
     ->limit(variable_get(USERPOINTS_REPORT_LIMIT, 10));
+
+  $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
 
   $unapproved_query = db_select('userpoints_txn')
     ->condition('uid', $account->uid)
@@ -84,35 +77,9 @@ function userpoints_list_my_userpoints($account, $tid = NULL) {
     $total_title = t('Total !points', userpoints_translation());
   }
 
-  $stati = userpoints_txn_status();
   $rows = array();
   foreach ($query->execute() as $transaction) {
-    $status = $stati[$transaction->status];
-    $row = array(
-      array(
-        'data' => $transaction->points,
-        'class' => array('userpoints-myuserpoints-field-points'),
-      ),
-      array(
-        'data' => $status,
-        'class' => array('userpoints-myuserpoints-field-status'),
-      ),
-      array(
-        'data' => format_date($transaction->time_stamp, 'small'),
-        'class' => array('userpoints-myuserpoints-field-timestamp'),
-      ),
-      array(
-        'data' => userpoints_create_description($transaction),
-        'class' => array('userpoints-myuserpoints-field-reason'),
-      ),
-    );
-    if ($multiple_categories) {
-      $row[] = array(
-        'data' => isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[0],
-        'class' => array('userpoints-myuserpoints-field-category'),
-      );
-    }
-    $rows[] = $row;
+    $rows[] = userpoints_get_transaction_row($transaction, $settings);
   }
 
   $output['table'] = array(

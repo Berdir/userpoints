@@ -42,7 +42,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn_id = NULL) {
       drupal_exit();
     }
 
-    $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i O');
+    $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i:s O');
     $txn_user = user_load($txn->uid);
 
     $form['txn'] = array(
@@ -119,14 +119,14 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn_id = NULL) {
   $expirydate = 0;
   if (isset($txn->txn_id)) {
     if ($txn->expirydate > 0) {
-      $expirydate = format_date($txn->expirydate, 'custom', 'Y-m-d H:i O');
+      $expirydate = format_date($txn->expirydate, 'custom', 'Y-m-d H:i:s O');
     }
   }
   else {
     // If we're not editing we use site defaults.
     $expirydate = userpoints_get_default_expiry_date();
     if ($expirydate) {
-      $expirydate = format_date($expirydate, 'custom', 'Y-m-d H:i O');
+      $expirydate = format_date($expirydate, 'custom', 'Y-m-d H:i:s O');
     }
   }
   $form['expirydate'] = array(
@@ -293,7 +293,8 @@ function userpoints_admin_txn_submit($form, &$form_state) {
  * Provides an administrative interface for managing points.
  */
 function userpoints_admin_points($tid = NULL) {
-  $cat_count = count(userpoints_get_categories());
+  $categories = userpoints_get_categories();
+  $show_category = count($categories) > 1;
 
   $header = array(
       array('data' => t('User'), 'field' => 'u.name'),
@@ -314,21 +315,22 @@ function userpoints_admin_points($tid = NULL) {
 
   $query->join('users', 'u', 'p.uid = u.uid');
   $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
-  $query->addField('t', 'name', 'cat');
 
-  // Check for filtering.
-  if (!is_null($tid) && $tid == 0) {
-    $query->condition('p.tid', 0);
-    $cat = t('!Uncategorized', userpoints_translation());
+  // Check for filtering. isset() is used because 0 is a valid value
+  // (Uncategorized).
+  if (isset($tid)) {
+    // If a category is selected, limit both the default query and the query
+    // that displays pending points to this category.
+    $query->condition('p.tid', (int)$tid);
+    $active_category = $categories[$tid];
   }
-  elseif ($tid > 0) {
-    $query->condition('p.tid', $tid);
-    $cat = db_query("SELECT name from {taxonomy_term_data} WHERE tid = :tid", array(':tid' => $tid))->fetchField();
+
+  if (isset($active_category)) {
+    drupal_set_title(t('Totals (%category category)', userpoints_translation() + array('%category' => $active_category)), PASS_THROUGH);
   }
   else {
-    $cat = t('All');
+    drupal_set_title(t('Totals'));
   }
-  drupal_set_title($cat . " " . t("!points", userpoints_translation()));
 
   if (variable_get(USERPOINTS_REPORT_DISPLAYZERO, 1) == 0) {
     // The user would NOT like to see users with zero points.
@@ -337,99 +339,171 @@ function userpoints_admin_points($tid = NULL) {
 
   $rows = array();
   foreach ($query->execute() as $data) {
-    if (!$data->cat) {
-      $data->cat = t('!Uncategorized', userpoints_translation());
-    }
     $link = userpoints_admin_access('edit') ? l(t("(details)"), "myuserpoints/$data->uid") : '';
     $rows[] = array(
         array('data' => trim(theme('username', array('account' => $data)) . ' ' . $link)),
-        array('data' => $data->cat, 'align' => 'right'),
+        array('data' => isset($categories[$data->tid]) ? $categories[$data->tid] : $categories[0], 'align' => 'right'),
         array('data' => $data->points, 'align' => 'right'),
     );
   }
 
   // If there is only one category there is no sense in display the category filter dropdown.
   $output = array();
-  if ($cat_count > 1) {
-    $output = drupal_get_form('userpoints_filter_cat_select', 'admin/config/people/userpoints/', $tid);
+  if ($categories > 1) {
+    $output['filter'] = drupal_get_form('userpoints_filter_cat_select', 'admin/config/people/userpoints/', $tid);
   }
   $output['table'] = array(
-    '#markup' => theme('table', array('header' => $header, 'rows' => $rows)),
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
   );
   $output['pager'] = array(
-    '#markup' => theme('pager'),
+    '#theme' => 'pager',
   );
   return $output;
 }
 
 
-function userpoints_admin_manage($tid = NULL) {
-  $cat_count = count(userpoints_get_categories());
+/**
+ * Displays a list of transactions.
+ *
+ */
+function userpoints_admin_transactions($tid = NULL) {
 
-  $header = array(
-      array('data' => t('User'), 'field' => 'uid'),
-      array('data' => t('Time stamp'), 'field' => 'time_stamp', 'sort' => 'desc'),
-      array('data' => t('!Points', userpoints_translation()), 'field' => 'points'),
-      array('data' => t('Reason'), 'field' => 'operation'),
-      array('data' => t('Category'), 'field' => 'cat'),
-      array('data' => t('Operation')),
+  // Load the categories and check if there are multiples or only a single one.
+  $categories = userpoints_get_categories();
+  $show_category = count($categories) > 1;
+
+  // Store context in the output array so that modules have access to it.
+  $output = array(
+    '#tid' => $tid,
+    '#attached' => array(
+      'css' => array(
+        drupal_get_path('module', 'userpoints') . '/userpoints.css',
+      ),
+    ),
   );
 
+  // Only display the category selection if there is more than one category
+  // to select from. This check is specific to the categories the user has
+  // points in.
+  if ($show_category) {
+    $output['form'] = drupal_get_form('userpoints_filter_cat_select', 'admin/config/people/userpoints/list/transactions/', $tid);
+    $output['form']['#weight'] = -10;
+  }
+
+  $settings = array(
+    'show_category' => $show_category,
+  );
+  $header = userpoints_get_transaction_header($settings);
   $query = db_select('userpoints_txn', 'p')->extend('PagerDefault')->extend('TableSort')
-                  ->fields('p', array('txn_id', 'uid', 'time_stamp', 'points', 'operation', 'status', 'entity_type', 'entity_id'))
-                  ->condition('p.status', USERPOINTS_TXN_STATUS_PENDING)
-                  ->orderByHeader($header)
-                  ->limit(variable_get(USERPOINTS_REPORT_USERCOUNT, 30));
+    ->fields('p')
+    ->orderByHeader($header)
+    // Enforce consistent sort order.
+    ->orderBy('p.txn_id', 'DESC')
+    ->limit(variable_get(USERPOINTS_REPORT_USERCOUNT, 30));
 
   $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
-  $query->addField('t', 'name', 'cat');
 
-  // Check for filtering.
-  if (!is_null($tid) && $tid == 0) {
-    $query->condition(db_or()->isNull('p.tid')->condition('p.tid', ''));
-    $cat = t('!Uncategorized', userpoints_translation());
+  // Check for filtering. isset() is used because 0 is a valid value
+  // (Uncategorized).
+  if (isset($tid)) {
+    // If a category is selected, limit both the default query and the query
+    // that displays pending points to this category.
+    $query->condition('p.tid', (int)$tid);
+    $active_category = $categories[$tid];
   }
-  elseif ($tid > 0) {
-    $query->condition('p.tid', $tid);
-    $cat = db_query("SELECT name from {taxonomy_term_data} WHERE tid = :tid", array(':tid' => $tid))->fetchField();
+
+  if (isset($active_category)) {
+    drupal_set_title(t('Transactions (%category category)', userpoints_translation() + array('%category' => $active_category)), PASS_THROUGH);
   }
   else {
-    $cat = t('All');
+    drupal_set_title(t('Transactions'));
   }
 
-  // Set the title of the page.
-  // @todo: translation of $cat => t() is wrong.
-  drupal_set_title(t('@category !points', userpoints_translation() + array('@category' => $cat)));
   $rows = array();
-  foreach ($query->execute() as $data) {
-    $account = user_load($data->uid);
-    if (!$data->cat) {
-      $data->cat = t('!Uncategorized', userpoints_translation());
-    }
-
-    $edit_link = userpoints_admin_access('edit') ? l('edit', "admin/config/people/userpoints/edit/$data->txn_id") : '';
-
-    $rows[] = array(
-        array('data' => theme('username', array('account' => $account))),
-        array('data' => format_date($data->time_stamp, 'custom', 'Y-m-d H:i')),
-        array('data' => $data->points, 'align' => 'right'),
-        array('data' => userpoints_create_description($data)),
-        array('data' => $data->cat),
-        array('data' => l('approve', "admin/config/people/userpoints/approve/$data->txn_id") .
-            ' ' . l('decline', "admin/config/people/userpoints/decline/$data->txn_id") .
-            ' ' . $edit_link),
-    );
+  foreach ($query->execute() as $transaction) {
+    $rows[] = userpoints_get_transaction_row($transaction, $settings);
   }
 
-  $output = array();
-  if ($cat_count > 1) {
-    $output = drupal_get_form('userpoints_filter_cat_select', 'admin/config/people/userpoints/moderate/', $tid);
-  }
   $output['table'] = array(
-    '#markup' => theme('table', array('header' => $header, 'rows' => $rows, 'empty' => t('No !points awaiting moderation', userpoints_translation()))),
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('No !Points earned', userpoints_translation()),
+    '#weight' => -5,
+    '#attributes' => array('class' => array('userpoints-transactions-list')),
   );
   $output['pager'] = array(
-    '#markup' => theme('pager'),
+    '#theme' => 'pager',
+    '#weight' => 0,
+  );
+
+  return $output;
+}
+
+function userpoints_admin_manage($tid = NULL) {
+  $categories = userpoints_get_categories();
+  $show_category = count($categories) > 1;
+
+  // Store context in the output array so that modules have access to it.
+  $output = array(
+    '#tid' => $tid,
+    '#attached' => array(
+      'css' => array(
+        drupal_get_path('module', 'userpoints') . '/userpoints.css',
+      ),
+    ),
+  );
+
+  $settings = array(
+    'show_category' => $show_category,
+    'show_status' => FALSE,
+  );
+  $header = userpoints_get_transaction_header($settings);
+
+  $query = db_select('userpoints_txn', 'p')->extend('PagerDefault')->extend('TableSort')
+    ->fields('p', array('txn_id', 'uid', 'time_stamp', 'points', 'operation', 'status', 'entity_type', 'entity_id', 'tid'))
+    ->condition('p.status', USERPOINTS_TXN_STATUS_PENDING)
+    ->orderByHeader($header)
+    // Enforce consistent sort order.
+    ->orderBy('p.txn_id', 'DESC')
+    ->limit(variable_get(USERPOINTS_REPORT_USERCOUNT, 30));
+
+  $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
+
+  // Check for filtering. isset() is used because 0 is a valid value
+  // (Uncategorized).
+  if (isset($tid)) {
+    // If a category is selected, limit both the default query and the query
+    // that displays pending points to this category.
+    $query->condition('p.tid', (int)$tid);
+    $active_category = $categories[$tid];
+  }
+
+  if (isset($active_category)) {
+    drupal_set_title(t('Moderation (%category category)', userpoints_translation() + array('%category' => $active_category)), PASS_THROUGH);
+  }
+  else {
+    drupal_set_title(t('Moderation'));
+  }
+  $rows = array();
+  foreach ($query->execute() as $data) {
+    $rows[] = userpoints_get_transaction_row($data, $settings);
+  }
+
+  if ($show_category) {
+    $output['filter'] = drupal_get_form('userpoints_filter_cat_select', 'admin/config/people/userpoints/moderate/', $tid);
+  }
+  $output['table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('No !points awaiting moderation', userpoints_translation()),
+    '#attributes' => array('class' => array('userpoints-moderation-list')),
+  );
+  $output['pager'] = array(
+    '#theme' => 'pager',
   );
   return $output;
 }
