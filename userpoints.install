@@ -53,6 +53,7 @@ function userpoints_schema() {
     'primary key' => array('pid'),
     'indexes' => array(
       'last_update' => array('last_update'),
+      'points' => array('points'),
     ),
     'unique keys' => array(
       'uid_tid' => array('uid', 'tid'),
@@ -163,6 +164,9 @@ function userpoints_schema() {
       'status_expired_expiry' => array('status', 'expired', 'expirydate'),
       //Optional as in update_6011
       'changed' => array('changed'),
+      'uid' => array('uid'),
+      'approver_uid' => array('approver_uid'),
+      'points' => array('points'),
     )
   );
   return $schema;
@@ -187,4 +191,18 @@ function userpoints_uninstall() {
  */
 function userpoints_update_7000() {
   variable_set(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, array(variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0)));
+}
+
+/**
+ * Add a few indexes to speed up contrib modules that query the `points` columns.
+ *
+ * Add index on points columns in userpoints and userpoints_txn, as well as on the two
+ * uid columns in userpoints_txn. No need to add a uid index in userpoints, as the
+ * compound uid_tid index is used instead when needed.
+ */
+function userpoints_update_7001() {
+  db_add_index('userpoints', 'points', array('points'));
+  db_add_index('userpoints_txn', 'uid', array('uid'));
+  db_add_index('userpoints_txn', 'approver_uid', array('approver_uid'));
+  db_add_index('userpoints_txn', 'points', array('points'));
 }
