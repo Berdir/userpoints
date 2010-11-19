@@ -1,10 +1,10 @@
 /* $Id$ */
 
-div.profile ul.userpoints-links {
+div.userpoints-view-transaction ul.userpoints-links {
     padding-left: 0;
 }
 
-div.profile ul.userpoints-links li.first {
+div.userpoints-view-transaction ul.userpoints-links li.first {
     padding-left: 0;
 }
 
@@ -30,3 +30,20 @@ table.userpoints-myuserpoints-total {
   min-width: 300px;
 }
 
+.userpoints-view-transaction {
+  clear: both;
+  margin: 1em 0;
+}
+.userpoints-view-transaction h3 {
+  border-bottom: 1px solid #ccc;
+}
+.userpoints-view-transaction dl {
+  margin: 0 0 1.5em 0;
+}
+.userpoints-view-transaction dt {
+  margin: 0 0 0.2em 0;
+  font-weight: bold;
+}
+.userpoints-view-transaction dd {
+  margin: 0 0 1em 0;
+}

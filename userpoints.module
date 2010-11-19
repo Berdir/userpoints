@@ -248,6 +248,18 @@ function userpoints_menu() {
       'type' => MENU_NORMAL_ITEM,
   );
 
+  $items['userpoints/view/%userpoints_transaction'] = array(
+      'title' => '!Point transaction',
+      'title callback' => 'userpoints_view_transaction_title',
+      'title arguments' => array(2),
+      'page callback' => 'userpoints_view_transaction',
+      'page arguments' => array(2),
+      'access callback' => 'userpoints_access_view_transaction',
+      'access arguments' => array(2),
+      'file' => 'userpoints.pages.inc',
+      'type' => MENU_NORMAL_ITEM,
+  );
+
   $items['myuserpoints/%user_uid_optional'] = array(
       'title' => 'My !points',
       'title arguments' => userpoints_translation(),
@@ -275,6 +287,33 @@ function userpoints_access_my_points($account = NULL) {
     return userpoints_admin_access('edit');
   }
   return (user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints');
+}
+
+/**
+ * Checks if a user has access to a transaction.
+ *
+ * @return
+ *   TRUE if the user has permissions to view the transaction.
+ */
+function userpoints_access_view_transaction($transaction) {
+  if (empty($transaction->user)) {
+    $account = user_load($transaction->uid);
+  }
+  else {
+    $account = $transaction->user;
+  }
+  return userpoints_access_my_points($account);
+}
+
+/**
+ * Title callback function, display transaction ID.
+ * @param $transaction
+ *   Transaction object.
+ * @return
+ *   Page title.
+ */
+function userpoints_view_transaction_title($transaction) {
+  return t('View !points transaction #@id', array('@id' => $transaction->txn_id) + userpoints_translation());
 }
 
 /**
@@ -325,6 +364,14 @@ function userpoints_theme() {
       ),
       'userpoints_list_users_header' => array(
           'variables' => array(),
+          'file' => 'userpoints.theme.inc',
+      ),
+      'userpoints_view_category' => array(
+          'render element' => 'element',
+          'file' => 'userpoints.theme.inc',
+      ),
+      'userpoints_view_item' => array(
+          'render element' => 'element',
           'file' => 'userpoints.theme.inc',
       ),
       'userpoints_list_users_row' => array(
@@ -670,7 +717,7 @@ function _userpoints_transaction(&$params) {
 
   if (!empty($params['txn_id']) && $params['txn_id'] > 0) {
     // A transaction ID was passed in so we'll update the transaction.
-    $txn = (array) userpoints_get_transaction($params['txn_id']);
+    $txn = (array) userpoints_transaction_load($params['txn_id']);
     if (!$txn) {
       return FALSE;
     }
@@ -1242,7 +1289,7 @@ function userpoints_get_info($operation = NULL) {
  *   The reason for that transaction, linked to the referenced
  *   entity if available.
  */
-function userpoints_create_description($transaction) {
+function userpoints_create_description($transaction, array $options = array()) {
   // Check if there is a valid entity referenced and which can be linked to.
   $entity = NULL;
   if ($transaction->entity_type && entity_get_info($transaction->entity_type)) {
@@ -1250,7 +1297,7 @@ function userpoints_create_description($transaction) {
   }
   $safe = FALSE;
   // Check transaction description first to allow custom overrides.
-  if (!empty($transaction->description)) {
+  if (!empty($transaction->description) && empty($options['skip_description'])) {
     $description = $transaction->description;
   } else {
     $info = userpoints_get_info($transaction->operation);
@@ -1271,7 +1318,7 @@ function userpoints_create_description($transaction) {
     $description = $transaction->operation;
   }
   // Link to the referenced entity, if available.
-  if ($entity) {
+  if ($entity && (!isset($options['link']) || $options['link'] != FALSE)) {
     $uri = entity_uri($transaction->entity_type, $entity);
     if ($uri) {
       $description = l($description, $uri['path'], $uri['options'] + array('html' => $safe));
@@ -1304,7 +1351,7 @@ function userpoints_userpoints_info() {
  * @return
  *   A loaded userpoints transaction object.
  */
-function userpoints_get_transaction($txn_id) {
+function userpoints_transaction_load($txn_id) {
   $transaction = db_query('SELECT * from {userpoints_txn} WHERE txn_id = :txn', array(':txn' => $txn_id))->fetchObject();
 
   // Load corresponding user object.
@@ -1320,22 +1367,30 @@ function userpoints_get_transaction($txn_id) {
  * Returns a list of operations as links.
  *
  * @param $transaction
- *  Transaction object.
+ *   Transaction object.
+ *
+ * @param $show_view
+ *   FALSE if the view link should not be displayed. Defaults to TRUE.
  *
  * @return
  *   A string with operation links.
  */
-function userpoints_get_transaction_operations($transaction) {
-  $operations = array();
+function userpoints_get_transaction_actions($transaction, $show_view = TRUE) {
+  $actions = array();
   $url_options = array('query' => drupal_get_destination());
+
+  if ($show_view && userpoints_access_view_transaction($transaction)) {
+    $actions[] = l('view', 'userpoints/view/' . $transaction->txn_id);
+  }
+
   if (userpoints_admin_access('edit')) {
-    $operations[] = l('edit', "admin/config/people/userpoints/edit/$transaction->txn_id", $url_options);
+    $actions[] = l('edit', "admin/config/people/userpoints/edit/$transaction->txn_id", $url_options);
   }
   if (userpoints_admin_access('moderate') && $transaction->status == USERPOINTS_TXN_STATUS_PENDING) {
-    $operations[] = l('approve', "admin/config/people/userpoints/approve/$transaction->txn_id", $url_options);
-    $operations[] = l('decline', "admin/config/people/userpoints/decline/$transaction->txn_id", $url_options);
+    $actions[] = l('approve', "admin/config/people/userpoints/approve/$transaction->txn_id", $url_options);
+    $actions[] = l('decline', "admin/config/people/userpoints/decline/$transaction->txn_id", $url_options);
   }
-  return implode(' ', $operations);
+  return implode(' ', $actions);
 }
 
 /**
@@ -1373,7 +1428,7 @@ function userpoints_get_transaction_header($settings) {
   if ($settings['show_status']) {
     $header[] = array('data' => t('Status'), 'field' => 'status', 'class' => array('userpoints-transactions-header-status'));
   }
-  $header[] = array('data' => t('Operations'), 'class' => array('userpoints-transactions-header-operations'));
+  $header[] = array('data' => t('Actions'), 'class' => array('userpoints-transactions-header-actions'));
   return $header;
 }
 
@@ -1439,8 +1494,8 @@ function userpoints_get_transaction_row($transaction, $settings = array()) {
     );
   }
   $row['data'][] = array(
-    'data' => userpoints_get_transaction_operations($transaction),
-    'class' => array('userpoints-transactions-field-operations'),
+    'data' => userpoints_get_transaction_actions($transaction),
+    'class' => array('userpoints-transactions-field-actions'),
   );
   return $row;
 }

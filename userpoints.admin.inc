@@ -517,7 +517,7 @@ function userpoints_confirm_approve($form, $form_state, $operation, $txn_id) {
     ),
   );
 
-  $transaction = userpoints_get_transaction($txn_id);
+  $transaction = userpoints_transaction_load($txn_id);
   $arguments = array(
     '!user' => theme('username', array('account' => $transaction->user)),
     '%category' => $transaction->category,
