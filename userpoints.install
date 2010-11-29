@@ -156,6 +156,7 @@ function userpoints_schema() {
       'status_expired_expiry' => array('status', 'expired', 'expirydate'),
       //Optional as in update_6011
       'changed' => array('changed'),
+      'expire' => array('status', 'expired', 'expirydate'),
     )
   );
   return $schema;
@@ -279,5 +280,14 @@ function userpoints_update_6012() {
   $ret = array();
   db_drop_index($ret, 'userpoints_txn', 'status');
   db_add_index($ret, 'userpoints_txn', 'status_expired_expiry', array('status', 'expired', 'expirydate'));
+  return $ret;
+}
+
+/**
+ * Add an index on status, expired, expirydate.
+ */
+function userpoints_update_6012() {
+  $ret = array();
+  db_add_index($ret, 'userpoints_txn', 'expire', array('status', 'expired', 'expirydate'));
   return $ret;
 }
