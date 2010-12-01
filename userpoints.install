@@ -15,7 +15,7 @@ function userpoints_schema() {
     'description' => 'Holds the user points',
     'fields' => array(
       'pid' => array(
-        'description' => 'User ID',
+        'description' => 'Points ID',
         'type' => 'serial',
         'not null' => TRUE,
       ),
@@ -75,7 +75,7 @@ function userpoints_schema() {
         'default' => 0,
       ),
       'approver_uid' => array(
-        'description' => 'Approving User ID',
+        'description' => 'Moderator User ID',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
@@ -121,7 +121,7 @@ function userpoints_schema() {
         'default' => 0,
       ),
       'expired' => array(
-        'description' => 'User ID',
+        'description' => 'Expiration status',
         'type' => 'int',
         'size' => 'tiny',
         'not null' => TRUE,
@@ -148,12 +148,12 @@ function userpoints_schema() {
       'entity_type' => array(
         'description' => 'Type of entity',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 128,
       ),
       'operation' => array(
         'description' => 'Operation being carried out',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 48,
       ),
 
     ),
@@ -206,4 +206,21 @@ function userpoints_update_7001() {
   db_add_index('userpoints_txn', 'uid', array('uid'));
   db_add_index('userpoints_txn', 'approver_uid', array('approver_uid'));
   db_add_index('userpoints_txn', 'points', array('points'));
+}
+
+/**
+ * Increase length of operation and entity_type columns.
+ */
+function userpoints_update_7002() {
+  db_change_field('userpoints_txn', 'operation', 'operation', array(
+    'description' => 'Operation being carried out',
+    'type' => 'varchar',
+    'length' => 48,
+  ));
+
+  db_change_field('userpoints_txn', 'entity_type', 'entity_type', array(
+    'description' => 'Type of entity',
+    'type' => 'varchar',
+    'length' => 128,
+  ));
 }
