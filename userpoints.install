@@ -167,7 +167,6 @@ function userpoints_schema() {
       'uid' => array('uid'),
       'approver_uid' => array('approver_uid'),
       'points' => array('points'),
-      'expire' => array('status', 'expired', 'expirydate'),
     )
   );
   return $schema;
