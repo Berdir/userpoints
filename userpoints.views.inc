@@ -33,7 +33,7 @@ function userpoints_views_data() {
           'left_field' => 'uid',
           'field' => 'uid',
       ),
-      'term_data' => array(
+      'taxonomy_term_data' => array(
           'left_field' => 'tid',
           'field' => 'tid',
       ),
@@ -68,18 +68,18 @@ function userpoints_views_data() {
 
   // Describe the tid column of the userpoints table.
   $data['userpoints']['tid'] = array(
-      'title' => t('Userpoints Category', userpoints_translation()),
-      'help' => t('The categories (terms) of userpoints used', userpoints_translation()), // The help that appears on the UI,
+      'title' => t('Category'),
+      'help' => t('The categories (terms) of userpoints used'), // The help that appears on the UI,
       'field' => array(
-          'handler' => 'views_handler_field_term_node_tid',
+          'handler' => 'userpoints_views_handler_field_category',
       ),
       'argument' => array(
-          'handler' => 'views_handler_argument_term_node_tid',
+          'handler' => 'userpoints_views_handler_argument_category',
           'numeric' => TRUE,
           'name field' => 'category', // display this field in the summary
       ),
       'filter' => array(
-          'handler' => 'views_handler_filter_term_node_tid',
+          'handler' => 'userpoints_views_handler_filter_category',
       ),
       'sort' => array(
           'handler' => 'views_handler_sort',
@@ -152,7 +152,7 @@ function userpoints_views_data() {
           'left_field' => 'uid',
           'field' => 'uid',
       ),
-      'term_data' => array(
+      'taxonomy_term_data' => array(
           'left_field' => 'tid',
           'field' => 'tid',
       ),
@@ -187,18 +187,18 @@ function userpoints_views_data() {
 
   // Describe the tid column of the userpoints table.
   $data['userpoints_txn']['tid'] = array(
-      'title' => t('Userpoints Category', userpoints_translation()),
-      'help' => t('The categories (terms) of userpoints used for this transaction', userpoints_translation()), // The help that appears on the UI,
+      'title' => t('Category'),
+      'help' => t('The categories (terms) of userpoints used for this transaction'), // The help that appears on the UI,
       'field' => array(
-          'handler' => 'views_handler_field_term_node_tid	',
+          'handler' => 'userpoints_views_handler_field_category',
       ),
       'argument' => array(
-          'handler' => 'views_handler_argument_term_node_tid',
+          'handler' => 'userpoints_views_handler_argument_category',
           'numeric' => TRUE,
           'name field' => 'category', // display this field in the summary
       ),
       'filter' => array(
-          'handler' => 'views_handler_filter_term_node_tid',
+          'handler' => 'userpoints_views_handler_filter_category',
       ),
       'sort' => array(
           'handler' => 'views_handler_sort',
@@ -357,6 +357,23 @@ function userpoints_views_data() {
       'sort' => array(
           'handler' => 'views_handler_sort',
       ),
+  );
+
+  // Reverse join information. This should not be necessary.
+  $data['taxonomy_term_data']['table']['join'] = array(
+    'userpoints' => array(
+      'left_field' => 'tid',
+      'field' => 'tid',
+    ),
+    'userpoints_txn' => array(
+      'left_field' => 'tid',
+      'field' => 'tid',
+    ),
+    'users' => array(
+      'left_field' => 'tid',
+      'left_table' => 'userpoints',
+      'field' => 'tid',
+    )
   );
 
   return $data;
