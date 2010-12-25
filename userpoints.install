@@ -177,7 +177,7 @@ function userpoints_schema() {
  */
 function userpoints_uninstall() {
   db_delete('variable')
-    ->condition('name', '%userpoints%', 'LIKE')
+    ->condition('name', 'userpoints_%', 'LIKE')
     ->execute();
 
   $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module='userpoints'")->fetchField();
