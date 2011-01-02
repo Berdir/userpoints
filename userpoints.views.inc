@@ -191,7 +191,7 @@ function userpoints_views_data() {
     'title' => t('Userpoints Category', userpoints_translation()),
     'help' => t('The categories (terms) of userpoints used for this transaction', userpoints_translation()), // The help that appears on the UI,
     'field' => array(
-      'handler' => 'views_handler_field_term_node_tid  ',
+      'handler' => 'views_handler_field_term_node_tid',
     ),
     'argument' => array(
       'handler' => 'views_handler_argument_term_node_tid',
