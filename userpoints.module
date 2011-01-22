@@ -845,14 +845,33 @@ function userpoints_user_view($account, $view_mode) {
     $points_list = userpoints_get_points_list($account);
 
     if (!empty($details) || $points_list) {
-      $account->content['userpoints']['title'] = array(
+      $account->content['userpoints'] = array(
+        'title' => array(
           '#markup' => '<h3>' .  t('!Points', userpoints_translation()) . '</h3>',
+        ),
+        '#weight' => 0,
       );
       if ($points_list) {
         $account->content['userpoints'] += $points_list;
       }
     }
   }
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function userpoints_field_extra_fields() {
+  $extra['user']['user'] = array(
+    'display' => array(
+      'userpoints' => array(
+        'label' => t('!Points', userpoints_translation()),
+        'description' => t('!Points related information and actions.', userpoints_translation()),
+        'weight' => 0,
+      )
+    )
+  );
+  return $extra;
 }
 
 /**
