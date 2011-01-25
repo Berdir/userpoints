@@ -303,45 +303,40 @@ class UserpointsTestCase extends DrupalWebTestCase {
     $this->assertTrue($db_points == $keep_points, t("Successfully removed expired points from the summary table.") );
   }
 
-  /*
+   /**
    * Changes the default expiration date in the administrative settings
    * and then checks to ensure that it is saved/returned correctly.
-  */
-  function test_get_default_expiry_date() {
+   */
+  function testDefaultExpireDate() {
      //login as an admin
     global $admin_user;
     $this->drupalLogin($admin_user);
 
-    $date = mktime(0, 0, 0, 1, 1, 2010);
+    // Use a date in the future.
+    $date = time() + 100000;
+    $date_array = array(
+      'month' => date('n', $date),
+      'day'   => date('d', $date),
+      'year'  => date('Y', $date),
+    );
 
-    /* save settings */
+    // save settings.
     $edit = array(
-      'userpoints_points_moderation' => '1',
-      'userpoints_trans_ucpoints' => 'Points',
-      'userpoints_trans_lcpoints' => 'points',
-      'userpoints_trans_lcpoint' => 'point',
-      'userpoints_trans_uncat' => 'Uncategorized',
-      'userpoints_expireafter_date' => '2419200',
-      'userpoints_expireon_date[month]' => '1',
-      'userpoints_expireon_date[day]' => '1',
-      'userpoints_expireon_date[year]' => '2010',
-      'userpoints_expiry_description' => '',
-      'userpoints_display_message' => '1',
-      'userpoints_report_limit' => '10',
-      'userpoints_report_displayzero' => '1',
-      'userpoints_report_usercount' => '30',
-      'userpoints_category_default_tid' => '0',
+      'userpoints_expireon_date[month]' => $date_array['month'],
+      'userpoints_expireon_date[day]' => $date_array['day'],
+      'userpoints_expireon_date[year]' => $date_array['year'],
     );
     $this->drupalPost('admin/settings/userpoints', $edit, 'Save configuration');
 
-    /* check database */
-    $sql = "SELECT value FROM {variable} WHERE name='%s'";
-    $expireon_date = db_result(db_query($sql, 'userpoints_expireon_date'));
-    $this->assertTrue($expireon_date != FALSE, t("Successfully verified the expiriation date in the database."));
+    // Check database.
+    $database_date = variable_get('userpoints_expireon_date', FALSE);
+    $this->assertEqual($database_date['day'], $date_array['day']);
+    $this->assertEqual($database_date['month'], $date_array['month']);
+    $this->assertEqual($database_date['year'], $date_array['year']);
 
-    /* check API */
+    // Check API.
     $expiry_date = userpoints_get_default_expiry_date();
-    $this->assertTrue($expiry_date == $date, t("Successfully verified that userpoints_get_expiry_date returns correct date is %s.", array('%s' => date("M-d-Y", $expiry_date))));
+    $this->assertEqual($expiry_date, userpoints_date_to_timestamp($date_array));
   }
 
 
@@ -351,15 +346,12 @@ class UserpointsTestCase extends DrupalWebTestCase {
     $desc = $this->randomName(10);
 
     /* create a new term*/
-    $new_term = array(
+    $term = array(
       'name' => $term_name,
       'description' => $desc,
-      'vid' => $vid
+      'vid' => $vid,
     );
-    taxonomy_save_term($new_term);
-
-    /* get this term */
-    $term = taxonomy_get_term_by_name($term_name);
+    taxonomy_save_term($term);
 
     /* login as admin userpoints */
     $admin_user = $this->drupalCreateUser(array('administer userpoints'));
@@ -367,41 +359,17 @@ class UserpointsTestCase extends DrupalWebTestCase {
 
     /* save settings */
     $edit = array(
-      'userpoints_points_moderation' => '1',
-      'userpoints_trans_ucpoints' => 'Points',
-      'userpoints_trans_lcpoints' => 'points',
-      'userpoints_trans_lcpoint' => 'point',
-      'userpoints_trans_uncat' => 'Uncategorized',
-      'userpoints_expireafter_date' => '2419200',
-      'userpoints_expireon_date[month]' => '1',
-      'userpoints_expireon_date[day]' => '1',
-      'userpoints_expireon_date[year]' => '2010',
-      'userpoints_expiry_description' => '',
-      'userpoints_display_message' => '1',
-      'userpoints_report_limit' => '10',
-      'userpoints_report_displayzero' => '1',
-      'userpoints_report_usercount' => '30',
-      'userpoints_category_default_tid' => $term[0]->tid,
+      'userpoints_category_default_tid' => $term['tid'],
     );
     $this->drupalPost('admin/settings/userpoints', $edit, 'Save configuration');
 
-    /* check database */
-    $sql = "SELECT value FROM {variable} WHERE name='%s'";
-    $expireon_date = db_result(db_query($sql, 'userpoints_category_default_tid'));
-    $this->assertTrue($expireon_date != FALSE, t("Successfully verified the term ID in the database."));
-
     /* check API*/
     $tid = userpoints_get_default_tid();
-    $this->assertTrue($tid == 0, t("Successfully retrieved default tid = %d.", array('%d' => $tid)));
-
-    /* check database */
-    $sql = "SELECT value FROM {variable} WHERE name='%s'";
-    $expireon_date = db_result(db_query($sql, 'userpoints_category_default_vid'));
-    $this->assertTrue($expireon_date != FALSE, t("Successfully verified the vocab ID in the database."));
+    $this->assertTrue($tid == $term['tid'], t("Successfully retrieved default tid = %d.", array('%d' => $tid)));
 
     /* check API*/
-    $vid = userpoints_get_vid();
-    $this->assertTrue(is_numeric($vid), t("Successfully retrieved default vid %d.", array('%d' => $vid)));
+    $api_vid = userpoints_get_vid();
+    $this->assertEqual($api_vid, $vid, t("Successfully retrieved default vid %d.", array('%d' => $vid)));
   }
   /**
    * Test user permissions

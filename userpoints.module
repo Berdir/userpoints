@@ -629,12 +629,15 @@ function userpoints_userpointsapi($params) {
       );
     }
   }
-  if ($params['points'] < 0) {
+  if (isset($params['points']) && $params['points'] < 0) {
     $msg = t('lost');
   }
-  elseif ($params['status'] == 2) {
+  elseif (isset($params['status']) && $params['status'] == 2) {
     //points have been declined
     $msg = t('was declined');
+  }
+  elseif (!empty($params['expired'])) {
+    $msg = t('expired');
   }
   else {
     $msg = t('earned');
@@ -668,7 +671,7 @@ function userpoints_userpointsapi($params) {
         ))));
   } //if $params['status']
 
-  if ($mesg && ($params['display'] || ($params['display'] === NULL && variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1))) {
+  if ($mesg && (!empty($params['display']) || (!array_key_exists('display', $params) && variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1))) {
     drupal_set_message($mesg);
   }
   // Call the _userpoints hook to allow modules to act after points are awarded
@@ -1095,7 +1098,7 @@ function userpoints_admin_txn($form_state) {
     '#title'         => t('User Name'),
     '#size'          => 30,
     '#maxlength'     => 60,
-    '#default_value' => $txn_user->name,
+    '#default_value' => !empty($txn_user->name) ? $txn_user->name : '',
     '#autocomplete_path' => 'user/autocomplete',
     '#description'   => t('User Name for the user you want the !points to affect', userpoints_translation()),
   );
@@ -1105,7 +1108,7 @@ function userpoints_admin_txn($form_state) {
     '#title'         => t('Points'),
     '#size'          => 10,
     '#maxlength'     => 10,
-    '#default_value' => $txn->points,
+    '#default_value' => isset($txn->points) ? $txn->points : 0,
     '#description'   => t('Number of !points to add/subtract from the user. For example, 25 (to add !points) or -25 (to subtract !points).', userpoints_translation()),
   );
 
@@ -1118,8 +1121,8 @@ function userpoints_admin_txn($form_state) {
     '#description'   => t('Date and time of this transaction, in the form YYYY-MM-DD HH:MM +ZZZZ'),
   );
 
-  if ($txn->txn_id) {
-    if ($txn->expirydate > 0) {
+  if (!empty($txn->txn_id)) {
+    if (!empty($txn->expirydate)) {
       $expirydate = format_date($txn->expirydate, 'custom', 'Y-m-d H:i O');
     }
   }
@@ -1152,7 +1155,7 @@ function userpoints_admin_txn($form_state) {
   $form['reference'] = array(
     '#type'          => 'textfield',
     '#title'         => t('Reference'),
-    '#default_value' => $txn->reference,
+    '#default_value' => !empty($txn->reference) ? $txn->reference : '',
     '#size'          => 30,
     '#maxlength'     => 128,
     '#description'   => t('Enter optional reference for this transaction. This field will be indexed and searchable.'),
@@ -1161,7 +1164,7 @@ function userpoints_admin_txn($form_state) {
   $form['description'] = array(
     '#type'          => 'textarea',
     '#title'         => t('Description'),
-    '#default_value' => $txn->description,
+    '#default_value' => !empty($txn->description) ? $txn->description : '',
     '#width'         => 70,
     '#lines'         => 5,
     '#description'   => t('Enter an optional description for this transaction, such as the reason it is created.'),
@@ -1337,6 +1340,7 @@ function userpoints_admin_points() {
   $sql .= tablesort_sql($header);
   $pager_limit = variable_get(USERPOINTS_REPORT_USERCOUNT, 30);
   $result = pager_query($sql, $pager_limit, 0, $sql_cnt, $tid);
+  $rows = array();
   while ($data = db_fetch_object($result)) {
     if (!$data->cat) {
       $data->cat = t('!Uncategorized', userpoints_translation());
