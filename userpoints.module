@@ -248,6 +248,15 @@ function userpoints_menu() {
       'type' => MENU_NORMAL_ITEM,
   );
 
+  $items['userpoints/operation-autocomplete'] = array(
+      'title' => 'Operation autocomplete',
+      'page callback' => 'userpoints_operation_autocomplete',
+      'access callback' => 'userpoints_admin_access',
+      'access arguments' => array('add'),
+      'file' => 'userpoints.admin.inc',
+      'type' => MENU_CALLBACK,
+  );
+
   $items['userpoints/view/%userpoints_transaction'] = array(
       'title' => '!Point transaction',
       'title callback' => 'userpoints_view_transaction_title',
@@ -1250,7 +1259,7 @@ function userpoints_views_api() {
  *   The operation being performed.
  * @param &$params
  *   Parameters to be passed to the hook.
- * 
+ *
  * @return
  *   An array of return values of the hook implementations. If modules return
  *   arrays from their implementations, those are merged into one array.
@@ -1357,6 +1366,7 @@ function userpoints_userpoints_info() {
   return array(
     'expiry' => array(
       'description' => t('!Points have expired.', userpoints_translation()),
+      'admin description' => t('Expire an existing transaction'),
     )
   );
 }

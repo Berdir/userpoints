@@ -47,3 +47,7 @@ table.userpoints-myuserpoints-total {
 .userpoints-view-transaction dd {
   margin: 0 0 1em 0;
 }
+
+div.form-item-entity-type, div.form-item-entity-id {
+    display: inline;
+}
