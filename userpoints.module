@@ -459,7 +459,7 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
   }
 
   // Check if a term id is passed as a parameter.
-  if (!$tid) {
+  if (!isset($tid)) {
     // It is not, so get the default term id.
     $tid = userpoints_get_default_tid();
   }
@@ -467,7 +467,7 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
   // Check if we have already cached the maximum for the user/term combination on previous calls.
   if (!isset($max[$uid][$tid])) {
     // We did not cache it.
-    if ($tid == 'all') {
+    if ($tid === 'all') {
       // There is no term id, so we use "all".
       $max[$uid][$tid] = db_query('SELECT SUM(max_points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
     }
@@ -665,7 +665,8 @@ function userpoints_userpointsapi($params) {
   // Call the _userpoints hook to allow modules to act after points are awarded.
   userpoints_invoke_all('points after', $params);
   return array(
-      'status' => TRUE,
+    'status' => TRUE,
+    'transaction' => $params,
   );
 }
 
@@ -737,14 +738,13 @@ function _userpoints_transaction(&$params) {
     $ret = drupal_write_record('userpoints_txn', $params, array('txn_id'));
     // Only update if the record has been successfully updated.
     if ($ret != FALSE) {
-      _userpoints_update_cache($params);
+      _userpoints_update_cache($params, $txn);
     }
   }
   else {
     // Create new transaction record.
     $ret = drupal_write_record('userpoints_txn', $params);
-    // Don't update cache if it's pending.
-    if ($params['status'] != USERPOINTS_TXN_STATUS_PENDING && $ret != FALSE) {
+    if ($ret != FALSE) {
       _userpoints_update_cache($params);
     }
   }
@@ -752,40 +752,95 @@ function _userpoints_transaction(&$params) {
 }
 
 /**
- * Update the caching table
+ * Update the caching table.
+ *
+ * @param $params
+ *   Array with the transaction params.
+ * @param $txn
+ *   The original transaction, if this is an update.
  */
-function _userpoints_update_cache(&$params) {
-  if ($params['status'] != USERPOINTS_TXN_STATUS_APPROVED || $params['expired'] == 1) {
-    // Only update the cache for fully approved non-expired points.
-    return FALSE;
+function _userpoints_update_cache($txn, $old_txn = NULL) {
+  // Store eventual updates in this array.
+  $updates = array();
+  if (!$old_txn) {
+    // For new transactions, only update the cache for fully approved non-expired
+    // points.
+    if ($txn['status'] == USERPOINTS_TXN_STATUS_APPROVED && $txn['expired'] != 1) {
+      // Calculate the current points based upon the tid.
+      $updates['points'] = $txn['points'] + userpoints_get_current_points($txn['uid'], $txn['tid']);
+      $max_points = userpoints_get_max_points($txn['uid'], $txn['tid']);
+      // If the new points are higher then the max, update the maximum.
+      if ($updates['points'] > $max_points) {
+        $updates['max_points'] = $updates['points'];
+      }
+    }
+  } else  {
+    // For existing transactions, it is a bit more complex.
+
+    // Expired transactions that were expired before can be ignored.
+    if ($txn['expired'] == 1 && $old_txn['expired'] == 1) {
+      return;
+    }
+
+    if ($old_txn['tid'] != $txn['tid']) {
+      // If the category has changed, remove the points of the old transaction
+      // from the old category.
+      $remove_points = userpoints_get_current_points($txn['uid'], $old_txn['tid']) - $old_txn['points'];
+      db_merge('userpoints')
+        ->key(array(
+          'uid' => $txn['uid'],
+          'tid' => (int) $old_txn['tid'],
+        ))
+        ->fields(array(
+          'points' => $remove_points,
+        ))
+        ->execute();
+
+      if ($txn['status'] == USERPOINTS_TXN_STATUS_APPROVED) {
+        // Make sure to add the points so that they are added to the new category.
+        $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) +  $txn['points'];
+      }
+    }
+    else if ($old_txn['status'] == USERPOINTS_TXN_STATUS_APPROVED && $txn['status'] != USERPOINTS_TXN_STATUS_APPROVED) {
+      // If the transaction goes from approved to not approved, subtract the
+      // points to the total.
+      $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) - $old_txn['points'];
+      $max_points = userpoints_get_max_points($txn['uid'], $txn['tid']);
+      // If the new points are higher then the max, update the maximum.
+      if ($updates['points'] > $max_points) {
+        $updates['max_points'] = $updates['points'];
+      }
+    }
+    else if ($txn['points'] != $old_txn['points'] && $old_txn['status'] == USERPOINTS_TXN_STATUS_APPROVED && $txn['status'] == USERPOINTS_TXN_STATUS_APPROVED) {
+      // If the category did not change but the points and the transaction
+      // was and still is approved, update the points difference.
+      $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) + ($txn['points'] - $old_txn['points']);
+    }
+    elseif ($old_txn['status'] != USERPOINTS_TXN_STATUS_APPROVED && $txn['status'] == USERPOINTS_TXN_STATUS_APPROVED) {
+      // Calculate the current points based upon the tid.
+      $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) + $txn['points'];
+    }
   }
-  if (!isset($params['tid'])) {
-    $params['tid'] = 0;
+  if (empty($updates)) {
+    return;
   }
 
-  // Calculate the current points based upon the tid.
-  $current_points = (int) $params['points'] + userpoints_get_current_points($params['uid'], $params['tid']);
-  // Grab the user's maximum points to preserve it.
-  $max_points = (int) db_query('SELECT max_points FROM {userpoints} WHERE uid = :uid AND tid = :tid',
-                  array(':uid' => $params['uid'], ':tid' => (int) $params['tid']))->fetchField();
-  if ($params['points'] > 0) {
-    // Points are greater than zero, update their max_points.
-    $max_points = (int) $params['points'] + (int) $max_points;
+  $max_points = userpoints_get_max_points($txn['uid'], $txn['tid']);
+  // If the new points are higher then the maximum, update it.
+  if ($updates['points'] > $max_points) {
+    $updates['max_points'] = $updates['points'];
   }
+  $updates['last_update'] = REQUEST_TIME;
 
-  // Insert or update the userpoints caching table with the user's current points.
+  // Insert or update the userpoints caching table with the user's current
+  // points.
   db_merge('userpoints')
-          ->key(array(
-              'uid' => $params['uid'],
-              'tid' => (int) $params['tid'],
-          ))
-          ->fields(array(
-              'points' => (int) $current_points,
-              'max_points' => (int) $max_points,
-              'last_update' => REQUEST_TIME,
-          ))
-          ->execute();
-  unset($params);
+    ->key(array(
+      'uid' => $txn['uid'],
+      'tid' => (int) $txn['tid'],
+    ))
+    ->fields($updates)
+    ->execute();
 }
 
 /**
