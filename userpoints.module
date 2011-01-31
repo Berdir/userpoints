@@ -578,16 +578,11 @@ function userpoints_userpointsapi($params) {
     }
 
     if (!isset($params['moderate'])) {
-      //if not passed then site default is used
-      $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, 0);
+      // If not passed then site default is used.
+      $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, USERPOINTS_TXN_STATUS_APPROVED);
     }
     else {
-      if ($params['moderate'] == TRUE) {
-        $params['status'] = 1;
-      }
-      else {
-        $params['status'] = 0;
-      }
+      $params['status'] = $params['moderate'] ? USERPOINTS_TXN_STATUS_PENDING : USERPOINTS_TXN_STATUS_APPROVED;
     }
     if (!isset($params['tid']) || !is_numeric($params['tid'])) {
       //if not passed then site default is used
@@ -632,7 +627,7 @@ function userpoints_userpointsapi($params) {
   if (isset($params['points']) && $params['points'] < 0) {
     $msg = t('lost');
   }
-  elseif (isset($params['status']) && $params['status'] == 2) {
+  elseif (isset($params['status']) && $params['status'] == USERPOINTS_TXN_STATUS_DECLINED) {
     //points have been declined
     $msg = t('was declined');
   }
@@ -651,7 +646,7 @@ function userpoints_userpointsapi($params) {
     );
   }
 
-  if ($params['status'] == 1) {
+  if ($params['status'] == USERPOINTS_TXN_STATUS_PENDING) {
     $mesg = (t('User %uname %op %pointsvalue !points, pending administrator approval.',
       array_merge(userpoints_translation(), array(
         '%uname'  => $name,
@@ -703,18 +698,6 @@ function _userpoints_transaction(&$params) {
       //there must be a UID, anonymous does not receive points
       if (!$params['uid'] > 0) {
         return FALSE;
-      }
-    }
-    if (!isset($params['moderate'])) {
-      //if not passed then site default is used
-      $params['status'] = variable_get(USERPOINTS_POINTS_MODERATION, 0);
-    }
-    else {
-      if ($params['moderate'] == TRUE) {
-        $params['status'] = 1;
-      }
-      else {
-        $params['status'] = 0;
       }
     }
     if (isset($params['expirydate']) && !is_numeric($params['expirydate'])) {
