@@ -1717,13 +1717,7 @@ function userpoints_list_my_userpoints() {
   $args['approved_total'] = $grand_total;
 
   //Grab the unmoderated point total
-  $result = db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d AND status = 1", $uid);
-  if (db_result($result, 0, 0)) {
-    $args['unapproved_total'] = db_result($result, 0, 0);
-  }
-  else {
-    $args['unapproved_total'] =0;
-  }
+  $args['unapproved_total'] = (int)db_result(db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d AND status = 1", $uid));
   $args['overall_total'] = ($args['approved_total'] + $args['unapproved_total']);
 
   $header = array(
