@@ -269,6 +269,9 @@ class UserpointsTestCase extends DrupalWebTestCase {
     db_query("TRUNCATE TABLE {userpoints}");
     db_query("TRUNCATE TABLE {userpoints_txn}");
 
+    // Set a default expire time.
+    variable_set(USERPOINTS_EXPIREON_DATE, time() + 5000);
+
     //Add two different points in, one to post immediately another to expire in the future.
     $keep_points = rand(1, 100);
     $expire_points = rand(1, 100);
@@ -276,15 +279,20 @@ class UserpointsTestCase extends DrupalWebTestCase {
       'uid' => $user->uid,
       'points' => $expire_points,
       'expirydate' => time() - 1000,
+      'operation' => 'must_expire',
     );
     $return = userpoints_userpointsapi($params);
     $this->assertTrue($return['status'] == TRUE,
         t("API succesfully added points for expiration"));
 
+    // Load timestamp of the first transaction.
+    $time_stamp = db_result(db_query("SELECT time_stamp FROM {userpoints_txn} WHERE operation = 'must_expire'"));
+
     $params = array(
       'uid' => $user->uid,
       'points' => $keep_points,
       'expirydate' => time() + 10000,
+      'operation' => 'must_not_expire',
     );
     userpoints_userpointsapi($params);
     $this->assertTrue($return['status'] == TRUE,
@@ -301,6 +309,16 @@ class UserpointsTestCase extends DrupalWebTestCase {
     $sql = "SELECT points FROM {userpoints} WHERE uid=%d";
     $db_points = (int) db_result(db_query($sql, $user->uid));
     $this->assertTrue($db_points == $keep_points, t("Successfully removed expired points from the summary table.") );
+
+    // Load the expiry transaction from the database and verify that it does
+    // not expire.
+    $expired_time = db_result(db_query("SELECT expirydate FROM {userpoints_txn} WHERE operation = 'expiry'"));
+    $this->assertEqual($expired_time, 0, t('Expiry userpoints transaction does not expire.'));
+
+    // Load expired transaction and verify that time_stamp was not updated.
+    $updated_time_stamp = db_result(db_query('SELECT time_stamp FROM {userpoints_txn} WHERE expired = 1'));
+    $this->assertEqual($time_stamp, $updated_time_stamp, t('Time stamp of expired transaction was not changed.'));
+
   }
 
    /**

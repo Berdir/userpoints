@@ -690,6 +690,7 @@ function _userpoints_transaction(&$params) {
   if (!is_array($params)) {
     return FALSE;
   }
+  $time = time();
   if (!isset($params['txn_id'])) {
     //If a txn_id is preset we UPDATE the record instead of adding one
     //the standard checks don't apply
@@ -739,15 +740,14 @@ function _userpoints_transaction(&$params) {
     if (!isset($params['expirydate'])) {
       $params['expirydate'] = userpoints_get_default_expiry_date();
     }
+    // Use current time for time_stamp if configured to always use the default,
+    // not set, not a positive integer or in the future.
+    if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || $params['time_stamp'] <= 0 || $params['time_stamp'] > $time) {
+      $params['time_stamp'] = $time;
+    }
   } // if txn_id
 
-  //Control time_stamp functionality, by default with current timestamp
-  $time = time();
-  //overide system time if meeting criteria matches: Don't let future timestamps, Don't let bad formated timestamps
-  if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || !is_numeric($params['time_stamp']) || $params['time_stamp'] > $time || $params['time_stamp'] < 0) {
-      $params['time_stamp'] = $time;
-  }
-  //Always force changed timestamp to current time() for transaction tracking
+  // Always force changed timestamp to current time() for transaction tracking.
   $params['changed'] = $time;
 
   if (!empty($params['txn_id']) && is_numeric($params['txn_id'])) {
@@ -1640,6 +1640,7 @@ function userpoints_expire_transactions() {
       'description' => $description,
       'parent_txn_id' => $line['txn_id'],
       'moderate' => FALSE,
+      'expirydate' => 0,
     );
     userpoints_userpointsapi($params);
     //Ok we've expired the entry lets update the original entry to set the expired flag
