@@ -1368,11 +1368,29 @@ function userpoints_get_info($operation = NULL) {
  *  * description of the transaction.
  *  * name of the operation.
  *
+ * @param $transaction
+ *   The transaction object for which the description shall be generated.
+ *
+ * @param $options
+ *   Array of options:
+ *   - link: If FALSE, no link is generated to the linked entity even if there
+ *     were one. Defaults to TRUE.
+ *   - truncate: Define if the reason should be truncated. Defaults to TRUE.
+ *   - skip_description: Allows to skip the eventually existing custom
+ *     description a transaction has and always uses the generated description.
+ *
  * @return
  *   The reason for that transaction, linked to the referenced
  *   entity if available.
  */
 function userpoints_create_description($transaction, array $options = array()) {
+
+  // Default options.
+  $options += array(
+    'link' => TRUE,
+    'truncate' => TRUE,
+  );
+
   // Check if there is a valid entity referenced and which can be linked to.
   $entity = NULL;
   if ($transaction->entity_type && entity_get_info($transaction->entity_type)) {
@@ -1400,11 +1418,22 @@ function userpoints_create_description($transaction, array $options = array()) {
   if (empty($description)) {
     $description = $transaction->operation;
   }
+
+  // Truncate description.
+  $attributes = array();
+  $stripped_description = strip_tags($description);
+  if ($options['truncate'] && drupal_strlen($stripped_description) > variable_get('userpoints_truncate', 30) + 3) {
+    // The title attribute will be check_plain()'d again drupal_attributes(),
+    // avoid double escaping.
+    $attributes['title'] = html_entity_decode($stripped_description, ENT_QUOTES);
+    $description = truncate_utf8($stripped_description, variable_get('userpoints_truncate', 30), FALSE, TRUE);
+  }
+
   // Link to the referenced entity, if available.
-  if ($entity && (!isset($options['link']) || $options['link'] != FALSE)) {
+  if ($entity && $options['link']) {
     $uri = entity_uri($transaction->entity_type, $entity);
     if ($uri) {
-      $description = l($description, $uri['path'], $uri['options'] + array('html' => $safe));
+      $description = l($description, $uri['path'], $uri['options'] + array('html' => $safe, 'attributes' => $attributes));
     }
   }
   if ((empty($entity) || empty($uri)) && !$safe) {

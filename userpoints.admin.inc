@@ -809,6 +809,14 @@ function userpoints_admin_settings($form, &$form_state) {
       '#description' => t('When listing !points by user limit how many users are displayed on a single page', userpoints_translation()),
   );
 
+  $form[$group]['userpoints_truncate'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Truncation length for the "Reason" column in transaction listings'),
+    '#description'   => t('Choose the truncation length in characters for the "Reason" column in transaction listings. The reason is not truncated on the transaction details page.'),
+    '#default_value' => variable_get('userpoints_truncate', 30),
+    '#size'          => 5,
+    '#maxlength'     => 5,
+  );
 
   // Categories will only appear if the taxonomy module is enabled as
   // the module is required for this functionality but not necessarily

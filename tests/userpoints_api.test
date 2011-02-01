@@ -172,7 +172,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
   /**
    * Call userpoints_userpointsapi() with just points.
    */
-  function testBasicCall() {
+  function dtestBasicCall() {
     global $user;
 
     $points = (int) rand(1, 500);
@@ -223,7 +223,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
   /**
    * Call the api functions with an array.
    */
-  function testParamsArrayCall() {
+  function dtestParamsArrayCall() {
     $points = rand();
 
     // Assert that the use of a params array with simply points in it works.
@@ -309,7 +309,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $this->assertTrue($db_point_rec['operation'] == $operation, t('Point event successfully verified in DB'));
   }
 
-  function testExpiration() {
+  function dtestExpiration() {
     $points = rand(1, 100);
     $sum_points = 0;
 
@@ -407,7 +407,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
    * Changes the default expiration date in the administrative settings
    * and then checks to ensure that it is saved/returned correctly.
    */
-  function testDefaultExpireDate() {
+  function dtestDefaultExpireDate() {
     // Login as an admin.
     $this->drupalLogin($this->admin_user);
 
@@ -442,7 +442,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
   /**
    * Test the default term id.
    */
-  function testGetDefaultTid() {
+  function dtestGetDefaultTid() {
     $vid = userpoints_get_vid();
     $term_name = $this->randomName(10);
     $desc = $this->randomName(10);
@@ -483,7 +483,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
   /**
    * Test user permissions
    */
-  function testUserpermissions() {
+  function dtestUserpermissions() {
     $this->non_admin_username = 'test';
     $points = 10;
 
@@ -519,7 +519,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $this->assertResponse(403, t("Successful verified that a user without admin userpoints permissions can not access the admin interface."));
   }
 
-  function testModeration() {
+  function dtestModeration() {
     $points = rand(1, 100);
 
     // condition1 moderate=TRUE.
@@ -577,7 +577,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
   /**
    * Tests the userpoints_get_categories() function.
    */
-  function testGetCategories() {
+  function dtestGetCategories() {
     $cats = userpoints_get_categories();
     $this->assertTrue(is_array($cats), 'Successfully verified userpoints_get_categories() returned an array');
   }
@@ -699,6 +699,8 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     );
     userpoints_userpointsapi($params);
     $this->verifyPoints($uid, 59, 59, 1);
+
+    $this->verifyPoints($uid, 159, 164, 'all');
   }
 
 }
@@ -734,7 +736,7 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
   }
 
 
-  function testAddEditPoints() {
+  function dtestAddEditPoints() {
     $user = $this->drupalCreateUser();
 
     $categories = userpoints_get_categories();

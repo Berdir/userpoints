@@ -247,7 +247,7 @@ function userpoints_view_transaction($transaction) {
   $content['details']['reason'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('Reason'),
-    '#value' => userpoints_create_description($transaction),
+    '#value' => userpoints_create_description($transaction, array('truncate' => FALSE)),
     '#weight' => 40,
     '#attributes' => array('class' => array('userpoints-item-reason')),
   );
@@ -373,7 +373,7 @@ function userpoints_view_transaction($transaction) {
       $content['admin']['description_generated'] = array(
         '#theme' => 'userpoints_view_item',
         '#title' => t('Description (auto generated)'),
-        '#value' => userpoints_create_description($transaction, array('skip_description' => TRUE)),
+        '#value' => userpoints_create_description($transaction, array('skip_description' => TRUE, 'truncate' => FALSE)),
         '#weight' => 20,
         '#attributes' => array('class' => array('userpoints-item-description-generated')),
       );
