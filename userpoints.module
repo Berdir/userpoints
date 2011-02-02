@@ -49,11 +49,11 @@ function userpoints_translation() {
 
   if (!isset($trans)) {
     $trans = array(
-      '!Points' => variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points'),
-      '!points' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
-      '!Point'  => variable_get(USERPOINTS_TRANS_UCPOINT, 'Point'),
-      '!point'  => variable_get(USERPOINTS_TRANS_LCPOINT, 'point'),
-      '!Uncategorized'  => variable_get(USERPOINTS_TRANS_UNCAT, 'Uncategorized'),
+      '!Points' => check_plain(variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points')),
+      '!points' => check_plain(variable_get(USERPOINTS_TRANS_LCPOINTS, 'points')),
+      '!Point'  => check_plain(variable_get(USERPOINTS_TRANS_UCPOINT, 'Point')),
+      '!point'  => check_plain(variable_get(USERPOINTS_TRANS_LCPOINT, 'point')),
+      '!Uncategorized'  => check_plain(variable_get(USERPOINTS_TRANS_UNCAT, 'Uncategorized')),
       );
   }
   return $trans;
@@ -950,7 +950,7 @@ function userpoints_admin_manage() {
             $operation = l($data->operation, 'node/'. $node->nid, array('attributes' => array('title' => $node->title)));
           }
           else {
-            $operation = $data->operation;
+            $operation = check_plain($data->operation);
           }
           break;
         case 'comment' :
@@ -961,12 +961,12 @@ function userpoints_admin_manage() {
               $operation = l($data->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject), 'fragment' => 'comment-'. $comment->cid));
             }
             else {
-              $operation = $data->operation;
+              $operation = check_plain($data->operation);
             }
           }
           break;
         default:
-          $operation = $data->operation;
+          $operation = check_plain($data->operation);
       }
     }
     $rows[] = array(
@@ -1728,7 +1728,7 @@ function userpoints_list_my_userpoints() {
       $row->cat = t('!Uncategorized', userpoints_translation());
     }
     if ($row->description) {
-      $description = $row->description;
+      $description = filter_xss($row->description);
     }
     else {
       $description = t('None');
@@ -1745,7 +1745,7 @@ function userpoints_list_my_userpoints() {
             $operation = l($row->operation, 'node/'. $node->nid, array('attributes' => array('title' => $node->title)));
           }
           else {
-            $operation = $row->operation;
+            $operation = check_plain($row->operation);
           }
           break;
         case 'comment' :
@@ -1756,12 +1756,12 @@ function userpoints_list_my_userpoints() {
               $operation = l($row->operation, 'node/'. $comment->nid, array('attributes' => array('title' => $comment->subject), 'fragment' => 'comment-'. $comment->cid ));
             }
             else {
-              $operation = $row->operation;
+              $operation = check_plain($row->operation);
             }
           }
           break;
         default:
-          $operation = $row->operation;
+          $operation = check_plain($row->operation);
       }
     }
     $rows[] = array(
