@@ -40,11 +40,11 @@ function userpoints_translation() {
 
   if (!isset($trans)) {
     $trans = array(
-        '!Points' => variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points'),
-        '!points' => variable_get(USERPOINTS_TRANS_LCPOINTS, 'points'),
-        '!Point' => variable_get(USERPOINTS_TRANS_UCPOINT, 'Point'),
-        '!point' => variable_get(USERPOINTS_TRANS_LCPOINT, 'point'),
-        '!Uncategorized' => variable_get(USERPOINTS_TRANS_UNCAT, 'General'),
+      '!Points' => check_plain(variable_get(USERPOINTS_TRANS_UCPOINTS, 'Points')),
+      '!points' => check_plain(variable_get(USERPOINTS_TRANS_LCPOINTS, 'points')),
+      '!Point' => check_plain(variable_get(USERPOINTS_TRANS_UCPOINT, 'Point')),
+      '!point' => check_plain(variable_get(USERPOINTS_TRANS_LCPOINT, 'point')),
+      '!Uncategorized' => check_plain(variable_get(USERPOINTS_TRANS_UNCAT, 'General')),
     );
   }
   return $trans;
