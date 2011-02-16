@@ -49,6 +49,7 @@ function userpoints_schema() {
     'indexes' => array(
       'last_update' => array('last_update'),
       'uid_tid' => array('uid', 'tid'),
+      'points' => array('points'),
     ),
   );
 
@@ -156,6 +157,9 @@ function userpoints_schema() {
       'status_expired_expiry' => array('status', 'expired', 'expirydate'),
       //Optional as in update_6011
       'changed' => array('changed'),
+      'uid' => array('uid'),
+      'approver_uid' => array('approver_uid'),
+      'points' => array('points'),
     )
   );
   return $schema;
@@ -279,5 +283,17 @@ function userpoints_update_6012() {
   $ret = array();
   db_drop_index($ret, 'userpoints_txn', 'status');
   db_add_index($ret, 'userpoints_txn', 'status_expired_expiry', array('status', 'expired', 'expirydate'));
+  return $ret;
+}
+
+/**
+ * Add indexes to speed up contrib modules that query the `points` columns.
+ */
+function userpoints_update_6013() {
+  $ret = array();
+  db_add_index($ret, 'userpoints', 'points', array('points'));
+  db_add_index($ret, 'userpoints_txn', 'uid', array('uid'));
+  db_add_index($ret, 'userpoints_txn', 'approver_uid', array('approver_uid'));
+  db_add_index($ret, 'userpoints_txn', 'points', array('points'));
   return $ret;
 }
