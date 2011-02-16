@@ -177,7 +177,7 @@ function userpoints_install() {
  */
 function userpoints_uninstall() {
   drupal_uninstall_schema('userpoints');
-  db_query("DELETE FROM {variable} WHERE name like '%userpoints%'");
+  db_query("DELETE FROM {variable} WHERE name like 'userpoints_%'");
 
   $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE module='userpoints'"));
   if ($vid) {
