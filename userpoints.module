@@ -1355,7 +1355,7 @@ function userpoints_list_users() {
   $tid = arg(1);
 
   $sql = "SELECT p.uid, u.name, p.points, p.tid, t.name as cat
-          FROM {userpoints} p INNER JOIN {users} u USING (uid)
+          FROM {userpoints} p INNER JOIN {users} u ON p.uid = u.uid AND u.status = 1
           LEFT JOIN {term_data} t ON p.tid = t.tid
           ";
 
@@ -1520,7 +1520,7 @@ function userpoints_block($op = 'list', $delta = 0, $edit = array()) {
         //if 0 we pull 0 or NULL
         $title = t('Highest Users');
         $num = variable_get('userpoints_block_up_records_'. $delta, 5);
-        $sql = 'SELECT p.uid, u.name, p.points FROM {userpoints} p INNER JOIN {users} u USING (uid)';
+        $sql = 'SELECT p.uid, u.name, p.points FROM {userpoints} p INNER JOIN {users} u ON u.uid = p.uid AND u.status = 1';
         if ($delta == 0) {
           $sql .= ' WHERE p.tid = 0 OR p.tid IS NULL ORDER BY p.points DESC';
           $result = db_query_range($sql, 0, $num);
