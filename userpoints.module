@@ -178,9 +178,7 @@ function userpoints_access_my_points() {
   if ($user->uid === 1 || user_access(USERPOINTS_PERM_ADMIN)) {
     return TRUE;
   }
-  return ( _userpoints_user_exists($user->uid) &&
-          ((user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in()) || user_access(USERPOINTS_PERM_VIEW_OWN))
-         );
+  return (user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in()) || user_access(USERPOINTS_PERM_VIEW_OWN);
 }
 
 /**
