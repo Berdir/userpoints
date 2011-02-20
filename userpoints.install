@@ -199,12 +199,23 @@ function userpoints_update_7000() {
  * Add index on points columns in userpoints and userpoints_txn, as well as on the two
  * uid columns in userpoints_txn. No need to add a uid index in userpoints, as the
  * compound uid_tid index is used instead when needed.
+ *
+ * Since these indexes are added in a 6.x update as well, they need to be conditional
+ * in this update. Otherwise users get errors, which is bad.
  */
 function userpoints_update_7001() {
-  db_add_index('userpoints', 'points', array('points'));
-  db_add_index('userpoints_txn', 'uid', array('uid'));
-  db_add_index('userpoints_txn', 'approver_uid', array('approver_uid'));
-  db_add_index('userpoints_txn', 'points', array('points'));
+  if (!db_index_exists('userpoints', 'points')) {
+    db_add_index('userpoints', 'points', array('points'));
+  }
+  if (!db_index_exists('userpoints_txn', 'uid')) {
+    db_add_index('userpoints_txn', 'uid', array('uid'));
+  }
+  if (!db_index_exists('userpoints_txn', 'approver_uid')) {
+    db_add_index('userpoints_txn', 'approver_uid', array('approver_uid'));
+  }
+  if (!db_index_exists('userpoints_txn', 'points')) {
+    db_add_index('userpoints_txn', 'points', array('points'));
+  }
 }
 
 /**
