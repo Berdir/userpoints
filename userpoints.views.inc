@@ -71,15 +71,15 @@ function userpoints_views_data() {
     'title' => t('Userpoints Category', userpoints_translation()),
     'help' => t('The categories (terms) of userpoints used', userpoints_translation()), // The help that appears on the UI,
     'field' => array(
-      'handler' => 'views_handler_field_term_node_tid',
+      'handler' => 'userpoints_views_handler_field_category',
     ),
     'argument' => array(
-      'handler' => 'views_handler_argument_term_node_tid',
+      'handler' => 'userpoints_views_handler_argument_category',
       'numeric' => TRUE,
       'name field' => 'category', // display this field in the summary
     ),
     'filter' => array(
-      'handler' => 'views_handler_filter_term_node_tid',
+      'handler' => 'userpoints_views_handler_filter_category',
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
@@ -191,15 +191,15 @@ function userpoints_views_data() {
     'title' => t('Userpoints Category', userpoints_translation()),
     'help' => t('The categories (terms) of userpoints used for this transaction', userpoints_translation()), // The help that appears on the UI,
     'field' => array(
-      'handler' => 'views_handler_field_term_node_tid',
+      'handler' => 'userpoints_views_handler_field_category',
     ),
     'argument' => array(
-      'handler' => 'views_handler_argument_term_node_tid',
+      'handler' => 'userpoints_views_handler_argument_category',
       'numeric' => TRUE,
       'name field' => 'category', // display this field in the summary
     ),
     'filter' => array(
-      'handler' => 'views_handler_filter_term_node_tid',
+      'handler' => 'userpoints_views_handler_filter_category',
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
@@ -361,4 +361,26 @@ function userpoints_views_data() {
   );
 
   return $data;
+}
+
+/**
+ * Implements hook_views_handlers().
+ */
+function userpoints_views_handlers() {
+  return array(
+    'info' => array(
+      'path' => drupal_get_path('module', 'userpoints') . '/views',
+    ),
+    'handlers' => array(
+      'userpoints_views_handler_field_category' => array(
+        'parent' => 'views_handler_field',
+      ),
+      'userpoints_views_handler_filter_category' => array(
+        'parent' => 'views_handler_filter_in_operator',
+      ),
+      'userpoints_views_handler_argument_category' => array(
+        'parent' => 'views_handler_argument',
+      ),
+    ),
+  );
 }
