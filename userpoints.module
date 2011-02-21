@@ -159,10 +159,20 @@ function userpoints_menu() {
   );
 
   $items['myuserpoints'] = array(
-    'title'           => 'My !points',
+    'title' => 'My !points',
     'title arguments' => userpoints_translation(),
-    'page callback'   => 'userpoints_list_my_userpoints',
+    'page callback' => 'userpoints_list_my_userpoints_forward',
+    'access callback' => TRUE,
+    'type'            => MENU_CALLBACK,
+  );
+
+  $items['myuserpoints/%user_uid_optional'] = array(
+    'title' => 'My !points',
+    'title arguments' => userpoints_translation(),
+    'page callback' => 'userpoints_list_my_userpoints',
+    'page arguments' => array(1),
     'access callback' => 'userpoints_access_my_points',
+    'access arguments' => array(1),
     'type'            => MENU_NORMAL_ITEM
   );
   return $items;
@@ -171,14 +181,24 @@ function userpoints_menu() {
 /**
  * Checks if user can access their points - used via hook_menu().
  *
- * @return TRUE if user has permissions to view userpoints and if the user is logged in
+ * @return
+ *   TRUE if user has permissions to view userpoints and if the user is logged
+ *   in.
  */
-function userpoints_access_my_points() {
+function userpoints_access_my_points($account = NULL) {
   global $user;
-  if ($user->uid === 1 || user_access(USERPOINTS_PERM_ADMIN)) {
-    return TRUE;
+  if ($account && $user->uid != $account->uid) {
+    return user_access(USERPOINTS_PERM_ADMIN);
   }
   return (user_access(USERPOINTS_PERM_VIEW) && user_is_logged_in()) || user_access(USERPOINTS_PERM_VIEW_OWN);
+}
+
+/**
+ * Forward to the myuserpoints page of the current user.
+ */
+function userpoints_list_my_userpoints_forward() {
+  global $user;
+  drupal_goto('myuserpoints/' . $user->uid);
 }
 
 /**
@@ -863,17 +883,13 @@ function userpoints_user($op, &$edit, &$account, $category = '') {
       break;
 
     case 'view':
-      if (user_access(USERPOINTS_PERM_VIEW) || (user_access(USERPOINTS_PERM_VIEW_OWN) && $user->uid == $account->uid )) {
-        $details = NULL;
-        if (userpoints_access_my_points()) {
-          $details .= l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
-        }
+      if (userpoints_access_my_points($account)) {
+        $details = array();
+          $details[] = l(t('View'), 'myuserpoints/'. $account->uid, array('attributes' => array('title' => t('View detailed transactions'))));
         if (user_access(USERPOINTS_PERM_ADMIN)) {
-          if (!is_null($details)) {
-            $details .= ', ';
-          }
-          $details .= l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user', userpoints_translation()))));
+          $details[] = l(t('Adjust'), 'admin/user/userpoints/add/'. $account->uid, array('attributes' => array('title' => t('Add/substract !points from this user', userpoints_translation()))));
         }
+        $details = implode(', ', $details);
 
         //Which points are we display?
         $points = userpoints_get_current_points($account->uid, variable_get(USERPOINTS_CATEGORY_PROFILE_DISPLAY_TID, 0));
@@ -1644,34 +1660,10 @@ function userpoints_cron() {
  * Purpose: Displays a detailed transaction report for an individual user
  * no URL argument returns current user otherwise accepts uid.
  */
-function userpoints_list_my_userpoints() {
+function userpoints_list_my_userpoints($points_user) {
   $overall_total = 0;
   $unapproved_total = 0;
   $approved_total = 0;
-
-  global $user;
-
-  // User which are displaying points for
-  $uid = (int)arg(1);
-  if ($uid) {
-    if ($uid != $user->uid && !user_access(USERPOINTS_PERM_ADMIN)) {
-      // If not the same as logged in user
-      drupal_access_denied();
-      return;
-    }
-  }
-  else {
-    // Default to currently logged in user
-    $uid = $user->uid;
-  }
-  $point_user = user_load(array('uid' => $uid));
-
-  // Check permissions
-  if (!user_access(USERPOINTS_PERM_VIEW) && !user_access(USERPOINTS_PERM_VIEW_OWN)) {
-    // User has no access to view points
-    drupal_access_denied();
-    return;
-  }
 
   $title = t('!Points for ', userpoints_translation()) . check_plain($point_user->name);
   drupal_set_title($title);
