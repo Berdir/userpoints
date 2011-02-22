@@ -1665,7 +1665,7 @@ function userpoints_list_my_userpoints($points_user) {
   $unapproved_total = 0;
   $approved_total = 0;
 
-  $title = t('!Points for ', userpoints_translation()) . check_plain($point_user->name);
+  $title = t('!Points for ', userpoints_translation()) . check_plain($points_user->name);
   drupal_set_title($title);
 
    //Grab all tids for this user
@@ -1674,14 +1674,14 @@ function userpoints_list_my_userpoints($points_user) {
     LEFT JOIN {term_data} t on p.tid = t.tid
     WHERE uid = %d
     GROUP BY p.tid, t.name";
-  $results = db_query($sql, $uid);
+  $results = db_query($sql, $points_user->uid);
   $grand_total = 0;
   while ($result = db_fetch_array($results)) {
     if ($result['name'] == NULL) {
       $result['name'] = t('!Uncategorized', userpoints_translation());
     }
     //pull the sum from the caching table for resource reason and b/c the
-    $result['total'] = userpoints_get_current_points($uid, $result['tid']);
+    $result['total'] = userpoints_get_current_points($points_user->uid, $result['tid']);
     $args['subtotals'][$result['tid']] = $result;
 
     //maintain a grand total
@@ -1690,7 +1690,7 @@ function userpoints_list_my_userpoints($points_user) {
   $args['approved_total'] = $grand_total;
 
   //Grab the unmoderated point total
-  $args['unapproved_total'] = (int)db_result(db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d AND status = 1", $uid));
+  $args['unapproved_total'] = (int)db_result(db_query("SELECT SUM(points) FROM {userpoints_txn} WHERE uid = %d AND status = 1", $points_user->uid));
   $args['overall_total'] = ($args['approved_total'] + $args['unapproved_total']);
 
   $header = array(
@@ -1707,7 +1707,7 @@ function userpoints_list_my_userpoints($points_user) {
            WHERE p.uid = %d";
   $sql .= tablesort_sql($header);
   $pager_limit = variable_get(USERPOINTS_REPORT_LIMIT, 10);
-  $result = pager_query($sql, $pager_limit, 0, NULL, $uid);
+  $result = pager_query($sql, $pager_limit, 0, NULL, $points_user->uid);
   $stati = userpoints_txn_status();
   $num_rows = 0;
   $rows = array();
@@ -1751,7 +1751,7 @@ function userpoints_list_my_userpoints($points_user) {
           }
           break;
         case 'user':
-            $operation = l($row->operation, 'user/'.$uid);
+            $operation = l($row->operation, 'user/' . $row->entity_id);
           break;
         default:
           $operation = check_plain($row->operation);
