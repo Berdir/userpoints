@@ -1,4 +1,3 @@
-; $Id$
 name = Userpoints
 description = Userpoints core: API module for recording points for other modules.
 package = Userpoints
