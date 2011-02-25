@@ -1,4 +1,3 @@
-// $Id$
 (function ($) {
   Drupal.behaviors.userpointsAdminFieldsetSummaries = {
     attach: function (context) {
