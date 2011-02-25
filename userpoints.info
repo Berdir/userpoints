@@ -1,4 +1,3 @@
-; $Id$
 name = Userpoints
 description = Users earn points as they post nodes, comments, and vote on nodes.
 package = Userpoints
