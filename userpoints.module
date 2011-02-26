@@ -395,22 +395,271 @@ function userpoints_theme() {
  * Implements hook_tokens().
  */
 function userpoints_tokens($type, $tokens, array $data = array(), array $options = array()) {
-  if ($type == 'user' && isset($data['user']) && isset($tokens['userpoints'])) {
-    return array($tokens['userpoints'] => userpoints_get_current_points($data['user']->uid));
+  $url_options = array('absolute' => TRUE);
+  if (isset($options['language'])) {
+    $url_options['language'] = $options['language'];
+    $language_code = $options['language']->language;
   }
+  else {
+    $language_code = NULL;
+  }
+  $sanitize = !empty($options['sanitize']);
+
+  $replacements = array();
+
+  if ($type == 'user' && !empty($data['user'])) {
+    $user = $data['user'];
+    foreach ($tokens as $name => $original) {
+      switch ($name) {
+        case 'points':
+          $replacements[$original] = userpoints_get_current_points($user->uid);
+          break;
+
+        case 'maxpoints':
+          $replacements[$original] = userpoints_get_max_points($user->uid);
+
+        default:
+          break;
+      }
+    }
+
+    if ($points_tokens = token_find_with_prefix($tokens, 'points')) {
+      $replacements += token_generate('userpoints', $points_tokens, $data, $options);
+    }
+    if ($points_tokens = token_find_with_prefix($tokens, 'maxpoints')) {
+      $replacements += token_generate('maxuserpoints', $points_tokens, $data, $options);
+    }
+  }
+
+  if ($type == 'userpoints' && !empty($data['user'])) {
+    $uid = is_object($data['user']->uid) ? $data['user']->getIdentifier() : $data['user']->uid;
+    foreach ($tokens as $name => $original) {
+      $tid = NULL;
+      if ($name == 'all') {
+        $tid = 'all';
+      }
+      else if (strpos($name, 'category-') === 0) {
+        // Extract the category id from the string that looks like category-1.
+        list(,$tid) = explode('-', $name);
+      }
+      if ($tid) {
+        $replacements[$original] = userpoints_get_current_points($uid, $tid);
+      }
+    }
+  }
+
+  if ($type == 'maxuserpoints' && !empty($data['user'])) {
+    $uid = is_object($data['user']->uid) ? $data['user']->getIdentifier() : $data['user']->uid;
+    foreach ($tokens as $name => $original) {
+      $tid = NULL;
+      if ($name == 'all') {
+        $tid = 'all';
+      }
+      else if (strpos($name, 'category-') === 0) {
+        // Extract the category id from the string that looks like category-1.
+        list(,$tid) = explode('-', $name);
+      }
+      if ($tid) {
+        $replacements[$original] = userpoints_get_max_points($uid, $tid);
+      }
+    }
+  }
+
+  if ($type == 'userpoints_transaction' && !empty($data['userpoints_transaction'])) {
+    $txn = (object)$data['userpoints_transaction'];
+    foreach ($tokens as $name => $original) {
+      switch ($name) {
+        case 'points':
+          $replacements[$original] = $txn->$name;
+          break;
+
+        case 'points-abs':
+          $replacements[$original] = abs($txn->points);
+          break;
+
+        case 'display':
+          $replacements[$original] = $txn->$name ? t('Yes') : t('No');
+          break;
+
+        case 'status':
+          $stati = userpoints_txn_status();
+          $replacements[$original] = $stati[$txn->$name];
+          break;
+
+        case 'description':
+        case 'reference':
+        case 'operation':
+          $replacements[$original] = $sanitize ? filter_xss($txn->$name) : $txn->$name;
+          break;
+
+        case 'reason':
+          $replacements[$original] = userpoints_create_description($txn);
+          break;
+
+        case 'entity':
+          $entity = !empty($txn->entity_type) && !empty($txn->entity_id) ? entity_load($txn->entity_type, array($txn->entity_id)) : array();
+          $entity = reset($entity);
+          $label = $entity ? entity_label($txn->entity_type, $entity) : '';
+          $replacements[$original] = $sanitize ? filter_xss($label) : $label;
+          break;
+
+        // Default values for the chained tokens handled below.
+        case 'user':
+          $user = user_load($txn->uid);
+          $replacements[$original] = $sanitize ? filter_xss(format_username($user)) : format_username($user);
+          break;
+
+        case 'time-stamp':
+          $replacements[$original] = format_date($txn->time_stamp, 'medium', '', NULL, $language_code);
+          break;
+
+        case 'expirydate':
+          if ($txn->$name > 0) {
+            $replacements[$original] = format_date($txn->$name, 'medium', '', NULL, $language_code);
+          }
+          else {
+            $replacements[$original] = t('Never');
+          }
+          break;
+
+        case 'tid':
+          if ($txn->tid > 0) {
+            $term = taxonomy_term_load($txn->tid);
+            $term_name = $term ? $term->name : '';
+          }
+          else {
+            $term_name = t('!Uncategorized', userpoints_translation());
+          }
+          $replacements[$original] = $sanitize ? filter_xss($term_name) : $term_name;
+          break;
+      }
+    }
+
+    if ($user_tokens = token_find_with_prefix($tokens, 'user')) {
+      $replacements += token_generate('user', $user_tokens, array('user' => $txn->user), $options);
+    }
+
+    if ($term_tokens = token_find_with_prefix($tokens, 'tid')) {
+      if ($txn->tid > 0) {
+        $replacements += token_generate('term', $term_tokens, array('term' => taxonomy_term_load($txn->tid)), $options);
+      }
+      else {
+        // For the general category, only tid and name is supported.
+        foreach ($term_tokens as $name => $original) {
+          switch ($name) {
+            case 'tid':
+              $replacements[$original] = '0';
+              break;
+
+            case 'name':
+              $term_name = t('!Uncategorized', userpoints_translation());
+              $replacements[$original] = $sanitize ? filter_xss($term_name) : $term_name;
+              break;
+          }
+        }
+      }
+    }
+
+    if ($timestamp_tokens = token_find_with_prefix($tokens, 'time-stamp')) {
+      $replacements += token_generate('date', $timestamp_tokens, array('date' => $txn->time_stamp), $options);
+    }
+
+    if ($expiry_tokens = token_find_with_prefix($tokens, 'expirydate')) {
+      if ($txn->expirydate > 0) {
+        $replacements += token_generate('date', $expiry_tokens, array('date' => $txn->expirydate), $options);
+      }
+      else {
+        // Create array with $original as key and 'Never' as value.
+        $replacements += array_fill_keys($expiry_tokens, t('Never'));
+      }
+    }
+  }
+  return $replacements;
 }
 
 /**
- * Implements hook_token_list().
+ * Implements hook_token_info().
  */
-function userpoints_token_list($type = 'all') {
+function userpoints_token_info() {
+  $types = array(
+    'userpoints_transaction' => array(
+      'name' => t('!Points transaction', userpoints_translation()),
+      'description' => t('A single transaction that grants or removes a certain amount of points from a user.'),
+      'needs-data' => 'userpoints_transaction',
+    ),
+    'userpoints' => array(
+      'name' => t('!Points', userpoints_translation()),
+      'description' => t('Amount of !points a user has.', userpoints_translation()),
+      'needs-data' => 'user',
+    ),
+    'maxuserpoints' => array(
+      'name' => t('Maximal !points', userpoints_translation()),
+      'description' => t('Maximal amount of !points a user had at any time.', userpoints_translation()),
+      'needs-data' => 'user',
+    ),
+  );
+
+  $tokens = array();
+
+  $tokens['user']['points'] = array(
+    'name' => t('!Points', userpoints_translation()),
+    'description' => t('The amount of !points this user has. If there are multiple categories, only the default category is taken into account.', userpoints_translation()),
+    'type' => 'userpoints',
+  );
+
+  $tokens['user']['maxpoints'] = array(
+    'name' => t('Maximal !points', userpoints_translation()),
+    'description' => t('The highest amount of !points a user had at any given point. If there are multiple categories, only the default category is taken into account.', userpoints_translation()),
+    'type' => 'userpoints',
+  );
+
+  $categories = userpoints_get_categories();
+  if (count($categories) > 1) {
+    foreach ($categories as $tid => $category) {
+      $tokens['userpoints']['category-' . $tid] = array(
+        'name' => t('!Points in category %category', array_merge(array('%category' => $category), userpoints_translation())),
+        'description' => t('The amount of !points this user has in that category.', userpoints_translation()),
+      );
+
+      $tokens['maxuserpoints']['category-' . $tid] = array(
+        'name' => t('Maximal !points in category %category', array_merge(array('%category' => $category), userpoints_translation())),
+        'description' => t('The highest amount of !points a user had at any given point in that category.', userpoints_translation()),
+      );
+    }
+    $tokens['userpoints']['all'] = array(
+      'name' => t('Total !points', userpoints_translation()),
+      'description' => t('Total amount of !points over all categories.', userpoints_translation()),
+    );
+    $tokens['userpoints']['all'] = array(
+      'name' => t('Total maximum !points', userpoints_translation()),
+      'description' => t('Total amount of maximal !points over all categories.', userpoints_translation()),
+    );
+  }
+
+  // Re-use property definition that is used for rules integration.
+  foreach (_userpoints_userpoints_transaction_properties() as $property => $info) {
+    $tokens['userpoints_transaction'][$property] = array(
+      'name' => $info['label'],
+      'description' => $info['description'],
+    );
+    if (in_array($info['type'], array('date', 'user'))) {
+      $tokens['userpoints_transaction'][$property]['type'] = $info['type'];
+    }
+    if ($property == 'tid') {
+      // tid is of type taxonomy_term.
+      $tokens['userpoints_transaction'][$property]['type'] = 'term';
+    }
+  }
+
+  // Add an additional token for the absolute points.
+  $tokens['userpoints_transaction']['points-abs'] = array(
+    'name' => t('!Points absolute', userpoints_translation()),
+    'description' => t('The absolute (positive) amount of !points of this transaction.', userpoints_translation()),
+  );
+
   return array(
-      'tokens' => array(
-          'user' => array(
-              'name' => t('User points'),
-              'description' => t('The number of points a user has.'),
-          )
-      )
+    'types' => $types,
+    'tokens' => $tokens,
   );
 }
 
@@ -1610,4 +1859,95 @@ function userpoints_get_transaction_row($transaction, $settings = array()) {
     'class' => array('userpoints-transactions-field-actions'),
   );
   return $row;
+}
+
+/**
+ * Returns properties of userpoints_transaction data object.
+ */
+function _userpoints_userpoints_transaction_properties() {
+  return array(
+    'user' => array(
+      'type' => 'user',
+      'label' => t('User'),
+      'description' => t('The user that will receive the !points', userpoints_translation()),
+      'setter callback' => 'entity_metadata_verbatim_set',
+    ),
+    'points' => array(
+      'type' => 'integer',
+      'label' => t('!Points', userpoints_translation()),
+      'description' => t('Amount of !points to give or take.', userpoints_translation()),
+      'restriction' => 'input',
+      'setter callback' => 'entity_metadata_verbatim_set',
+    ),
+    'tid' => array(
+      'label' => t('!Points category', userpoints_translation()),
+      'description' => t('The category to which these transaction belongs.'),
+      'type' => 'integer',
+      'options list' => 'userpoints_rules_get_categories',
+      'restriction' => 'input',
+      'setter callback' => 'entity_metadata_verbatim_set',
+    ),
+    'entity' => array(
+      'label' => t('Entity'),
+      'type' => 'entity',
+      'description' => t('The entity to which this transaction refers.'),
+      'restriction' => 'input',
+      'optional' => TRUE,
+      'getter callback' => 'entity_metadata_verbatim_get',
+     ),
+    'description' => array(
+      'label' => t('Description'),
+      'type' => 'text',
+      'description' => t('Can contain the reason why the points have been given.'),
+      'restriction' => 'input',
+      'optional' => TRUE,
+      'setter callback' => 'entity_metadata_verbatim_set',
+    ),
+    'reference' => array(
+      'label' => t('Reference'),
+      'type' => 'text',
+      'description' => t('Can contain a reference for this transaction.'),
+      'optional' => TRUE,
+      'setter callback' => 'entity_metadata_verbatim_set',
+    ),
+    'operation' => array(
+      'label' => t('Operation'),
+      'type' => 'text',
+      'description' => t('Describes the operation (Insert/Remove/...).'),
+      'restriction' => 'input',
+      'setter callback' => 'entity_metadata_verbatim_set',
+    ),
+    'reason' => array(
+      'label' => t('Reason'),
+      'type' => 'text',
+      'description' => t('The reason why the points were granted.'),
+      'restriction' => 'input',
+    ),
+    'time-stamp' => array(
+      'label' => t('Timestamp'),
+      'type' => 'date',
+      'description' => t('Time when the points were given.'),
+      'setter callback' => 'entity_metadata_verbatim_set',
+      'getter callback' => 'entity_metadata_verbatim_get',
+    ),
+    'expirydate' => array(
+      'label' => t('Expiry date'),
+      'type' => 'date',
+      'description' => t('Time when the points will expire.'),
+      'setter callback' => 'entity_metadata_verbatim_set',
+      'getter callback' => 'entity_metadata_verbatim_get',
+    ),
+    'display' => array(
+      'label' => t('Display'),
+      'type' => 'boolean',
+      'description' => t('Wether to show a message to the user for this transaction or not.'),
+      'setter callback' => 'entity_metadata_verbatim_set',
+    ),
+    'status' => array(
+      'label' => t('Status'),
+      'type' => 'integer',
+      'description' => t('Status of this transaction.'),
+      'options list' => 'userpoints_txn_status',
+    ),
+  );
 }
