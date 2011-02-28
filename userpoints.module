@@ -966,7 +966,7 @@ function _userpoints_transaction(&$params) {
 
     // Use current time for time_stamp if configured to always use the default,
     // not set, not a positive integer or in the future.
-    if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || $params['time_stamp'] <= 0 || $params['time_stamp'] > $time) {
+    if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || $params['time_stamp'] <= 0 || $params['time_stamp'] > REQUEST_TIME) {
       $params['time_stamp'] = REQUEST_TIME;
     }
   }
