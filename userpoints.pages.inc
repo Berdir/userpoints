@@ -189,6 +189,8 @@ function userpoints_list_users($tid = NULL) {
 function userpoints_view_transaction($transaction) {
   drupal_add_css(drupal_get_path('module', 'userpoints') . '/userpoints.css');
 
+  drupal_set_title(t('View transaction #@txn_id', array('@txn_id' => $transaction->txn_id)));
+
   $css_stati = array(
     USERPOINTS_TXN_STATUS_APPROVED => 'approved',
     USERPOINTS_TXN_STATUS_DECLINED => 'declined',
