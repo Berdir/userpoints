@@ -860,11 +860,10 @@ function userpoints_userpointsapi($params) {
     }
 
     // Anonymous users do not get points, and there have to be points to process.
-    if (($params['uid'] == 0 || $params['points'] == 0)) {
+    if (empty($params['uid']) || empty($params['points'])) {
       return array(
           'status' => FALSE,
-          'reason' => 'uid or points = 0. Anonymous users do not get points
-                     and there must be points to process.',
+          'reason' => 'uid or points not given. Anonymous users do not get points and there must be points to process.',
       );
     }
   }
