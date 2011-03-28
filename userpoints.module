@@ -1948,6 +1948,8 @@ function _userpoints_userpoints_transaction_properties() {
       'type' => 'integer',
       'description' => t('Status of this transaction.'),
       'options list' => 'userpoints_txn_status',
+      'setter callback' => 'entity_metadata_verbatim_set',
+      'getter callback' => 'entity_metadata_verbatim_get',
     ),
   );
 }
