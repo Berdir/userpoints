@@ -683,7 +683,7 @@ function userpoints_userpointsapi($params) {
         ))));
   } //if $params['status']
 
-  if ($mesg && (!empty($params['display']) || (!array_key_exists('display', $params) && variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1))) {
+  if ($mesg && (!empty($params['display']) || (empty($params['display']) && variable_get(USERPOINTS_DISPLAY_MESSAGE, 1) == 1))) {
     drupal_set_message($mesg);
   }
   // Call the _userpoints hook to allow modules to act after points are awarded
