@@ -1241,7 +1241,7 @@ function userpoints_get_points_list($account = NULL) {
       'href' => 'myuserpoints/' . $account->uid,
     );
   }
-  if (user_access('administer userpoints')) {
+  if (userpoints_admin_access('add')) {
     $links['userpoints-adjust'] = array(
       'title' => t('Add or deduct !points', userpoints_translation()),
       'href' => 'admin/config/people/userpoints/add/' . $account->uid,
