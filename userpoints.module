@@ -1262,12 +1262,11 @@ function userpoints_get_points_list($account = NULL) {
 /**
  * Provides a dropdown to filter by category.
  */
-function userpoints_filter_cat_select($form, &$form_state, $path, $tid, $account = NULL) {
+function userpoints_filter_cat_select(&$form_state, $tid, $account = NULL) {
   $current_cat = url($path . $tid);
-  $form = array();
-  $formname = 'catselect';
 
   $cats = userpoints_get_categories($account);
+  dpm($cats);
   $options = array();
   $options[url(substr($path, 0, strlen($path) - 1))] = t('Display all');
   foreach ($cats as $key => $value) {
@@ -1275,14 +1274,11 @@ function userpoints_filter_cat_select($form, &$form_state, $path, $tid, $account
   }
   $form['catselect'] = array(
       '#type' => 'select',
-      '#name' => $formname,
-      '#id' => $formname,
       '#title' => t('Filter by category'),
       '#default_value' => $current_cat,
       '#options' => $options,
       '#multiple' => FALSE,
       '#required' => FALSE,
-      '#attributes' => array('onChange' => "top.location.href=document.getElementById('$formname').options[document.getElementById('$formname').selectedIndex].value"),
   );
 
   return $form;

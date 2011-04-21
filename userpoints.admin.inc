@@ -450,7 +450,7 @@ function userpoints_admin_points($tid = NULL) {
   // If there is only one category there is no sense in display the category filter dropdown.
   $output = array();
   if ($categories > 1) {
-    $output['filter'] = drupal_get_form('userpoints_filter_cat_select', 'admin/config/people/userpoints/', $tid);
+    $output['filter'] = drupal_get_form('userpoints_filter_cat_select', $tid);
   }
   $output['table'] = array(
     '#theme' => 'table',
