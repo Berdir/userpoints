@@ -377,6 +377,7 @@ function userpoints_admin_txn_submit($form, &$form_state) {
  * Provides an administrative interface for managing points.
  */
 function userpoints_admin_points($tid = NULL) {
+  global $user;
   $categories = userpoints_get_categories();
   $show_category = count($categories) > 1;
 
@@ -422,9 +423,15 @@ function userpoints_admin_points($tid = NULL) {
 
   $rows = array();
   foreach ($query->execute() as $data) {
-    $link = userpoints_admin_access('edit') ? l(t("(details)"), "myuserpoints/$data->uid") : '';
+    $details = '';
+    if ($user->uid == $data->uid) {
+      $details = "&nbsp;&nbsp;" . l(t("(details)"), 'myuserpoints');
+    }
+    else if (userpoints_admin_access('edit')) {
+      $details = "&nbsp;&nbsp;" . l(t("(details)"), 'user/' . $data->uid . '/points');
+    }
     $rows[] = array(
-        array('data' => trim(theme('username', array('account' => $data)) . ' ' . $link)),
+        array('data' => trim(theme('username', array('account' => $data)) . ' ' . $details)),
         array('data' => isset($categories[$data->tid]) ? $categories[$data->tid] : $categories[0], 'align' => 'right'),
         array('data' => $data->points, 'align' => 'right'),
     );

@@ -63,7 +63,10 @@ function theme_userpoints_list_users_row($attributes) {
 
   $details = '';
   if ($user->uid == $row->uid) {
-    $details = "&nbsp;&nbsp;" . l(t("(details)"), "myuserpoints");
+    $details = "&nbsp;&nbsp;" . l(t("(details)"), 'myuserpoints');
+  }
+  else if (userpoints_admin_access('edit')) {
+    $details = "&nbsp;&nbsp;" . l(t("(details)"), 'user/' . $row->uid . '/points');
   }
 
   return array(
