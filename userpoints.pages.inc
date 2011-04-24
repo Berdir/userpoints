@@ -10,9 +10,17 @@
  * Displays a detailed transaction report for an individual user.
  *
  * @param $account
- *   For which account to display.
+ *   For which account to display. Defaults to the current user.
  */
-function userpoints_list_my_userpoints($account, $tid = NULL) {
+function userpoints_list_my_userpoints($account = NULL, $tid = NULL) {
+  if (empty($account)) {
+    global $user;
+    $account = $user;
+  }
+
+  if (!is_object($account)) {
+    return MENU_ACCESS_DENIED;
+  }
 
   // Load the categories and check if there are multiples or only a single one.
   $categories = userpoints_get_categories();
@@ -33,7 +41,7 @@ function userpoints_list_my_userpoints($account, $tid = NULL) {
   // to select from. This check is specific to the categories the user has
   // points in.
   if ($show_category) {
-    $output['form'] = drupal_get_form('userpoints_filter_cat_select', 'myuserpoints/' . $account->uid . '/', $tid, $account);
+    $output['form'] = drupal_get_form('userpoints_filter_cat_select', 'myuserpoints/', $tid, $account);
     $output['form']['#weight'] = -10;
   }
   $settings = array(

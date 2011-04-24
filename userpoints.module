@@ -164,11 +164,6 @@ function userpoints_menu() {
       'type' => MENU_LOCAL_TASK,
       'weight' => 0,
   );
-  $items['admin/config/people/userpoints/transaction/list'] = array(
-    'title' => 'List',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -15,
-  );
 
   $items['admin/config/people/userpoints/moderate'] = array(
       'title' => 'Moderation',
@@ -194,49 +189,6 @@ function userpoints_menu() {
       'weight' => 0,
   );
 
-  $items['admin/config/people/userpoints/transaction/%userpoints_transaction/view'] = array(
-    'title' => 'View',
-    'page callback' => 'userpoints_view_transaction',
-    'page arguments' => array(5),
-    'access callback' => 'userpoints_access_view_transaction',
-    'access arguments' => array(5),
-    'file' => 'userpoints.pages.inc',
-    'type' => MENU_LOCAL_TASK,
-    'weight' => -10,
-  );
-
-  $items['admin/config/people/userpoints/transaction/%userpoints_transaction/edit'] = array(
-      'title' => 'Edit',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('userpoints_admin_txn', 6, 5),
-      'access callback' => 'userpoints_admin_access',
-      'access arguments' => array('edit'),
-      'file' => 'userpoints.admin.inc',
-      'type' => MENU_LOCAL_TASK,
-      'weight' => -5,
-  );
-
-  $items['admin/config/people/userpoints/transaction/%userpoints_transaction/approve'] = array(
-      'title' => 'Approve',
-      'title arguments' => userpoints_translation(),
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('userpoints_confirm_approve', 6, 5),
-      'access callback' => 'userpoints_admin_access_transaction_pending',
-      'access arguments' => array(5),
-      'file' => 'userpoints.admin.inc',
-      'type' => MENU_LOCAL_TASK,
-  );
-  $items['admin/config/people/userpoints/transaction/%userpoints_transaction/decline'] = array(
-      'title' => 'Decline',
-      'title arguments' => userpoints_translation(),
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('userpoints_confirm_approve', 6, 5),
-      'access callback' => 'userpoints_admin_access_transaction_pending',
-      'access arguments' => array(5),
-      'file' => 'userpoints.admin.inc',
-      'type' => MENU_LOCAL_TASK,
-  );
-
   $items['admin/config/people/userpoints/settings'] = array(
       'title' => '!Points settings',
       'description' => strtr('Settings for !points', userpoints_translation()),
@@ -254,6 +206,7 @@ function userpoints_menu() {
       'title' => 'Users by !points',
       'title arguments' => userpoints_translation(),
       'page callback' => 'userpoints_list_users',
+      'page arguments' => array(NULL),
       'access arguments' => array('view userpoints'),
       'file' => 'userpoints.pages.inc',
       'type' => MENU_NORMAL_ITEM,
@@ -268,29 +221,87 @@ function userpoints_menu() {
       'type' => MENU_CALLBACK,
   );
 
-  $items['userpoints/view/%userpoints_transaction'] = array(
-      'title' => '!Point transaction',
-      'title callback' => 'userpoints_view_transaction_title',
-      'title arguments' => array(2),
-      'page callback' => 'userpoints_view_transaction',
-      'page arguments' => array(2),
-      'access callback' => 'userpoints_access_view_transaction',
-      'access arguments' => array(2),
-      'file' => 'userpoints.pages.inc',
-      'type' => MENU_NORMAL_ITEM,
+  $items['myuserpoints'] = array(
+    'title' => 'My !points',
+    'title arguments' => userpoints_translation(),
+    'page callback' => 'userpoints_list_my_userpoints',
+    'access callback' => 'userpoints_access_my_points',
+    'file' => 'userpoints.pages.inc',
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'user-menu',
   );
 
-  $items['myuserpoints/%user_uid_optional'] = array(
-      'title' => 'My !points',
-      'title arguments' => userpoints_translation(),
-      'page callback' => 'userpoints_list_my_userpoints',
-      'page arguments' => array(1),
-      'access callback' => 'userpoints_access_my_points',
-      'access arguments' => array(1),
-      'file' => 'userpoints.pages.inc',
-      'type' => MENU_NORMAL_ITEM,
-      'menu_name' => 'user-menu',
+  $items['user/%user/points'] = array(
+    'title' => '!Points',
+    'title arguments' => userpoints_translation(),
+    'page callback' => 'userpoints_list_my_userpoints',
+    'page arguments' => array(1),
+    'access callback' => 'userpoints_access_my_points',
+    'access arguments' => array(1),
+    'file' => 'userpoints.pages.inc',
+    'type' => MENU_LOCAL_TASK,
   );
+
+  // There are separate, duplicated local tasks for transactions in the
+  // administrative area, myuserpoints and the userpoints of another user.
+  // They all need to be created separately because local tasks must be menu
+  // router items, but it can be done in a loop since the only difference is
+  // the path prefix and position of the argument.
+  $local_task_prefixes = array(
+    'admin/config/people/userpoints/transaction',
+    'myuserpoints/transaction',
+    'user/%user/points',
+  );
+
+  foreach ($local_task_prefixes as $local_task_prefix) {
+    // The dynamic argument is always the first after the prefix.
+    $pos = count(explode('/', $local_task_prefix));
+    $items[$local_task_prefix . '/list'] = array(
+      'title' => 'List',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -15,
+    );
+    $items[$local_task_prefix . '/%userpoints_transaction/view'] = array(
+      'title' => 'View',
+      'page callback' => 'userpoints_view_transaction',
+      'page arguments' => array($pos),
+      'access callback' => 'userpoints_access_view_transaction',
+      'access arguments' => array($pos),
+      'file' => 'userpoints.pages.inc',
+      'type' => MENU_LOCAL_TASK,
+      'weight' => -10,
+    );
+    $items[$local_task_prefix . '/%userpoints_transaction/edit'] = array(
+        'title' => 'Edit',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('userpoints_admin_txn', $pos + 1, $pos),
+        'access callback' => 'userpoints_admin_access',
+        'access arguments' => array('edit'),
+        'file' => 'userpoints.admin.inc',
+        'type' => MENU_LOCAL_TASK,
+        'weight' => -5,
+    );
+    $items[$local_task_prefix . '/%userpoints_transaction/approve'] = array(
+        'title' => 'Approve',
+        'title arguments' => userpoints_translation(),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('userpoints_confirm_approve', $pos + 1, $pos),
+        'access callback' => 'userpoints_admin_access_transaction_pending',
+        'access arguments' => array($pos),
+        'file' => 'userpoints.admin.inc',
+        'type' => MENU_LOCAL_TASK,
+    );
+    $items['user/%user/points/%userpoints_transaction/decline'] = array(
+        'title' => 'Decline',
+        'title arguments' => userpoints_translation(),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('userpoints_confirm_approve', $pos + 1, $pos),
+        'access callback' => 'userpoints_admin_access_transaction_pending',
+        'access arguments' => array($pos),
+        'file' => 'userpoints.admin.inc',
+        'type' => MENU_LOCAL_TASK,
+    );
+  }
   return $items;
 }
 
@@ -346,6 +357,7 @@ function userpoints_admin_access_transaction_pending($transaction) {
  */
 function userpoints_access_my_points($account = NULL) {
   global $user;
+
   if ($account && $user->uid != $account->uid) {
     return userpoints_admin_access('edit');
   }
@@ -1800,20 +1812,23 @@ function userpoints_get_transaction_actions($transaction, $show_view = TRUE) {
   $actions = array();
   $url_options = array('query' => drupal_get_destination());
 
-  if ($show_view && userpoints_access_view_transaction($transaction)) {
-    $url = 'userpoints/view/' . $transaction->txn_id;
-    if ($transaction->uid != $user->uid || strpos($_GET['q'], 'admin/config/people/userpoints') !== FALSE) {
-      $url = 'admin/config/people/userpoints/transaction/' . $transaction->txn_id . '/view';
-    }
-    $actions[] = l('view', $url);
+  $url_prefix = 'myuserpoints/transaction/' . $transaction->txn_id;
+  if (strpos($_GET['q'], 'admin/config/people/userpoints') !== FALSE) {
+    $url_prefix = "admin/config/people/userpoints/transaction/$transaction->txn_id";
+  }
+  elseif ($transaction->uid != $user->uid) {
+    $url_prefix = "user/$transaction->uid/points/$transaction->txn_id";
   }
 
+  if ($show_view && userpoints_access_view_transaction($transaction)) {
+    $actions[] = l('view', $url_prefix . '/view');
+  }
   if (userpoints_admin_access('edit')) {
-    $actions[] = l('edit', "admin/config/people/userpoints/transaction/$transaction->txn_id/edit", $url_options);
+    $actions[] = l('edit', $url_prefix . '/edit', $url_options);
   }
   if (userpoints_admin_access('moderate') && $transaction->status == USERPOINTS_TXN_STATUS_PENDING) {
-    $actions[] = l('approve', "admin/config/people/userpoints/transaction/$transaction->txn_id/approve", $url_options);
-    $actions[] = l('decline', "admin/config/people/userpoints/transaction/$transaction->txn_id/decline", $url_options);
+    $actions[] = l('approve', $url_prefix . '/approve', $url_options);
+    $actions[] = l('decline', $url_prefix . '/decline', $url_options);
   }
   return implode(' ', $actions);
 }
