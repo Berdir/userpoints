@@ -485,11 +485,22 @@ function userpoints_admin_settings() {
 }
 
 /**
- * @param uid: user id of the user to get or lose the points
+ * @param $uid
+ *  User ID of the user to get or lose the points.
+ * @param $tid
+ *  Term ID to get points for, or 'all'.
+ * @param $reset
+ *   Reset the static cache.
  *
- * @return number of current points in that user's account
+ * @return number of current points in that user's account. No return value
+ *   $reset is passed.
  */
-function userpoints_get_current_points($uid = NULL, $tid = NULL) {
+function userpoints_get_current_points($uid = NULL, $tid = NULL, $reset = FALSE) {
+  static $points = array();
+  if ($reset) {
+    $points = array();
+    return;
+  }
   if (!$uid) {
     global $user;
     $uid = $user->uid;
@@ -497,10 +508,15 @@ function userpoints_get_current_points($uid = NULL, $tid = NULL) {
   if (!$tid) {
     $tid = userpoints_get_default_tid();
   }
-  elseif ($tid == 'all') {
-    return (int)db_result(db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = %d', $uid));
+  if (!isset($points[$uid][$tid])) {
+    if ($tid == 'all') {
+      $points[$uid][$tid] = (int) db_result(db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = %d', $uid));
+    }
+    else {
+      $points[$uid][$tid] = (int) db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d AND tid = %d', $uid, $tid));
+    }
   }
-  return (int)db_result(db_query('SELECT points FROM {userpoints} WHERE uid = %d AND tid = %d', $uid, $tid));
+  return $points[$uid][$tid];
 }
 
 /**
@@ -654,6 +670,8 @@ function userpoints_userpointsapi($params) {
   else {
     $msg = t('earned');
   }
+  // Reset the static cache of userpoints.
+  userpoints_get_current_points(NULL, NULL, TRUE);
 
   $ret = _userpoints_transaction($params);
   if ($ret == FALSE) {

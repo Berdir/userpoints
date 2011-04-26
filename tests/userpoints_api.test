@@ -98,6 +98,7 @@ class UserpointsTestCase extends DrupalWebTestCase {
       t('Caching table matches testing code after !recs point records totaling !points points',
       array('!recs' => $i, '!points' => $sumpoints ))
     );
+    userpoints_get_current_points(NULL, NULL, TRUE);
     $this->assertTrue($sumpoints == userpoints_get_current_points(),
       t("userpoints_get_current_points() returned correct point value")
     );
