@@ -98,7 +98,6 @@ class UserpointsTestCase extends DrupalWebTestCase {
       t('Caching table matches testing code after !recs point records totaling !points points',
       array('!recs' => $i, '!points' => $sumpoints ))
     );
-    userpoints_get_current_points(NULL, NULL, TRUE);
     $this->assertTrue($sumpoints == userpoints_get_current_points(),
       t("userpoints_get_current_points() returned correct point value")
     );
@@ -265,9 +264,10 @@ class UserpointsTestCase extends DrupalWebTestCase {
       );
     }
 
-    //clear the slate again
+    // Clear the state again.
     db_query("TRUNCATE TABLE {userpoints}");
     db_query("TRUNCATE TABLE {userpoints_txn}");
+    userpoints_get_current_points(NULL, NULL, TRUE);
 
     // Set a default expire time.
     variable_set(USERPOINTS_EXPIREON_DATE, time() + 5000);

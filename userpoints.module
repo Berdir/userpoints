@@ -485,14 +485,17 @@ function userpoints_admin_settings() {
 }
 
 /**
+ * Get current points of a user.
+ *
  * @param $uid
- *  User ID of the user to get or lose the points.
+ *   User ID of the user to get or lose the points.
  * @param $tid
- *  Term ID to get points for, or 'all'.
+ *   Term ID to get points for, or 'all'.
  * @param $reset
  *   Reset the static cache.
  *
- * @return number of current points in that user's account. No return value
+ * @return
+ *   Number of current points in that user's account. No return value if
  *   $reset is passed.
  */
 function userpoints_get_current_points($uid = NULL, $tid = NULL, $reset = FALSE) {
@@ -670,10 +673,12 @@ function userpoints_userpointsapi($params) {
   else {
     $msg = t('earned');
   }
+
+  $ret = _userpoints_transaction($params);
+
   // Reset the static cache of userpoints.
   userpoints_get_current_points(NULL, NULL, TRUE);
 
-  $ret = _userpoints_transaction($params);
   if ($ret == FALSE) {
     return array(
       'status' => FALSE,
