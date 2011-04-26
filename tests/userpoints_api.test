@@ -755,8 +755,8 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $this->clickLink(t('Transactions'));
     $row = $this->xpath('//table/tbody/tr');
     $transaction = userpoints_transaction_load($txn_id);
-    $this->assertEqual((string)$row[0]->td[0], 10, t('Points correctly displayed.'));
-    //$this->assertEqual(strip_tags((string)$row[0]->td[1]), $user->name, t('User correctly displayed.'));
+    //$this->assertEqual(strip_tags((string)$row[0]->td[0]), $user->name, t('User correctly displayed.'));
+    $this->assertEqual((string)$row[0]->td[1], 10, t('Points correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[2], format_date($transaction->time_stamp, 'small'), t('Date correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[3], 'admin', t('Reason correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[4], t('Approved'), t('Status correctly displayed.'));
@@ -781,8 +781,8 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $this->assertEqual(7, userpoints_get_current_points($user->uid));
     $row = $this->xpath('//table/tbody/tr');
     $transaction = userpoints_transaction_load($transaction->txn_id);
-    $this->assertEqual((string)$row[0]->td[0], 7, t('Points correctly displayed.'));
-    //$this->assertEqual(strip_tags((string)$row[0]->td[1]), $user->name, t('User correctly displayed.'));
+    //$this->assertEqual(strip_tags((string)$row[0]->td[0]), $user->name, t('User correctly displayed.'));
+    $this->assertEqual((string)$row[0]->td[1], 7, t('Points correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[2], format_date($transaction->time_stamp, 'small'), t('Date correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[3], $edit['description'], t('Reason correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[4], t('Approved'), t('Status correctly displayed.'));

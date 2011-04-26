@@ -1852,6 +1852,9 @@ function userpoints_get_transaction_header($settings) {
     'show_status' => TRUE,
   );
   $header = array();
+  if ($settings['show_user']) {
+    $header[] = array('data' => t('User'), 'field' => 'uid', 'class' => array('userpoints-transactions-header-status'));
+  }
   $header[] = array('data' => t('!Points', userpoints_translation()), 'field' => 'points', 'class' => array('userpoints-transactions-header-points'));
   // Only display category if there is more than one category. In contrast to
   // the filter, this is not specific for the categories. If there are
@@ -1859,9 +1862,6 @@ function userpoints_get_transaction_header($settings) {
   // only has points in a single category.
   if ($settings['show_category']) {
     $header[] = array('data' => t('Category'), 'field' => 't.name', 'class' => array('userpoints-transactions-header-category'));
-  }
-  if ($settings['show_user']) {
-    $header[] = array('data' => t('User'), 'field' => 'uid', 'class' => array('userpoints-transactions-header-status'));
   }
   $header[] = array('data' => t('Date'), 'field' => 'time_stamp', 'sort' => 'desc', 'class' => array('userpoints-transactions-header-timestamp'));
   $header[] = array('data' => t('Reason'), 'class' => array('userpoints-transactions-header-reason'));
@@ -1902,6 +1902,12 @@ function userpoints_get_transaction_row($transaction, $settings = array()) {
     'userpoints-transaction-row-status-' . $css_stati[$transaction->status],
     'userpoints-transaction-row-category-' . $transaction->tid),
   );
+  if ($settings['show_user']) {
+    $row['data'][] = array(
+      'data' => theme('username', array('account' => user_load($transaction->uid))),
+      'class' => array('userpoints-transactions-field-user'),
+    );
+  }
   $row['data'][] = array(
     'data' => $transaction->points,
     'class' => array('userpoints-transactions-field-points', 'userpoints-transaction-points-' . ($transaction->points > 0 ? 'positive' : 'negative')),
@@ -1911,12 +1917,6 @@ function userpoints_get_transaction_row($transaction, $settings = array()) {
     $row['data'][] = array(
       'data' => isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[0],
       'class' => array('userpoints-transactions-field-category'),
-    );
-  }
-  if ($settings['show_user']) {
-    $row['data'][] = array(
-      'data' => theme('username', array('account' => user_load($transaction->uid))),
-      'class' => array('userpoints-transactions-field-user'),
     );
   }
   $row['data'][] = array(

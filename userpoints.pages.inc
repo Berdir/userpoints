@@ -221,11 +221,19 @@ function userpoints_view_transaction($transaction) {
     '#attributes' => array('class' => array('userpoints-group-details')),
   );
 
+  $content['details']['user'] = array(
+    '#theme' => 'userpoints_view_item',
+    '#title' => t('User'),
+    '#value' => theme('username', array('account' => $transaction->user)),
+    '#weight' => 0,
+    '#attributes' => array('class' => array('userpoints-item-user')),
+  );
+
   $content['details']['points'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('!Points', userpoints_translation()),
     '#value' => $transaction->points,
-    '#weight' => 0,
+    '#weight' => 10,
     '#attributes' => array('class' => array('userpoints-item-points')),
   );
 
@@ -233,31 +241,15 @@ function userpoints_view_transaction($transaction) {
     '#theme' => 'userpoints_view_item',
     '#title' => t('Category'),
     '#value' => $transaction->category,
-    '#weight' => 10,
-    '#attributes' => array('class' => array('userpoints-item-category')),
-  );
-
-  $content['details']['user'] = array(
-    '#theme' => 'userpoints_view_item',
-    '#title' => t('User'),
-    '#value' => theme('username', array('account' => $transaction->user)),
     '#weight' => 20,
-    '#attributes' => array('class' => array('userpoints-item-user')),
-  );
-
-  $content['details']['date'] = array(
-    '#theme' => 'userpoints_view_item',
-    '#title' => t('Date'),
-    '#value' => format_date($transaction->time_stamp),
-    '#weight' => 30,
-    '#attributes' => array('class' => array('userpoints-item-date')),
+    '#attributes' => array('class' => array('userpoints-item-category')),
   );
 
   $content['details']['reason'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('Reason'),
     '#value' => userpoints_create_description($transaction, array('truncate' => FALSE)),
-    '#weight' => 40,
+    '#weight' => 30,
     '#attributes' => array('class' => array('userpoints-item-reason')),
   );
 
@@ -265,7 +257,7 @@ function userpoints_view_transaction($transaction) {
     '#theme' => 'userpoints_view_item',
     '#title' => t('Transaction ID'),
     '#value' => $transaction->txn_id,
-    '#weight' => 50,
+    '#weight' => 40,
     '#attributes' => array('class' => array('userpoints-item-transaction')),
   );
 
@@ -285,11 +277,19 @@ function userpoints_view_transaction($transaction) {
     '#attributes' => array('class' => array('userpoints-item-status')),
   );
 
+  $content['status']['date'] = array(
+    '#theme' => 'userpoints_view_item',
+    '#title' => t('Creation date'),
+    '#value' => format_date($transaction->time_stamp),
+    '#weight' => 10,
+    '#attributes' => array('class' => array('userpoints-item-date')),
+  );
+
   $content['status']['changed'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('Last modified'),
     '#value' => format_date($transaction->changed),
-    '#weight' => 10,
+    '#weight' => 20,
     '#attributes' => array('class' => array('userpoints-item-changed')),
   );
 
@@ -399,7 +399,7 @@ function userpoints_view_transaction($transaction) {
     if (!empty($transaction->reference)) {
       $content['admin']['reference'] = array(
         '#theme' => 'userpoints_view_item',
-        '#title' => t('Reference'),
+        '#title' => t('Internal reference'),
         '#value' => $transaction->reference,
         '#weight' => 40,
         '#attributes' => array('class' => array('userpoints-item-reference')),
