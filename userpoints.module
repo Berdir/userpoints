@@ -711,12 +711,15 @@ function userpoints_token_info() {
  * Get current points of a user.
  *
  * @param $uid
- *   User id of the user to get or lose the points.
+ *   User ID of the user to get or lose the points.
+ * @param $tid
+ *   Term ID to get points for, or 'all'.
  *
  * @return
  *   Number of current points in that user's account.
  */
 function userpoints_get_current_points($uid = NULL, $tid = NULL) {
+  $points = drupal_static(__FUNCTION__, array());
   if (!$uid) {
     global $user;
     $uid = $user->uid;
@@ -725,10 +728,15 @@ function userpoints_get_current_points($uid = NULL, $tid = NULL) {
   if (!isset($tid)) {
     $tid = userpoints_get_default_tid();
   }
-  elseif ($tid === 'all') {
-    return (int) db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
+  if (!isset($points[$uid][$tid])) {
+    if ($tid === 'all') {
+      $points[$uid][$tid] = (int) db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
+    }
+    else {
+      $points[$uid][$tid] = (int) db_query('SELECT points FROM {userpoints} WHERE uid = :uid AND tid = :tid', array(':uid' => $uid, ':tid' => $tid))->fetchField();
+    }
   }
-  return (int) db_query('SELECT points FROM {userpoints} WHERE uid = :uid AND tid = :tid', array(':uid' => $uid, ':tid' => $tid))->fetchField();
+  return $points[$uid][$tid];
 }
 
 /**
@@ -875,6 +883,10 @@ function userpoints_userpointsapi($params) {
   }
 
   $ret = _userpoints_transaction($params);
+
+  // Reset the static cache of userpoints.
+  drupal_static_reset('userpoints_get_current_points');
+
   if ($ret == FALSE) {
     return array(
         'status' => FALSE,
