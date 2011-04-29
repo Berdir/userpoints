@@ -90,8 +90,8 @@ function userpoints_help($path, $arg) {
  *   them. Supported strings:
  *   - list: Access to the userpoints list, default local task. All
  *           administrative permissions have access to this.
- *   - add: Permission to add new userpoint transactions.
- *   - edit: Permission to edit existing userpoint transactions.
+ *   - add: Permission to add new userpoints transactions.
+ *   - edit: Permission to edit existing userpoints transactions.
  *   - moderate: Permission to approve/decline pending transactions.
  *   - administer: Unlimited userpoints permissions, used for settings page.
  *
@@ -793,7 +793,7 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
 }
 
 /**
- * Save userpoint changes and call hooks.
+ * Save userpoints changes and call hooks.
  *
  * @param $params
  *    if (int) assumed to be points for current user
@@ -801,7 +801,7 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
  *    'points' => # of points (int) (required)
  *    'moderate' => TRUE/FALSE
  *    'uid' => $user->uid
- *    'time_stamp' => unix time of the points assignement date
+ *    'time_stamp' => unix time of the points assignment date
  *    'operation' => 'published' 'moderated' etc.
  *    'tid' => 'category ID'
  *    'expirydate' => timestamp or 0, 0 = non-expiring; NULL = site default
@@ -1024,7 +1024,7 @@ function _userpoints_transaction(&$params) {
     }
     elseif ($params['tid'] == 0) {
       // Tid with 0 are uncategorized and are set to NULL
-      // this is a backwards compatibilty issue.
+      // this is a backwards compatibility issue.
       $params['tid'] = NULL;
     }
     if (!isset($params['expirydate'])) {
@@ -1254,12 +1254,12 @@ function userpoints_field_extra_fields() {
 }
 
 /**
- * Returns a renderable array that displays the points and action links.
+ * Returns a render array that displays the points and action links.
  *
  * @param $account
  *   User object for which the points should be displayed.
  * @return
- *   Renderable array with the points and actions.
+ *   Render array with the points and actions.
  */
 function userpoints_get_points_list($account = NULL) {
   if (empty($account)) {
@@ -1837,7 +1837,7 @@ function userpoints_get_transaction_actions($transaction, $show_view = TRUE) {
  * Returns a table header for a transaction listing.
  *
  * @param $settings
- *   Array with setings about which column shall be displayed. All settings
+ *   Array with settings about which column shall be displayed. All settings
  *   default to TRUE.
  *   - show_category, show category column.
  *   - show_user, show user column.
@@ -1877,7 +1877,7 @@ function userpoints_get_transaction_header($settings) {
  * @param $transaction
  *   Transaction object.
  * @param $settings
- *   Array with setings about which column shall be displayed. All settings
+ *   Array with settings about which column shall be displayed. All settings
  *   default to TRUE.
  *   - show_category, show category column.
  *   - show_user, show user column.
@@ -2019,7 +2019,7 @@ function _userpoints_userpoints_transaction_properties() {
     'display' => array(
       'label' => t('Display'),
       'type' => 'boolean',
-      'description' => t('Wether to show a message to the user for this transaction or not.'),
+      'description' => t('Whether to show a message to the user for this transaction or not.'),
       'setter callback' => 'entity_metadata_verbatim_set',
     ),
     'status' => array(

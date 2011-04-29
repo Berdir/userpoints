@@ -104,7 +104,7 @@ function userpoints_rules_rules_action_info() {
  * Wrapper function for userpoints_get_categories().
  *
  * Rules.module uses different arguments for option list callbacks than
- * userpoints_get_categories expectes.
+ * userpoints_get_categories expects.
  */
 function userpoints_rules_get_categories() {
   return userpoints_get_categories();
@@ -118,7 +118,7 @@ function userpoints_rules_get_all_categories() {
 }
 
 /**
- * Simple callback that liss the possible moderate values.
+ * Simple callback that lists the possible moderate values.
  */
 function userpoints_rules_moderate() {
   return array(
@@ -199,7 +199,7 @@ function userpoints_action_grant_points($params) {
   unset($params['user']);
   unset($params['entity']);
   unset($params['settings']);
-  $result = userpoints_userpointsapi($params);
+  userpoints_userpointsapi($params);
 }
 
 function userpoints_action_grant_points_form_alter(&$form, &$form_state) {

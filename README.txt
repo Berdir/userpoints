@@ -49,7 +49,7 @@ in the site, and be more active. The module is easily extended through use of
 the API (see below)
 
 
-Initally sponsored by: http://artalyst.com
+Initially sponsored by: http://artalyst.com
 
 Installation
 ------------
@@ -109,7 +109,7 @@ userpoints_userpointsapi()
 
   Returns an array with a status (true/false) and a reason (string) if there
   is an error. example
-  return array('status' => false, 'reasaon' => 'DB transaction failed');
+  return array('status' => false, 'reason' => 'DB transaction failed');
   
   'uid'         => (int) User ID 
   'points'      => (int) # of points to award the user 
@@ -205,7 +205,7 @@ site.
 
 Please refer to the services module documentation for further information.
 
-Userpoints provides the follwing XML-RPC calls:
+Userpoints provides the following XML-RPC calls:
 
 userpoints.get 
 

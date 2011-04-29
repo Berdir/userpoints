@@ -8,7 +8,7 @@
 /**
  * Return information about registered operations.
  *
- * Modules can register operion strings
+ * Modules can register operation strings
  *
  * @return
  *   An array whose keys are operation strings used in

@@ -22,7 +22,6 @@ function userpoints_confirm_approve_submit($form, &$form_state) {
  * Form builder for add/edit userpoints transaction form.
  */
 function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
-  global $user;
 
   drupal_add_css(drupal_get_path('module', 'userpoints') . '/userpoints.css');
 
@@ -282,7 +281,7 @@ function userpoints_create_operation_autocomplete_label($operation, $info, $sear
   if (!empty($info['admin description'])) {
     $label = $info['admin description'];
   }
-  return preg_replace("/(" . preg_quote($search) . ")/i","<b>$1</b>", $label);
+  return preg_replace("/(" . preg_quote($search) . ")/i","<strong>$1</strong>", $label);
 }
 
 /**
@@ -768,7 +767,7 @@ function userpoints_admin_settings($form, &$form_state) {
       '#title' => t('Display message'),
       '#default_value' => variable_get(USERPOINTS_DISPLAY_MESSAGE, 1),
       '#options' => array(0 => t('No'), 1 => t('Yes')),
-      '#description' => t('Determines if a message should be displayed whenever !points are awarded/substracted.', userpoints_translation()),
+      '#description' => t('Determines if a message should be displayed whenever !points are awarded/subtracted.', userpoints_translation()),
   );
   $group = "reports";
   $form[$group] = array(
@@ -851,7 +850,7 @@ function userpoints_admin_settings($form, &$form_state) {
       '#maxlength' => 20,
     );
   }
-  // New configuration options to overide current timestamp.
+  // New configuration options to override current timestamp.
   $group = "stamping";
   $form[$group] = array(
       '#type' => 'fieldset',
@@ -864,7 +863,7 @@ function userpoints_admin_settings($form, &$form_state) {
       '#type' => 'checkbox',
       '#title' => t('Always use system time'),
       '#default_value' => variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1),
-      '#description' => t('Sets if the transaction timestamp should obey current time, or can be modified by the API operations. Unchecking this option will allow customization of timetamp for the transactions.'),
+      '#description' => t('Sets if the transaction timestamp should obey current time, or can be modified by the API operations. Unchecking this option will allow customization of timestamp for the transactions.'),
   );
 
   $form['settings_additional'] = array(

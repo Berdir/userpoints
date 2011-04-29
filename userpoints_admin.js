@@ -71,7 +71,6 @@
         else {
           return Drupal.t('Allow customization of transaction time.');
         }
-        return Drupal.t('Default category %category, %display_category displayed.', {'%category' : category, '%display_category' : display_category});
       });
 
       // Expiration.
