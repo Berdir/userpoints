@@ -488,7 +488,6 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
   }
 
   if ($type == 'userpoints' && !empty($data['user'])) {
-    $uid = is_object($data['user']->uid) ? $data['user']->getIdentifier() : $data['user']->uid;
     foreach ($tokens as $name => $original) {
       $tid = NULL;
       if ($name == 'all') {
@@ -499,7 +498,7 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
         list(,$tid) = explode('-', $name);
       }
       if ($tid) {
-        $replacements[$original] = userpoints_get_current_points($uid, $tid);
+        $replacements[$original] = userpoints_get_current_points($user->uid, $tid);
       }
     }
   }
@@ -592,7 +591,7 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
     }
 
     if ($user_tokens = token_find_with_prefix($tokens, 'user')) {
-      $replacements += token_generate('user', $user_tokens, array('user' => $txn->user), $options);
+      $replacements += token_generate('user', $user_tokens, array('user' => user_load($txn->uid)), $options);
     }
 
     if ($term_tokens = token_find_with_prefix($tokens, 'tid')) {
