@@ -748,8 +748,7 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     // Go to the listing page, verify that the user is shown.
     $row = $this->xpath('//table/tbody/tr');
     //$this->assertEqual(strip_tags((string)$row[0]->td[0]), t('@name (details)', array('@name' => $user->name)), t('User name with details link displayed.'));
-    $this->assertEqual((string)$row[0]->td[1], $category, t('Category correctly displayed.'));
-    $this->assertEqual((string)$row[0]->td[2], 10, t('Points correctly displayed.'));
+    $this->assertEqual((string)$row[0]->td[1], 10, t('Points correctly displayed.'));
 
     // Go to the transaction listing page, verify that the transaction is shown.
     $this->clickLink(t('Transactions'));
@@ -791,8 +790,7 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $this->clickLink(t('Totals'));
     $row = $this->xpath('//table/tbody/tr');
     //$this->assertEqual(strip_tags((string)$row[0]->td[0]), t('@name (details)', array('@name' => $user->name)), t('User name with details link displayed.'));
-    $this->assertEqual((string)$row[0]->td[1], $category, t('Category correctly displayed.'));
-    $this->assertEqual((string)$row[0]->td[2], 7, t('Points correctly displayed.'));
+    $this->assertEqual((string)$row[0]->td[1], 7, t('Points correctly displayed.'));
 
     // View transaction details.
     $this->clickLink(t('Transactions'));

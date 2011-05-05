@@ -31,3 +31,27 @@ function hook_userpoints_info() {
     )
   );
 }
+
+/**
+ * Allows to customize the output of a the users by points page.
+ *
+ * @param $output
+ *   Render array with the content.
+ *
+ * @see userpoints_list_users().
+ */
+function hook_userpoints_list_alter(&$output) {
+
+}
+
+/**
+ * Allows to customize the output of a the my userpoints page.
+ *
+ * @param $output
+ *   Render array with the content.
+ *
+ * @see userpoints_list_transactions().
+ */
+function hook_userpoints_list_transactions_alter(&$output) {
+
+}

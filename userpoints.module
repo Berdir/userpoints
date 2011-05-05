@@ -139,16 +139,14 @@ function userpoints_menu() {
       'title' => '!Points',
       'title arguments' => userpoints_translation(),
       'description' => strtr('Manage !points', userpoints_translation()),
-      'page callback' => 'userpoints_admin_points',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('userpoints_admin_points'),
       'access callback' => 'userpoints_admin_access',
       'access arguments' => array('list'),
       'file' => 'userpoints.admin.inc',
   );
   $items['admin/config/people/userpoints/list'] = array(
       'title' => 'Totals',
-      'description' => strtr('List users by !points', userpoints_translation()),
-      'access callback' => 'userpoints_admin_access',
-      'access arguments' => array('list'),
       'file' => 'userpoints.admin.inc',
       'type' => MENU_DEFAULT_LOCAL_TASK,
       'weight' => -2,
@@ -157,7 +155,8 @@ function userpoints_menu() {
       'title' => 'Transactions',
       'title arguments' => userpoints_translation(),
       'description' => 'List transactions',
-      'page callback' => 'userpoints_admin_transactions',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('userpoints_admin_transactions', FALSE),
       'access callback' => 'userpoints_admin_access',
       'access arguments' => array('edit'),
       'file' => 'userpoints.admin.inc',
@@ -169,7 +168,8 @@ function userpoints_menu() {
       'title' => 'Moderation',
       'title arguments' => userpoints_translation(),
       'description' => strtr('Review !points in moderation', userpoints_translation()),
-      'page callback' => 'userpoints_admin_manage',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('userpoints_admin_transactions', TRUE),
       'access callback' => 'userpoints_admin_access',
       'access arguments' => array('moderate'),
       'file' => 'userpoints.admin.inc',
@@ -205,8 +205,8 @@ function userpoints_menu() {
   $items['userpoints'] = array(
       'title' => 'Users by !points',
       'title arguments' => userpoints_translation(),
-      'page callback' => 'userpoints_list_users',
-      'page arguments' => array(NULL),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('userpoints_list_users'),
       'access arguments' => array('view userpoints'),
       'file' => 'userpoints.pages.inc',
       'type' => MENU_NORMAL_ITEM,
@@ -224,7 +224,19 @@ function userpoints_menu() {
   $items['myuserpoints'] = array(
     'title' => 'My !points',
     'title arguments' => userpoints_translation(),
-    'page callback' => 'userpoints_list_my_userpoints',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('userpoints_list_transactions'),
+    'access callback' => 'userpoints_access_my_points',
+    'file' => 'userpoints.pages.inc',
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'user-menu',
+  );
+
+  $items['myuserpoints/%'] = array(
+    'title' => 'My !points',
+    'title arguments' => userpoints_translation(),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('userpoints_list_transactions', NULL, 1),
     'access callback' => 'userpoints_access_my_points',
     'file' => 'userpoints.pages.inc',
     'type' => MENU_NORMAL_ITEM,
@@ -234,8 +246,8 @@ function userpoints_menu() {
   $items['user/%user/points'] = array(
     'title' => '!Points',
     'title arguments' => userpoints_translation(),
-    'page callback' => 'userpoints_list_my_userpoints',
-    'page arguments' => array(1),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('userpoints_list_transactions', 1),
     'access callback' => 'userpoints_access_my_points',
     'access arguments' => array(1),
     'file' => 'userpoints.pages.inc',
@@ -417,33 +429,14 @@ function userpoints_permission() {
  */
 function userpoints_theme() {
   return array(
-      'userpoints_list_users' => array(
-          'variables' => array(
-              'header' => NULL,
-              'rows' => NULL,
-              'tid' => NULL,
-              'pager_limit' => NULL,
-          ),
-          'file' => 'userpoints.theme.inc',
-      ),
-      'userpoints_list_users_header' => array(
-          'variables' => array(),
-          'file' => 'userpoints.theme.inc',
-      ),
-      'userpoints_view_category' => array(
-          'render element' => 'element',
-          'file' => 'userpoints.theme.inc',
-      ),
-      'userpoints_view_item' => array(
-          'render element' => 'element',
-          'file' => 'userpoints.theme.inc',
-      ),
-      'userpoints_list_users_row' => array(
-          'variables' => array(
-              'row' => NULL,
-          ),
-          'file' => 'userpoints.theme.inc',
-      ),
+    'userpoints_view_category' => array(
+      'render element' => 'element',
+      'file' => 'userpoints.theme.inc',
+    ),
+    'userpoints_view_item' => array(
+      'render element' => 'element',
+      'file' => 'userpoints.theme.inc',
+    ),
   );
 }
 
@@ -1328,30 +1321,86 @@ function userpoints_get_points_list($account = NULL) {
 /**
  * Provides a dropdown to filter by category.
  */
-function userpoints_filter_cat_select($form, &$form_state, $path, $tid, $account = NULL) {
-  $current_cat = url($path . $tid);
+function userpoints_filter_form($account = NULL, $values = array()) {
+  $categories = userpoints_get_categories($account);
   $form = array();
-  $formname = 'catselect';
-
-  $cats = userpoints_get_categories($account);
-  $options = array();
-  $options[url(substr($path, 0, strlen($path) - 1))] = t('Display all');
-  foreach ($cats as $key => $value) {
-    $options[url($path . $key)] = $value;
-  }
-  $form['catselect'] = array(
+  if (count($categories) > 1) {
+    $categories = array('all' => t('Display all')) + $categories;
+    $form['tid'] = array(
       '#type' => 'select',
-      '#name' => $formname,
-      '#id' => $formname,
       '#title' => t('Filter by category'),
-      '#default_value' => $current_cat,
-      '#options' => $options,
-      '#multiple' => FALSE,
-      '#required' => FALSE,
-      '#attributes' => array('onChange' => "top.location.href=document.getElementById('$formname').options[document.getElementById('$formname').selectedIndex].value"),
-  );
+      '#options' => $categories,
+      '#default_value' => isset($values['tid']) ? $values['tid'] : 'all',
+      '#ajax' => array(
+        'callback' => 'userpoints_filter_form_ajax_callback',
+        'wrapper' => 'userpoints_list_wrapper',
+      ),
+    );
+  }
 
   return $form;
+}
+
+/**
+ * Ajax callback for userpoints filter form.
+ */
+function userpoints_filter_form_ajax_callback($form, $form_state) {
+  $commands = array();
+  // First, replace the points listing.
+  $commands[] = ajax_command_replace('#userpoints_list_wrapper', drupal_render($form['list']));
+
+  // Bartik uses the page-title id, Seven has a class of that name. Replace
+  // the title for both of them and assume that most other themes use the
+  // same.
+  $commands[] = ajax_command_html('h1#page-title, h1.page-title', drupal_get_title());
+
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+/**
+ * Parse input and generate an values array.
+ *
+ * @param $form_state
+ *   Form state with the submitted values.
+ * @param $tid
+ *   Category id to be used as a default.
+ *
+ * @return
+ *   Array of values to be used with userpoints_filter_form().
+ */
+function userpoints_filter_parse_input($form_state, $tid = NULL) {
+  // Enforce tid if passed in through the URL.
+  $values = isset($form_state['values']) ? $form_state['values'] : array('tid' => NULL);
+  if (!isset($values['tid'])) {
+    if (isset($_GET['tid'])) {
+      $values['tid'] = $_GET['tid'];
+    }
+    elseif ($tid) {
+      $values['tid'] = $tid;
+    }
+  }
+
+  if (isset($values['tid'])) {
+    // Add tid argument to GET.
+    $_GET['tid'] = $values['tid'];
+  }
+
+  return $values;
+}
+
+/**
+ * Filter a query according to the selected filters.
+ */
+function userpoints_filter_query(SelectQueryInterface $query, $values) {
+    // Check for filtering. isset() is used because 0 is a valid value
+  // (Uncategorized).
+  if (isset($values['tid']) && $values['tid'] != 'all') {
+    // If a category is selected, limit both the default query and the query
+    // that displays pending points to this category.
+    $query->condition('p.tid', (int)$values['tid']);
+    $categories = userpoints_get_categories();
+    return $categories[$values['tid']];
+  }
 }
 
 /**
@@ -1846,7 +1895,7 @@ function userpoints_get_transaction_actions($transaction, $show_view = TRUE) {
  */
 function userpoints_get_transaction_header($settings) {
   $settings += array(
-    'show_category' => FALSE,
+    'show_category' => count(userpoints_get_categories()) > 1,
     'show_user' => TRUE,
     'show_status' => TRUE,
   );
@@ -1872,6 +1921,44 @@ function userpoints_get_transaction_header($settings) {
 }
 
 /**
+ * Returns the header array definition for userpoints listings.
+ */
+function userpoints_get_list_header() {
+  $header = array(
+    array('data' => t('User'), 'field' => 'u.name'),
+  );
+  if (count(userpoints_get_categories()) > 1) {
+    $header[] = array('data' => t('Category'), 'field' => 't.name');
+  }
+  $header[] = array('data' => t('!Points', userpoints_translation()), 'field' => 'p.points', 'sort' => 'desc');
+  return $header;
+}
+
+function userpoints_get_list_row($data) {
+  global $user;
+
+  $categories = userpoints_get_categories();
+
+  $details = '';
+  if ($user->uid == $data->uid) {
+    $details = "&nbsp;&nbsp;" . l(t("details"), 'myuserpoints');
+  }
+  else if (userpoints_admin_access('edit')) {
+    $details = "&nbsp;&nbsp;" . l(t("details"), 'user/' . $data->uid . '/points');
+  }
+
+  $name = theme('username', array('account' => $data));
+  $row = array(
+    array('data' => $details ? t('!name (!details)', array('!name' => $name, '!details' => $details)) : $name),
+  );
+  if (count($categories) > 1) {
+    $row[] = array('data' => isset($categories[$data->tid]) ? $categories[$data->tid] : $categories[0], 'align' => 'right');
+  }
+  $row[] = array('data' => $data->points, 'align' => 'right');
+  return $row;
+}
+
+/**
  * Returns a single row for a transaction listing.
  * @param $transaction
  *   Transaction object.
@@ -1886,7 +1973,6 @@ function userpoints_get_transaction_header($settings) {
  */
 function userpoints_get_transaction_row($transaction, $settings = array()) {
   $settings += array(
-    'show_category' => TRUE,
     'show_user' => TRUE,
     'show_status' => TRUE,
   );
@@ -1911,8 +1997,9 @@ function userpoints_get_transaction_row($transaction, $settings = array()) {
     'data' => $transaction->points,
     'class' => array('userpoints-transactions-field-points', 'userpoints-transaction-points-' . ($transaction->points > 0 ? 'positive' : 'negative')),
   );
-  if ($settings['show_category']) {
-    $categories = userpoints_get_categories();
+
+  $categories = userpoints_get_categories();
+  if (count($categories) > 1) {
     $row['data'][] = array(
       'data' => isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[0],
       'class' => array('userpoints-transactions-field-category'),
