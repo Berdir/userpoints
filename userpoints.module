@@ -681,15 +681,15 @@ function userpoints_token_info() {
         'description' => t('The highest amount of !points a user had at any given point in that category.', userpoints_translation()),
       );
     }
-    $tokens['userpoints']['all'] = array(
-      'name' => t('Total !points', userpoints_translation()),
-      'description' => t('Total amount of !points over all categories.', userpoints_translation()),
-    );
-    $tokens['userpoints']['all'] = array(
-      'name' => t('Total maximum !points', userpoints_translation()),
-      'description' => t('Total amount of maximal !points over all categories.', userpoints_translation()),
-    );
   }
+  $tokens['userpoints']['all'] = array(
+    'name' => t('Total !points', userpoints_translation()),
+    'description' => t('Total amount of !points over all categories.', userpoints_translation()),
+  );
+  $tokens['maxuserpoints']['all'] = array(
+    'name' => t('Total maximum !points', userpoints_translation()),
+    'description' => t('Total amount of maximal !points over all categories.', userpoints_translation()),
+  );
 
   // Re-use property definition that is used for rules integration.
   foreach (_userpoints_userpoints_transaction_properties() as $property => $info) {
