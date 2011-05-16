@@ -1411,7 +1411,7 @@ function userpoints_block_info() {
   // Grab a list of the available terms.
   $terms = userpoints_get_categories();
   foreach ($terms as $key => $value) {
-    $blocks[$key]['info'] = t("Highest $value !points", userpoints_translation());
+    $blocks[$key]['info'] = t("Highest @term !points", userpoints_translation() + array('@term' => $value));
     ;
   }
 
@@ -1546,7 +1546,7 @@ function userpoints_expire_transactions() {
       '!txn_id' => $line->txn_id,
       '!date' => $time_stamp_formatted,
     ));
-    $description = t(variable_get(USERPOINTS_EXPIRY_DESCRIPTION, NULL), $arguments);
+    $description = strtr(variable_get(USERPOINTS_EXPIRY_DESCRIPTION, NULL), $arguments);
 
     $params = array(
       'points' => -$line->points,
