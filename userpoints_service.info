@@ -3,4 +3,5 @@ description = Exposes userpoints functionality via XML-RPC
 package = Userpoints
 dependencies[] = userpoints
 dependencies[] = services
-core = 6.x
+core = 7.x
+files[]=userpoints_service.test
