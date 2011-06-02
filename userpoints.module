@@ -571,7 +571,7 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
           break;
 
         case 'tid':
-          if ($txn->tid > 0) {
+          if (module_exists('taxonomy') && $txn->tid > 0) {
             $term = taxonomy_term_load($txn->tid);
             $term_name = $term ? $term->name : '';
           }
@@ -587,7 +587,7 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
       $replacements += token_generate('user', $user_tokens, array('user' => user_load($txn->uid)), $options);
     }
 
-    if ($term_tokens = token_find_with_prefix($tokens, 'tid')) {
+    if (module_exists('taxonomy') && $term_tokens = token_find_with_prefix($tokens, 'tid')) {
       if ($txn->tid > 0) {
         $replacements += token_generate('term', $term_tokens, array('term' => taxonomy_term_load($txn->tid)), $options);
       }

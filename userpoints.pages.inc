@@ -42,7 +42,9 @@ function userpoints_list_transactions($form, &$form_state, $account = NULL, $tid
     ->orderBy('p.txn_id', 'DESC')
     ->limit(variable_get(USERPOINTS_REPORT_LIMIT, 10));
 
-  $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
+  if (module_exists('taxonomy')) {
+    $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
+  }
 
   $unapproved_query = db_select('userpoints_txn', 'p')
     ->condition('uid', $account->uid)
@@ -153,12 +155,14 @@ function userpoints_list_users($form, &$form_state, $tid = NULL) {
     ->groupBy('u.name')
     ->groupBy('p.points')
     ->groupBy('p.tid')
-    ->groupBy('t.name')
     ->orderByHeader($header)
     ->limit(variable_get(USERPOINTS_REPORT_USERCOUNT, 30));
 
   $query->join('users', 'u', 'p.uid = u.uid');
-  $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
+  if (module_exists('taxonomy')) {
+    $query->groupBy('t.name');
+    $query->leftJoin('taxonomy_term_data', 't', 'p.tid = t.tid');
+  }
 
   $values = userpoints_filter_parse_input($form_state, $tid);
   $active_category = userpoints_filter_query($query, $values);

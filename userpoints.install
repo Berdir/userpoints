@@ -180,7 +180,7 @@ function userpoints_uninstall() {
     ->execute();
 
   $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module='userpoints'")->fetchField();
-  if ($vid) {
+  if ($vid && function_exists('taxonomy_vocabulary_delete')) {
     taxonomy_vocabulary_delete($vid);
   }
 }
