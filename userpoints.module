@@ -252,6 +252,7 @@ function userpoints_menu() {
     'access arguments' => array(1),
     'file' => 'userpoints.pages.inc',
     'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
   );
 
   // There are separate, duplicated local tasks for transactions in the
@@ -1254,8 +1255,8 @@ function userpoints_field_extra_fields() {
  *   Render array with the points and actions.
  */
 function userpoints_get_points_list($account = NULL) {
+  global $user;
   if (empty($account)) {
-    global $user;
     $account = $user;
   }
   $output = array();
@@ -1297,7 +1298,7 @@ function userpoints_get_points_list($account = NULL) {
   if (userpoints_access_my_points($account)) {
     $links['userpoints-view'] = array(
       'title' => t('View !points transactions', userpoints_translation()),
-      'href' => 'myuserpoints/' . $account->uid,
+      'href' => $user->uid == $account->uid ? 'myuserpoints' : 'user/' . $account->uid . '/points',
     );
   }
   if (userpoints_admin_access('add')) {
