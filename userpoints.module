@@ -1502,7 +1502,7 @@ function userpoints_block_save($delta, $edit) {
  * returns an array of possible expiry times
  * to the administrative settings page
  */
-function expiry_dates() {
+function userpoints_expiry_dates() {
   return array(
       NULL => 'Never',
       3600 => 'One hour',

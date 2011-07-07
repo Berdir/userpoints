@@ -645,7 +645,7 @@ function userpoints_admin_settings($form, &$form_state) {
       '#title' => t('Expire !points after', userpoints_translation()),
       '#description' => t('Once !points have been obtained by the user
                           they will expire according to this setting', userpoints_translation()),
-      '#options' => expiry_dates(),
+      '#options' => userpoints_expiry_dates(),
       '#default_value' => variable_get(USERPOINTS_EXPIREAFTER_DATE, NULL),
   );
 
