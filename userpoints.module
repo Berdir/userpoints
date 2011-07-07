@@ -735,7 +735,7 @@ function userpoints_get_current_points($uid = NULL, $tid = NULL) {
   }
   if (!isset($points[$uid][$tid])) {
     if ($tid === 'all') {
-      $points[$uid][$tid] = (int) db_query('SELECT SUM(points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
+      $points[$uid][$tid] = (int) db_query('SELECT points FROM {userpoints_total} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
     }
     else {
       $points[$uid][$tid] = (int) db_query('SELECT points FROM {userpoints} WHERE uid = :uid AND tid = :tid', array(':uid' => $uid, ':tid' => $tid))->fetchField();
@@ -773,8 +773,8 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
   if (!isset($max[$uid][$tid])) {
     // We did not cache it.
     if ($tid === 'all') {
-      // There is no term id, so we use "all".
-      $max[$uid][$tid] = db_query('SELECT SUM(max_points) FROM {userpoints} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
+      // There is no term id, so we select the total.
+      $max[$uid][$tid] = db_query('SELECT max_points FROM {userpoints_total} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
     }
     else {
       // A term ID is specified, so fetch its maximum points.
@@ -1070,17 +1070,14 @@ function _userpoints_transaction(&$params) {
 function _userpoints_update_cache($txn, $old_txn = NULL) {
   // Store eventual updates in this array.
   $updates = array();
+  $totals = array();
   if (!$old_txn) {
     // For new transactions, only update the cache for fully approved non-expired
     // points.
     if ($txn['status'] == USERPOINTS_TXN_STATUS_APPROVED && $txn['expired'] != 1) {
       // Calculate the current points based upon the tid.
       $updates['points'] = $txn['points'] + userpoints_get_current_points($txn['uid'], $txn['tid']);
-      $max_points = userpoints_get_max_points($txn['uid'], $txn['tid']);
-      // If the new points are higher then the max, update the maximum.
-      if ($updates['points'] > $max_points) {
-        $updates['max_points'] = $updates['points'];
-      }
+      $totals['points'] = $txn['points'] + userpoints_get_current_points($txn['uid'], 'all');
     }
   } else  {
     // For existing transactions, it is a bit more complex.
@@ -1104,51 +1101,73 @@ function _userpoints_update_cache($txn, $old_txn = NULL) {
         ))
         ->execute();
 
+      // Subtract the points from the total.
+      $totals['points'] = userpoints_get_current_points($txn['uid'], 'all') - $old_txn['points'];
+
       if ($txn['status'] == USERPOINTS_TXN_STATUS_APPROVED) {
         // Make sure to add the points so that they are added to the new category.
         $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) +  $txn['points'];
+
+        // Add them to the totals.
+        $totals['points'] += $txn['points'];
       }
     }
     else if ($old_txn['status'] == USERPOINTS_TXN_STATUS_APPROVED && $txn['status'] != USERPOINTS_TXN_STATUS_APPROVED) {
       // If the transaction goes from approved to not approved, subtract the
       // points to the total.
       $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) - $old_txn['points'];
-      $max_points = userpoints_get_max_points($txn['uid'], $txn['tid']);
-      // If the new points are higher then the max, update the maximum.
-      if ($updates['points'] > $max_points) {
-        $updates['max_points'] = $updates['points'];
-      }
+      $totals['points'] = userpoints_get_current_points($txn['uid'], 'all') - $old_txn['points'];
     }
     else if ($txn['points'] != $old_txn['points'] && $old_txn['status'] == USERPOINTS_TXN_STATUS_APPROVED && $txn['status'] == USERPOINTS_TXN_STATUS_APPROVED) {
       // If the category did not change but the points and the transaction
       // was and still is approved, update the points difference.
       $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) + ($txn['points'] - $old_txn['points']);
+      $totals['points'] = userpoints_get_current_points($txn['uid'], 'all') + ($txn['points'] - $old_txn['points']);
+
     }
     elseif ($old_txn['status'] != USERPOINTS_TXN_STATUS_APPROVED && $txn['status'] == USERPOINTS_TXN_STATUS_APPROVED) {
       // Calculate the current points based upon the tid.
       $updates['points'] = userpoints_get_current_points($txn['uid'], $txn['tid']) + $txn['points'];
+      $totals['points'] = userpoints_get_current_points($txn['uid'], 'all') + $txn['points'];
     }
   }
-  if (empty($updates)) {
-    return;
+  if (!empty($updates)) {
+    $max_points = userpoints_get_max_points($txn['uid'], $txn['tid']);
+    // If the new points are higher then the maximum, update it.
+    if ($updates['points'] > $max_points) {
+      $updates['max_points'] = $updates['points'];
+    }
+    $updates['last_update'] = REQUEST_TIME;
+
+    // Insert or update the userpoints caching table with the user's current
+    // points.
+    db_merge('userpoints')
+      ->key(array(
+        'uid' => $txn['uid'],
+        'tid' => (int) $txn['tid'],
+      ))
+      ->fields($updates)
+      ->execute();
   }
 
-  $max_points = userpoints_get_max_points($txn['uid'], $txn['tid']);
-  // If the new points are higher then the maximum, update it.
-  if ($updates['points'] > $max_points) {
-    $updates['max_points'] = $updates['points'];
-  }
-  $updates['last_update'] = REQUEST_TIME;
+  // Update totals if necessary.
+  if (!empty($totals)) {
+    // Update the total max points if necessary.
+    $max_points_total = userpoints_get_max_points($txn['uid'], 'all');
+    if ($totals['points'] > $max_points_total) {
+      $totals['max_points'] = $totals['points'];
+    }
+    $totals['last_update'] = REQUEST_TIME;
 
-  // Insert or update the userpoints caching table with the user's current
-  // points.
-  db_merge('userpoints')
-    ->key(array(
-      'uid' => $txn['uid'],
-      'tid' => (int) $txn['tid'],
-    ))
-    ->fields($updates)
-    ->execute();
+    // Insert or update the userpoints total caching table with the user's current
+    // points.
+    db_merge('userpoints_total')
+      ->key(array(
+        'uid' => $txn['uid'],
+      ))
+      ->fields($totals)
+      ->execute();
+  }
 }
 
 /**

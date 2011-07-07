@@ -66,14 +66,14 @@ class UserpointsBaseTestCase extends DrupalWebTestCase {
       $tid = userpoints_get_default_tid();
     }
 
-    debug('Current is: ' . userpoints_get_current_points($uid, $tid) . ', should be: ' . $current);
-    $this->assertEqual($current, userpoints_get_current_points($uid, $tid), t('Current points are correct.'));
+    $api_current = userpoints_get_current_points($uid, $tid);
+    $this->assertEqual($current, $api_current, t('Current points for tid %tid are correct (expected: %expected, actual: %actual).', array('%expected' => $current, '%actual' => $api_current, '%tid' => $tid)));
     if ($max !== NULL) {
       // Hijack static cache, delete this item from it.
       $max_cache = &drupal_static('userpoints_get_max_points', array());
       unset($max_cache[$uid][$tid]);
-      debug('Max is: ' . userpoints_get_max_points($uid, $tid) . ', should be: ' . $max);
-      $this->assertEqual($max, userpoints_get_max_points($uid, $tid), t('Max points are correct.'));
+      $api_max = userpoints_get_max_points($uid, $tid);
+      $this->assertEqual($max, $api_max, t('Max points for tid %tid are correct (expected: %expected, actual: %actual).', array('%expected' => $max, '%actual' => $api_max, '%tid' => $tid)));
     }
   }
 }
@@ -672,11 +672,11 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     // Change points and category.
     $params = array(
       'txn_id' => $txn_id,
-      'points' => 4,
+      'points' => 9,
       'tid' => 0,
     );
     userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 104, 105, 0);
+    $this->verifyPoints($uid, 109, 109, 0);
     $this->verifyPoints($uid, 50, 53, 1);
 
     // Change points and status and category.
@@ -687,19 +687,20 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
       'status' => USERPOINTS_TXN_STATUS_DECLINED,
     );
     userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 100, 105, 0);
+    $this->verifyPoints($uid, 100, 109, 0);
     $this->verifyPoints($uid, 50, 53, 1);
 
     // Change points and status back to approved.
     $params = array(
       'txn_id' => $txn_id,
-      'points' => 9,
+      'points' => 4,
       'status' => USERPOINTS_TXN_STATUS_APPROVED,
     );
     userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 59, 59, 1);
+    $this->verifyPoints($uid, 100, 109, 0);
+    $this->verifyPoints($uid, 54, 54, 1);
 
-    $this->verifyPoints($uid, 159, 164, 'all');
+    $this->verifyPoints($uid, 154, 159, 'all');
   }
 
 }
