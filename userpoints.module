@@ -453,7 +453,6 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
   else {
     $language_code = NULL;
   }
-  $sanitize = !empty($options['sanitize']);
 
   $replacements = array();
 
@@ -513,116 +512,6 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
       }
     }
   }
-
-  if ($type == 'userpoints_transaction' && !empty($data['userpoints_transaction'])) {
-    $txn = (object)$data['userpoints_transaction'];
-    foreach ($tokens as $name => $original) {
-      switch ($name) {
-        case 'points':
-          $replacements[$original] = $txn->$name;
-          break;
-
-        case 'points-abs':
-          $replacements[$original] = abs($txn->points);
-          break;
-
-        case 'display':
-          $replacements[$original] = !empty($txn->$name) ? t('Yes') : t('No');
-          break;
-
-        case 'status':
-          $stati = userpoints_txn_status();
-          $replacements[$original] = $stati[$txn->$name];
-          break;
-
-        case 'description':
-        case 'reference':
-        case 'operation':
-          $replacements[$original] = $sanitize ? filter_xss($txn->$name) : $txn->$name;
-          break;
-
-        case 'reason':
-          $replacements[$original] = userpoints_create_description($txn);
-          break;
-
-        case 'entity':
-          $entity = !empty($txn->entity_type) && !empty($txn->entity_id) ? entity_load($txn->entity_type, array($txn->entity_id)) : array();
-          $entity = reset($entity);
-          $label = $entity ? entity_label($txn->entity_type, $entity) : '';
-          $replacements[$original] = $sanitize ? filter_xss($label) : $label;
-          break;
-
-        // Default values for the chained tokens handled below.
-        case 'user':
-          $user = user_load($txn->uid);
-          $replacements[$original] = $sanitize ? filter_xss(format_username($user)) : format_username($user);
-          break;
-
-        case 'time-stamp':
-          $replacements[$original] = format_date($txn->time_stamp, 'medium', '', NULL, $language_code);
-          break;
-
-        case 'expirydate':
-          if ($txn->$name > 0) {
-            $replacements[$original] = format_date($txn->$name, 'medium', '', NULL, $language_code);
-          }
-          else {
-            $replacements[$original] = t('Never');
-          }
-          break;
-
-        case 'tid':
-          if (module_exists('taxonomy') && $txn->tid > 0) {
-            $term = taxonomy_term_load($txn->tid);
-            $term_name = $term ? $term->name : '';
-          }
-          else {
-            $term_name = t('!Uncategorized', userpoints_translation());
-          }
-          $replacements[$original] = $sanitize ? filter_xss($term_name) : $term_name;
-          break;
-      }
-    }
-
-    if ($user_tokens = token_find_with_prefix($tokens, 'user')) {
-      $replacements += token_generate('user', $user_tokens, array('user' => user_load($txn->uid)), $options);
-    }
-
-    if (module_exists('taxonomy') && $term_tokens = token_find_with_prefix($tokens, 'tid')) {
-      if ($txn->tid > 0) {
-        $replacements += token_generate('term', $term_tokens, array('term' => taxonomy_term_load($txn->tid)), $options);
-      }
-      else {
-        // For the general category, only tid and name is supported.
-        foreach ($term_tokens as $name => $original) {
-          switch ($name) {
-            case 'tid':
-              $replacements[$original] = '0';
-              break;
-
-            case 'name':
-              $term_name = t('!Uncategorized', userpoints_translation());
-              $replacements[$original] = $sanitize ? filter_xss($term_name) : $term_name;
-              break;
-          }
-        }
-      }
-    }
-
-    if ($timestamp_tokens = token_find_with_prefix($tokens, 'time-stamp')) {
-      $replacements += token_generate('date', $timestamp_tokens, array('date' => $txn->time_stamp), $options);
-    }
-
-    if ($expiry_tokens = token_find_with_prefix($tokens, 'expirydate')) {
-      if ($txn->expirydate > 0) {
-        $replacements += token_generate('date', $expiry_tokens, array('date' => $txn->expirydate), $options);
-      }
-      else {
-        // Create array with $original as key and 'Never' as value.
-        $replacements += array_fill_keys($expiry_tokens, t('Never'));
-      }
-    }
-  }
   return $replacements;
 }
 
@@ -631,11 +520,6 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
  */
 function userpoints_token_info() {
   $types = array(
-    'userpoints_transaction' => array(
-      'name' => t('!Points transaction', userpoints_translation()),
-      'description' => t('A single transaction that grants or removes a certain amount of points from a user.'),
-      'needs-data' => 'userpoints_transaction',
-    ),
     'userpoints' => array(
       'name' => t('!Points', userpoints_translation()),
       'description' => t('Amount of !points a user has.', userpoints_translation()),
@@ -683,27 +567,6 @@ function userpoints_token_info() {
   $tokens['maxuserpoints']['all'] = array(
     'name' => t('Total maximum !points', userpoints_translation()),
     'description' => t('Total amount of maximal !points over all categories.', userpoints_translation()),
-  );
-
-  // Re-use property definition that is used for rules integration.
-  foreach (_userpoints_userpoints_transaction_properties() as $property => $info) {
-    $tokens['userpoints_transaction'][$property] = array(
-      'name' => $info['label'],
-      'description' => $info['description'],
-    );
-    if (in_array($info['type'], array('date', 'user'))) {
-      $tokens['userpoints_transaction'][$property]['type'] = $info['type'];
-    }
-    if ($property == 'tid') {
-      // tid is of type taxonomy_term.
-      $tokens['userpoints_transaction'][$property]['type'] = 'term';
-    }
-  }
-
-  // Add an additional token for the absolute points.
-  $tokens['userpoints_transaction']['points-abs'] = array(
-    'name' => t('!Points absolute', userpoints_translation()),
-    'description' => t('The absolute (positive) amount of !points of this transaction.', userpoints_translation()),
   );
 
   return array(
@@ -1046,6 +909,7 @@ function _userpoints_transaction(&$params) {
     $ret = drupal_write_record('userpoints_txn', $params, array('txn_id'));
     // Only update if the record has been successfully updated.
     if ($ret != FALSE) {
+      entity_get_controller('userpoints_transaction')->resetCache(array($params['txn_id']));
       _userpoints_update_cache($params, $txn);
     }
   }
@@ -1848,19 +1712,14 @@ function userpoints_userpoints_info() {
  * @return
  *   A loaded userpoints transaction object.
  */
-function userpoints_transaction_load($txn_id) {
-  $transaction = db_query('SELECT * from {userpoints_txn} WHERE txn_id = :txn', array(':txn' => $txn_id))->fetchObject();
-  if (!$transaction) {
-    return FALSE;
-  }
+function userpoints_transaction_load($txn_id, $reset = FALSE) {
+  $txn_ids = (isset($txn_id) ? array($txn_id) : array());
+  $temp = userpoints_transaction_load_multiple($txn_ids, array(), $reset);
+  return $temp ? reset($temp) : FALSE;
+}
 
-  // Load corresponding user object.
-  $transaction->user = user_load($transaction->uid);
-
-  // Load category.
-  $categories = userpoints_get_categories();
-  $transaction->category = isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[userpoints_get_default_tid()];
-  return $transaction;
+function userpoints_transaction_load_multiple(array $txn_ids, $conditions = array(), $reset = FALSE) {
+  return entity_load('userpoints_transaction', $txn_ids, $conditions, $reset);
 }
 
 /**
@@ -1876,17 +1735,11 @@ function userpoints_transaction_load($txn_id) {
  *   A string with operation links.
  */
 function userpoints_get_transaction_actions($transaction, $show_view = TRUE) {
-  global $user;
   $actions = array();
   $url_options = array('query' => drupal_get_destination());
 
-  $url_prefix = 'myuserpoints/transaction/' . $transaction->txn_id;
-  if (strpos($_GET['q'], 'admin/config/people/userpoints') !== FALSE) {
-    $url_prefix = "admin/config/people/userpoints/transaction/$transaction->txn_id";
-  }
-  elseif ($transaction->uid != $user->uid) {
-    $url_prefix = "user/$transaction->uid/points/$transaction->txn_id";
-  }
+  $uri = userpoints_transaction_uri_callback($transaction, TRUE);
+  $url_prefix = $uri['path'];
 
   if ($show_view && userpoints_access_view_transaction($transaction)) {
     $actions[] = l('view', $url_prefix . '/view');
@@ -2047,22 +1900,31 @@ function userpoints_get_transaction_row($transaction, $settings = array()) {
 }
 
 /**
- * Returns properties of userpoints_transaction data object.
+ * Implements hook_entity_property_info().
  */
-function _userpoints_userpoints_transaction_properties() {
-  return array(
+function userpoints_entity_property_info() {
+  $info = array();
+  // Add meta-data about the basic userpoints_transaction properties.
+  $properties = &$info['userpoints_transaction']['properties'];
+  $properties = array(
     'user' => array(
       'type' => 'user',
       'label' => t('User'),
       'description' => t('The user that will receive the !points', userpoints_translation()),
-      'setter callback' => 'entity_metadata_verbatim_set',
+      'setter callback' => 'entity_property_verbatim_set',
     ),
     'points' => array(
       'type' => 'integer',
       'label' => t('!Points', userpoints_translation()),
       'description' => t('Amount of !points to give or take.', userpoints_translation()),
       'restriction' => 'input',
-      'setter callback' => 'entity_metadata_verbatim_set',
+      'setter callback' => 'entity_property_verbatim_set',
+    ),
+    'points_abs' => array(
+      'label' => t('!Points absolute', userpoints_translation()),
+      'description' => t('The absolute (positive) amount of !points of this transaction.', userpoints_translation()),
+      'type' => 'integer',
+      'getter callback' => 'userpoints_transaction_get_points_absolute',
     ),
     'tid' => array(
       'label' => t('!Points category', userpoints_translation()),
@@ -2070,7 +1932,7 @@ function _userpoints_userpoints_transaction_properties() {
       'type' => 'integer',
       'options list' => 'userpoints_rules_get_categories',
       'restriction' => 'input',
-      'setter callback' => 'entity_metadata_verbatim_set',
+      'setter callback' => 'entity_property_verbatim_set',
     ),
     'entity' => array(
       'label' => t('Entity'),
@@ -2078,7 +1940,7 @@ function _userpoints_userpoints_transaction_properties() {
       'description' => t('The entity to which this transaction refers.'),
       'restriction' => 'input',
       'optional' => TRUE,
-      'getter callback' => 'entity_metadata_verbatim_get',
+      'getter callback' => 'entity_property_verbatim_get',
      ),
     'description' => array(
       'label' => t('Description'),
@@ -2086,21 +1948,21 @@ function _userpoints_userpoints_transaction_properties() {
       'description' => t('Can contain the reason why the points have been given.'),
       'restriction' => 'input',
       'optional' => TRUE,
-      'setter callback' => 'entity_metadata_verbatim_set',
+      'setter callback' => 'entity_property_verbatim_set',
     ),
     'reference' => array(
       'label' => t('Reference'),
       'type' => 'text',
       'description' => t('Can contain a reference for this transaction.'),
       'optional' => TRUE,
-      'setter callback' => 'entity_metadata_verbatim_set',
+      'setter callback' => 'entity_property_verbatim_set',
     ),
     'operation' => array(
       'label' => t('Operation'),
       'type' => 'text',
       'description' => t('Describes the operation (Insert/Remove/...).'),
       'restriction' => 'input',
-      'setter callback' => 'entity_metadata_verbatim_set',
+      'setter callback' => 'entity_property_verbatim_set',
     ),
     'reason' => array(
       'label' => t('Reason'),
@@ -2108,33 +1970,124 @@ function _userpoints_userpoints_transaction_properties() {
       'description' => t('The reason why the points were granted.'),
       'restriction' => 'input',
     ),
-    'time-stamp' => array(
+    'time_stamp' => array(
       'label' => t('Timestamp'),
       'type' => 'date',
       'description' => t('Time when the points were given.'),
-      'setter callback' => 'entity_metadata_verbatim_set',
-      'getter callback' => 'entity_metadata_verbatim_get',
+      'setter callback' => 'entity_property_verbatim_set',
+      'getter callback' => 'entity_property_verbatim_get',
     ),
     'expirydate' => array(
       'label' => t('Expiry date'),
       'type' => 'date',
       'description' => t('Time when the points will expire.'),
-      'setter callback' => 'entity_metadata_verbatim_set',
-      'getter callback' => 'entity_metadata_verbatim_get',
+      'setter callback' => 'entity_property_verbatim_set',
+      'getter callback' => 'entity_property_verbatim_get',
     ),
     'display' => array(
       'label' => t('Display'),
       'type' => 'boolean',
       'description' => t('Whether to show a message to the user for this transaction or not.'),
-      'setter callback' => 'entity_metadata_verbatim_set',
+      'setter callback' => 'entity_property_verbatim_set',
     ),
     'status' => array(
       'label' => t('Status'),
       'type' => 'integer',
       'description' => t('Status of this transaction.'),
       'options list' => 'userpoints_txn_status',
-      'setter callback' => 'entity_metadata_verbatim_set',
-      'getter callback' => 'entity_metadata_verbatim_get',
+      'setter callback' => 'entity_property_verbatim_set',
+      'getter callback' => 'entity_property_verbatim_get',
     ),
   );
+  return $info;
+}
+
+/**
+ * Gets the absolute points from a transaction..
+ */
+function userpoints_transaction_get_points_absolute($userpoints_transaction, array $options, $name) {
+  if (is_object($userpoints_transaction)) {
+    return abs($userpoints_transaction->points);
+  }
+  return NULL;
+}
+
+
+/**
+ * Implements hook_entity_info().
+ */
+function userpoints_entity_info() {
+  $return = array(
+    'userpoints_transaction' => array(
+      'label' => t('Userpoints Transaction'),
+      'controller class' => 'UserpointsTransactionController',
+      'base table' => 'userpoints_txn',
+      'uri callback' => 'userpoints_transaction_uri_callback',
+      'fieldable' => FALSE,
+      'entity keys' => array(
+        'id' => 'txn_id',
+      ),
+      'bundles' => array(),
+      'view modes' => array(
+        'full' => array(
+          'label' => t('Full content'),
+          'custom settings' => FALSE,
+        ),
+      ),
+    ),
+  );
+  return $return;
+}
+
+/**
+ * Return the path to the correct view location based on the global context.
+ *
+ * @param $transaction
+ *   The userpoints transaction entity.
+ * @param bool $prefix_only
+ *   If only the url prefix (without /view suffix) should be returned. Defaults to FALSE.
+ *
+ * @return
+ *   An array with the keys path and options.
+ */
+function userpoints_transaction_uri_callback($transaction, $prefix_only = FALSE) {
+  global $user;
+  $uri = array(
+    // Default path is displaying it below myuserpoints for the current user.
+    'path' => 'myuserpoints/transaction/' . $transaction->txn_id,
+    'options' => array(),
+  );
+  // When viewing the transaction in the admin UI (but not the add points page, as this might be called for generating
+  // tokens), use the admin link.
+  if (strpos($_GET['q'], 'admin/config/people/userpoints') !== FALSE && strpos($_GET['q'], 'admin/config/people/userpoints/add') === FALSE ) {
+    $uri['path'] = "admin/config/people/userpoints/transaction/$transaction->txn_id";
+  }
+  elseif ($transaction->uid != $user->uid) {
+    // When not in the admin ui but viewing the transaction of someone else, use the path for another user.
+    $uri['path'] = "user/$transaction->uid/points/$transaction->txn_id";
+  }
+
+  if (!$prefix_only) {
+    $uri['path'] .= '/view';
+  }
+
+  return $uri;
+}
+
+/**
+ * Userpoints transaction controller.
+ */
+class UserpointsTransactionController extends DrupalDefaultEntityController {
+
+  protected function attachLoad(&$transactions, $revision_id = FALSE) {
+    $categories = userpoints_get_categories();
+    foreach ($transactions as $transaction) {
+        // Load corresponding user object.
+        $transaction->user = user_load($transaction->uid);
+
+        // Load category.
+        $transaction->category = isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[userpoints_get_default_tid()];
+    }
+    parent::attachLoad($transactions, $revision_id);
+  }
 }

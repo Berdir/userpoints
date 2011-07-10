@@ -129,19 +129,6 @@ function userpoints_rules_moderate() {
 }
 
 /**
- * Implements hook_rules_data_info().
- */
-function userpoints_rules_rules_data_info() {
-  return array(
-    'userpoints_transaction' => array(
-      'label' => t('!Points transaction', userpoints_translation()),
-      'wrap' => TRUE,
-      'property info' => _userpoints_userpoints_transaction_properties(),
-    ),
-  );
-}
-
-/**
  * Implements hook_rules_event_info().
  */
 function userpoints_rules_rules_event_info() {
