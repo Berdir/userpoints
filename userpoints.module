@@ -1046,12 +1046,14 @@ function _userpoints_transaction(&$params) {
     $ret = drupal_write_record('userpoints_txn', $params, array('txn_id'));
     // Only update if the record has been successfully updated.
     if ($ret != FALSE) {
+      userpoints_transaction_load(NULL, TRUE);
       _userpoints_update_cache($params, $txn);
     }
   }
   else {
     // Create new transaction record.
     $ret = drupal_write_record('userpoints_txn', $params);
+    userpoints_transaction_load(NULL, TRUE);
     if ($ret != FALSE) {
       _userpoints_update_cache($params);
     }
@@ -1848,19 +1850,14 @@ function userpoints_userpoints_info() {
  * @return
  *   A loaded userpoints transaction object.
  */
-function userpoints_transaction_load($txn_id) {
-  $transaction = db_query('SELECT * from {userpoints_txn} WHERE txn_id = :txn', array(':txn' => $txn_id))->fetchObject();
-  if (!$transaction) {
-    return FALSE;
-  }
+function userpoints_transaction_load($txn_id, $reset = FALSE) {
+  $txn_ids = (isset($txn_id) ? array($txn_id) : array());
+  $temp = userpoints_transaction_load_multiple($txn_ids, array(), $reset);
+  return $temp ? reset($temp) : FALSE;
+}
 
-  // Load corresponding user object.
-  $transaction->user = user_load($transaction->uid);
-
-  // Load category.
-  $categories = userpoints_get_categories();
-  $transaction->category = isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[userpoints_get_default_tid()];
-  return $transaction;
+function userpoints_transaction_load_multiple(array $txn_ids, $conditions = array(), $reset = FALSE) {
+  return entity_load('userpoints_transaction', $txn_ids, $conditions, $reset);
 }
 
 /**
@@ -2049,7 +2046,10 @@ function userpoints_get_transaction_row($transaction, $settings = array()) {
 /**
  * Returns properties of userpoints_transaction data object.
  */
-function _userpoints_userpoints_transaction_properties() {
+function userpoints_entity_property_info() {
+  $info = array();
+  // Add meta-data about the basic node properties.
+  $properties = &$info['userpoints_transaction']['properties'];
   return array(
     'user' => array(
       'type' => 'user',
@@ -2137,4 +2137,65 @@ function _userpoints_userpoints_transaction_properties() {
       'getter callback' => 'entity_metadata_verbatim_get',
     ),
   );
+  return $info;
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function userpoints_entity_info() {
+  $return = array(
+    'userpoints_transaction' => array(
+      'label' => t('Userpoints Transaction'),
+      'controller class' => 'UserpointsTransactionController',
+      'base table' => 'userpoints_txn',
+      'uri callback' => 'todo',
+      'fieldable' => FALSE,
+      'entity keys' => array(
+        'id' => 'txn_id',
+        //'bundle' => 'bundle',
+      ),
+      /*'bundle keys' => array(
+        'bundle' => 'bundle',
+      ),*/
+      'bundles' => array(),
+      'view modes' => array(
+        'full' => array(
+          'label' => t('Full content'),
+          'custom settings' => FALSE,
+        ),
+      ),
+    ),
+  );
+
+  // Bundles must provide a human readable name so we can create help and error
+  // messages, and the path to attach Field admin pages to.
+  $return['userpoints_transaction']['bundles']['general'] = array(
+      'label' => t('General'),
+      'admin' => array(
+        'path' => 'admin/config/people/userpoints',
+        'real path' => 'admin/config/people/userpoints',
+        'bundle argument' => 4,
+        'access arguments' => array('administer content types'),
+      ),
+    );
+  return $return;
+}
+
+/**
+ * Userpoints transaction controller.
+ */
+class UserpointsTransactionController extends DrupalDefaultEntityController {
+
+  protected function attachLoad(&$transactions, $revision_id = FALSE) {
+    $categories = userpoints_get_categories();
+    foreach ($transactions as $transaction) {
+        // Load corresponding user object.
+        $transaction->user = user_load($transaction->uid);
+
+        // Load category.
+        $transaction->category = isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[userpoints_get_default_tid()];
+    }
+    parent::attachLoad($transactions, $revision_id);
+  }
 }
