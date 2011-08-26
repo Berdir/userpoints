@@ -794,17 +794,12 @@ function userpoints_admin_settings($form, &$form_state) {
       '#description' => t('Sets if the transaction timestamp should obey current time, or can be modified by the API operations. Unchecking this option will allow customization of timestamp for the transactions.'),
   );
 
-  $form['settings_additional'] = array(
-    '#prefix' => '<h3>' . t('Additional !points settings', userpoints_translation()) . '</h3>',
-    '#type' => 'vertical_tabs',
-  );
-
-  $form['setting'] = userpoints_invoke_all('setting');
-
-  // Hide the additional vertical_tabs element if nothing is being displayed in
-  // it.
-  if (isset($form['settings']) && empty($form['settings'])) {
-    $form['settings_additional']['#access'] = FALSE;
+  if ($settings = module_invoke_all('userpoints_settings')) {
+    $form['settings_additional'] = array(
+      '#prefix' => '<h3>' . t('Additional !points settings', userpoints_translation()) . '</h3>',
+      '#type' => 'vertical_tabs',
+    );
+    $form['setting'] = $settings;
   }
 
   return system_settings_form($form);

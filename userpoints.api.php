@@ -55,3 +55,30 @@ function hook_userpoints_list_alter(&$output) {
 function hook_userpoints_list_transactions_alter(&$output) {
 
 }
+
+/**
+ * Provide settings for the shared Userpoints administration settings form.
+ *
+ * @return
+ *   A form structure consisting of one or multiple vertical_tabs belonging to
+ *   the #group settings_additional.
+ */
+function hook_userpoints_settings() {
+  drupal_add_js(drupal_get_path('module', 'userpoints_nc') . '/userpoints_nc.js');
+
+  $form['userpoints_nc'] = array(
+    '#type'        => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed'   => TRUE,
+    '#title'       => t('Content'),
+    '#group'       => 'settings_additional',
+    '#weight'      => 15,
+  );
+
+  $form['userpoints_nc']['userpoints_nc_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enabled by default.'),
+    '#default_value' => userpoints_nc_get_setting('enabled', NULL, TRUE),
+    '#description' => t('If checked, all content types award !points by default. This can be overridden for each content type on the content type edit page.', userpoints_translation()),
+  );
+}
