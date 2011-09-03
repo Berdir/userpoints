@@ -800,3 +800,84 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
 
   }
 }
+
+
+/**
+ * API Tests.
+ */
+class UserpointsGrantPointsTestCase extends UserpointsBaseTestCase {
+
+  private $admin_user;
+  private $non_admin_user;
+
+  /**
+   * Implements getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Userpoints grant points'),
+      'description' => t('Tests the core API for proper inserts & updates to the database tables.'),
+      'group' => t('Userpoints'),
+    );
+  }
+
+  /**
+   * Install userpoints module and create users.
+   */
+  function setUp() {
+    parent::setUp('userpoints');
+
+    // Create an administrator account.
+    $this->admin_user = $this->drupalCreateUser(array('administer userpoints'));
+
+    // Create a standard Drupal account and log in as that person.
+    $this->non_admin_user = $this->drupalCreateUser();
+    $this->drupalLogin($this->non_admin_user);
+  }
+
+  function testGrantPoints() {
+    userpoints_grant_points('test', 10, $this->non_admin_user->uid)
+      ->save();
+
+    $this->verifyPoints($this->non_admin_user->uid, 10, 10);
+
+    userpoints_grant_points('test', -5, $this->non_admin_user->uid)
+      ->save();
+
+    $this->verifyPoints($this->non_admin_user->uid, 5, 10);
+
+    $transaction = userpoints_grant_points('test', 7, $this->non_admin_user->uid)
+      ->pending()
+      ->save();
+
+    $this->verifyPoints($this->non_admin_user->uid, 5, 10);
+
+    $transaction
+      ->approve()
+      ->save();
+
+    $this->verifyPoints($this->non_admin_user->uid, 12, 12);
+
+    $transaction = userpoints_grant_points('test', 19, $this->non_admin_user->uid)
+      ->pending()
+      ->save();
+
+    $this->verifyPoints($this->non_admin_user->uid, 12, 12);
+
+    $transaction
+      ->decline()
+      ->save();
+
+    $this->verifyPoints($this->non_admin_user->uid, 12, 12);
+
+    try {
+      $transaction
+        ->setPoints(123)
+        ->save();
+
+      $this->fail(t('Changing a declined transaction was not denied.'));
+    } catch (UserpointsChangeException $e) {
+      $this->pass(t('Changing a declined transaction was denied.'));
+    }
+  }
+}
