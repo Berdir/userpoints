@@ -10,12 +10,12 @@
  * API Documentation of the Userpoints module.
  *
  * - Topics:
- *  - @link api API functions @endlink
+ *  - @link userpoints_api API functions @endlink
  *  - @link userpoints_hooks Provided hooks @endlink
  */
 
 /**
- * @defgroup api API functions
+ * @defgroup userpoints_api API functions
  *
  */
 

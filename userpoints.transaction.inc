@@ -72,6 +72,8 @@ interface UserpointsTransactionInterface
 
 /**
  * A Userpoints transaction.
+ *
+ * @ingroup userpoints_api
  */
 class UserpointsTransaction
 {
