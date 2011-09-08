@@ -586,7 +586,7 @@ function userpoints_token_info() {
  * @return
  *   Number of current points in that user's account.
  *
- * @userpoints userpoints_api
+ * @ingroup userpoints_api
  */
 function userpoints_get_current_points($uid = NULL, $tid = NULL) {
   $points = drupal_static(__FUNCTION__, array());
