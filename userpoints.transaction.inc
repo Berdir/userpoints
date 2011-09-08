@@ -494,6 +494,10 @@ class UserpointsTransaction
     return $this->operation;
   }
 
+  function getTransactionId() {
+    return $this->txn_id;
+  }
+
   function getDisplay() {
     return $this->display;
   }
@@ -687,6 +691,13 @@ class UserpointsTransaction
           $message = format_plural(abs($params['points']), '!username just earned a !point and now has %total !points in the %category category.', '!username just earned @count !points and now has %total !points in the %category category.', $arguments);
         }
       }
+    }
+  }
+
+  function  __destruct() {
+    // Automatically save new transactions to improve DX.
+    if (!$this->getTransactionId()) {
+      $this->save();
     }
   }
 }

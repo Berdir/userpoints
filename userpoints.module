@@ -655,6 +655,29 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
 /**
  * Grant a user points.
  *
+ * The function excpects two required parameters, an operation string
+ * and the amount of points. Optionally, a user id can be passed.
+ *
+ * The function then returns a UserpointsTransaction object, which provides
+ * methods to add further details to the transaction. New transactions are saved
+ * automatically through the __destruct() method. However, if transaction needs
+ * to be saved immediately, save() can be called directly.
+ *
+ * Basic usage examples:
+ * @code
+ * // Adding points to the current user, relying on automatic saving.
+ * userpoints_grant_points('mymodule_type_action', $points);
+ *
+ * // Grant points to another, add a entity reference to a node and save
+ * // explicitly.
+ * userpoints_grant_points('mymodule_type_otheraction', $points, $account->uid)
+ *   ->setEntity($node)
+ *   ->save();
+ * @endcode
+ *
+ * A list of all available methods can be found in the UserpointsTransaction
+ * documentation.
+ *
  * @param $operation
  *   A string that can identify this transaction. Can be used to provide a
  *   custom, translatable, optionally dynamic reason for this transaction in

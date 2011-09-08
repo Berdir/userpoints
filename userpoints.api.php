@@ -17,6 +17,8 @@
 /**
  * @defgroup userpoints_api API functions
  *
+ * The function userpoints_grant_points() allows to grant a number of points,
+ * positive or negative, to a user.
  */
 
 /**
