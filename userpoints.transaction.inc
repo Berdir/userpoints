@@ -98,22 +98,21 @@ class UserpointsTransaction
   protected $display = TRUE;
   protected $message;
 
+  protected $orig_status;
+
   /**
    * Start a new transaction or update an existing one.
    *
    * @param $txn_id
    *   Transaction id if an existing transaction should be loaded.
    */
-  function __construct($txn_id = NULL) {
-    if ($txn_id) {
-      $txn = userpoints_transaction_load($txn_id);
-      if (!$txn) {
-        throw new UserpointsTransactionNotFoundException($txn_id);
-      }
+  function __construct($values = FALSE) {
+    if ($values) {
       // @todo Improve this.
-      foreach ($txn as $property => $value) {
+      foreach ($values as $property => $value) {
         $this->$property = $value;
       }
+      $this->orig_status = $this->status;
     }
     else {
       // Set default values.
@@ -136,6 +135,12 @@ class UserpointsTransaction
    */
   function setEntity($entity_type, $entity_id) {
     $this->checkChange();
+
+    // Ignore empty values.
+    if (empty($entity_type) || empty($entity_id)) {
+      return $this;
+    }
+
     $this->entity_type = $entity_type;
     $this->entity_id = $entity_id;
     return $this;
@@ -195,6 +200,10 @@ class UserpointsTransaction
       throw new UserpointsChangeException(t('Invalid status'));
     }
 
+    // Preserve the original status to be able to check if changes in this
+    // transaction are still allowed.
+    $this->orig_status = $this->status;
+
     $this->status = $status;
     return $this;
   }
@@ -211,10 +220,6 @@ class UserpointsTransaction
    */
   function setExpirationDate($expirydate) {
     $this->checkChange();
-
-    if (!($expirydate > 0)) {
-      throw new UserpointsInvalidArgumentException();
-    }
 
     if ($expirydate < REQUEST_TIME) {
       $this->setExpired(TRUE);
@@ -305,7 +310,7 @@ class UserpointsTransaction
     $this->checkChange(TRUE);
 
     if (variable_get('userpoints_transaction_timestamp', 1)) {
-      return;
+      return $this;
     }
     $this->time_stamp = $time_stamp;
     return $this;
@@ -390,9 +395,29 @@ class UserpointsTransaction
    *   An entity object or NULL.
    */
   function getEntity() {
-    if (!empty($this->entity_id) && !empty($this->entity_type)) {
+    if (!empty($this->entity_id) && !empty($this->entity_type) && entity_get_info($this->entity_type)) {
       return array_shift(entity_load($this->entity_type, array($this->entity_id)));
     }
+  }
+
+  /**
+   * Get the referenced entity type, if any.
+   *
+   * @return
+   *   The entity type as a string.
+   */
+  function getEntityType() {
+    return $this->entity_type;
+  }
+
+  /**
+   * Get the referenced entity id, if any.
+   *
+   * @return
+   *   The entity id as an integer.
+   */
+  function getEntityId() {
+    return $this->entity_id;
   }
 
   /**
@@ -468,6 +493,10 @@ class UserpointsTransaction
     return $this->approver_uid;
   }
 
+  function getApprover() {
+    return user_load($this->approver_uid);
+  }
+
   function getPoints() {
     return $this->points;
   }
@@ -494,7 +523,7 @@ class UserpointsTransaction
     return $this->operation;
   }
 
-  function getTransactionId() {
+  function getTxnId() {
     return $this->txn_id;
   }
 
@@ -505,20 +534,34 @@ class UserpointsTransaction
   function getCategory() {
     // Load categories.
     $categories = userpoints_get_categories();
-    $transaction->category = isset($categories[$this->tid]) ? $categories[$this->tid] : $categories[userpoints_get_default_tid()];
-    return $transaction;
+    return isset($categories[$this->tid]) ? $categories[$this->tid] : $categories[userpoints_get_default_tid()];
   }
 
   function pending() {
     $this->setStatus(USERPOINTS_TXN_STATUS_PENDING);
+    return $this;
   }
 
   function approve() {
     $this->setStatus(USERPOINTS_TXN_STATUS_APPROVED);
+    return $this;
   }
 
   function decline() {
     $this->setStatus(USERPOINTS_TXN_STATUS_DECLINED);
+    return $this;
+  }
+
+  function isPending() {
+    return $this->getStatus() == USERPOINTS_TXN_STATUS_PENDING;
+  }
+
+  function isDeclined() {
+    return $this->getStatus() == USERPOINTS_TXN_STATUS_DECLINED;
+  }
+
+  function isApproved() {
+    return $this->getStatus() == USERPOINTS_TXN_STATUS_APPROVED;
   }
 
   function save() {
@@ -547,6 +590,7 @@ class UserpointsTransaction
       'reference' => $this->reference,
       'status' => $this->status,
       'tid' => $this->tid,
+      'approver_uid' => $this->approver_uid,
     );
 
     if (empty($this->txn_id)) {
@@ -567,6 +611,10 @@ class UserpointsTransaction
     }
 
     module_invoke_all('userpoints_transaction_after', $this);
+
+    if ($this->getDisplay() && $message = $this->getMessage()) {
+      drupal_set_message($message);
+    }
 
     return $this;
   }
@@ -607,7 +655,8 @@ class UserpointsTransaction
   }
 
   protected function checkChange($only_new = FALSE) {
-    if (!empty($this->txn_id) && ($only_new || $this->status <> USERPOINTS_TXN_STATUS_PENDING)) {
+    if (!empty($this->txn_id) && ($only_new || $this->orig_status <> USERPOINTS_TXN_STATUS_PENDING)) {
+      debug_print_backtrace();
       throw new UserpointsChangeException(t('This transaction is saved and approved or pending and can not be changed.'));
     }
   }
@@ -626,78 +675,271 @@ class UserpointsTransaction
 
   function setMessage($message) {
     $this->message = $message;
+    return $this;
   }
 
   function getMessage() {
+    global $user;
+
     if (!empty($this->message)) {
       return $this->message;
     }
        // Prepare arguments. They are the same for all string combinations.
     $categories = userpoints_get_categories();
     $arguments = array_merge(userpoints_translation(), array(
-      '!username' => theme('username', array('account' => $account)),
-      '%total' => userpoints_get_current_points($params['uid'], $params['tid']),
-      '%category' => isset($categories[$params['tid']]) ? $categories[$params['tid']] : $categories[0],
+      '!username' => theme('username', array('account' => $this->getUser())),
+      '%total' => userpoints_get_current_points($this->getUid(), $this->getTid()),
+      '%category' => $this->getCategory(),
     ));
 
     $view_own_points = user_access('view own userpoints') || user_access('view userpoints') || user_access('administer userpoints');
     $view_all_points = user_access('view userpoints') || user_access('administer userpoints');
 
-    if ($params['status'] == USERPOINTS_TXN_STATUS_DECLINED) {
+    if ($this->isDeclined()) {
       // Points have been declined.
-      if ($account->uid == $user->uid && $view_own_points) {
-        $message = format_plural($params['points'], 'You did not receive approval for @count !point in the %category category.', 'You did not receive approval for @count !points in the %category category.', $arguments);
+      if ($this->getUid() == $user->uid && $view_own_points) {
+        $message = format_plural($this->getPoints(), 'You did not receive approval for @count !point in the %category category.', 'You did not receive approval for @count !points in the %category category.', $arguments);
       }
       elseif ($view_all_points) {
-        $message = format_plural($params['points'], '!username did not receive approval for @count !point in the %category category.', '!username did not receive approval for @count !points in the %category category.', $arguments);
+        $message = format_plural($this->getPoints(), '!username did not receive approval for @count !point in the %category category.', '!username did not receive approval for @count !points in the %category category.', $arguments);
       }
     }
-    elseif (isset($params['points']) && $params['points'] < 0) {
-      if ($params['status'] == USERPOINTS_TXN_STATUS_PENDING) {
-        if ($account->uid == $user->uid && $view_own_points) {
+    elseif ($this->getPoints() < 0) {
+      if ($this->isPending()) {
+        if ($this->getUid() == $user->uid && $view_own_points) {
           // Directly address the user if he is loosing points.
-          $message = format_plural(abs($params['points']), 'You just had a !point deducted, pending administrator approval.', 'You just had @count !points deducted, pending administrator approval.', $arguments);
+          $message = format_plural(abs($this->getPoints()), 'You just had a !point deducted, pending administrator approval.', 'You just had @count !points deducted, pending administrator approval.', $arguments);
         }
         elseif ($view_all_points) {
           // Only display message about other users if user has permission to view userpoints.
-          $message = format_plural(abs($params['points']), '!username just had a !point deducted, pending administrator approval.', '!username just had @count !points deducted, pending administrator approval.', $arguments);
+          $message = format_plural(abs($this->getPoints()), '!username just had a !point deducted, pending administrator approval.', '!username just had @count !points deducted, pending administrator approval.', $arguments);
         }
       }
       else {
-        if ($account->uid == $user->uid && $view_own_points) {
-          $message = format_plural(abs($params['points']), 'You just had a !point deducted and now have %total !points in the %category category.', 'You just had @count !points deducted and now have %total !points in the %category category.', $arguments);
+        if ($this->getUid() == $user->uid && $view_own_points) {
+          $message = format_plural(abs($this->getPoints()), 'You just had a !point deducted and now have %total !points in the %category category.', 'You just had @count !points deducted and now have %total !points in the %category category.', $arguments);
         }
         elseif ($view_all_points) {
-          $message = format_plural(abs($params['points']), '!username just had a !point deducted and now has %total !points in the %category category.', '!username just had @count !points deducted and now has %total !points in the %category category.', $arguments);
+          $message = format_plural(abs($this->getPoints()), '!username just had a !point deducted and now has %total !points in the %category category.', '!username just had @count !points deducted and now has %total !points in the %category category.', $arguments);
         }
       }
     }
-    elseif (!empty($params['points'])) {
-      if ($params['status'] == USERPOINTS_TXN_STATUS_PENDING) {
-        if ($account->uid == $user->uid && $view_own_points) {
+    else {
+      if ($this->isPending()) {
+        if ($this->getUid() == $user->uid && $view_own_points) {
           // Directly address the user if he is loosing points.
-          $message = format_plural(abs($params['points']), 'You just earned a !point, pending administrator approval.', 'You just earned @count !points, pending administrator approval.', $arguments);
+          $message = format_plural(abs($this->getPoints()), 'You just earned a !point, pending administrator approval.', 'You just earned @count !points, pending administrator approval.', $arguments);
         }
         elseif ($view_all_points) {
           // Only display message about other users if user has permission to view userpoints.
-          $message = format_plural(abs($params['points']), '!username just earned a !point, pending administrator approval.', '!username just earned @count !points, pending administrator approval.', $arguments);
+          $message = format_plural(abs($this->getPoints()), '!username just earned a !point, pending administrator approval.', '!username just earned @count !points, pending administrator approval.', $arguments);
         }
       }
       else {
-        if ($account->uid == $user->uid && $view_own_points) {
-          $message = format_plural(abs($params['points']), 'You just earned a !point and now have %total !points in the %category category.', 'You just earned @count !points and now have %total !points in the %category category.', $arguments);
+        if ($this->getUid() == $user->uid && $view_own_points) {
+          $message = format_plural(abs($this->getPoints()), 'You just earned a !point and now have %total !points in the %category category.', 'You just earned @count !points and now have %total !points in the %category category.', $arguments);
         }
         elseif ($view_all_points) {
-          $message = format_plural(abs($params['points']), '!username just earned a !point and now has %total !points in the %category category.', '!username just earned @count !points and now has %total !points in the %category category.', $arguments);
+          $message = format_plural(abs($this->getPoints()), '!username just earned a !point and now has %total !points in the %category category.', '!username just earned @count !points and now has %total !points in the %category category.', $arguments);
         }
       }
     }
+    return $message;
+  }
+
+  function getOperationInfo() {
+    return userpoints_get_info($this->getOperation());
+  }
+
+  /**
+   * Returns a descriptive reason for this transaction.
+   *
+   * The following resources are considered, in this order:
+   *
+   *  * description key in the information array for that operation.
+   *  * description of the transaction.
+   *  * name of the operation.
+   *
+   * @param $options
+   *   Array of options:
+   *   - link: If FALSE, no link is generated to the linked entity even if there
+   *     were one. Defaults to TRUE.
+   *   - truncate: Define if the reason should be truncated. Defaults to TRUE.
+   *   - skip_description: Allows to skip the eventually existing custom
+   *     description a transaction has and always uses the generated description.
+   *
+   * @return
+   *   The reason for that transaction, linked to the referenced entity if
+   *   available.
+   */
+  function getReason(array $options = array()) {
+
+    // Default options.
+    $options += array(
+      'link' => TRUE,
+      'truncate' => TRUE,
+    );
+
+    $safe = FALSE;
+    // Check transaction description first to allow custom overrides.
+    if (empty($options['skip_description']) && $description = $this->getDescription()) {
+      $reason = $description;
+    } else {
+      $info = $this->getOperationInfo();
+      // Check if there is a valid description callback defined for this
+      // operation.
+      if (!empty($info['description callback']) && function_exists($info['description callback'])) {
+        $reason = $info['description callback']($this, $this->getEntity());
+        $safe = TRUE;
+      }
+      // Try static description key.
+      elseif (!empty($info['description'])) {
+        $reason = $info['description'];
+        $safe = TRUE;
+      }
+    }
+    // Fallback to the operation name if there is no source.
+    if (empty($reason)) {
+      $reason = $this->getOperation();
+    }
+
+    // Truncate description.
+    $attributes = array();
+    $stripped_reason = strip_tags($reason);
+    if ($options['truncate'] && drupal_strlen($stripped_reason) > variable_get('userpoints_truncate', 30) + 3) {
+      // The title attribute will be check_plain()'d again drupal_attributes(),
+      // avoid double escaping.
+      $attributes['title'] = html_entity_decode($stripped_reason, ENT_QUOTES);
+      $reason = truncate_utf8($stripped_reason, variable_get('userpoints_truncate', 30), FALSE, TRUE);
+    }
+
+    // Link to the referenced entity, if available.
+    if ($this->getEntity() && $options['link']) {
+      $uri = entity_uri($this->getEntityType(), $this->getEntity());
+      if ($uri) {
+        $reason = l($reason, $uri['path'], $uri['options'] + array('html' => $safe, 'attributes' => $attributes));
+      }
+    }
+    if (($this->getEntity() || empty($uri)) && !$safe) {
+      // Escape possible user provided reason.
+      $reason = check_plain($reason);
+    }
+    return $reason;
+  }
+
+  /**
+   * Returns a list of operations as links.
+   *
+   * @param $show_view
+   *   FALSE if the view link should not be displayed. Defaults to TRUE.
+   *
+   * @return
+   *   A string with operation links.
+   */
+  function getActions($show_view = TRUE) {
+    $actions = array();
+    $url_options = array('query' => drupal_get_destination());
+
+    $uri = userpoints_transaction_uri_callback($this, TRUE);
+    $url_prefix = $uri['path'];
+
+    if ($show_view && userpoints_access_view_transaction($this)) {
+      $actions[] = l('view', $url_prefix . '/view');
+    }
+    if (userpoints_admin_access('edit')) {
+      $actions[] = l('edit', $url_prefix . '/edit', $url_options);
+    }
+    if (userpoints_admin_access('moderate') && $this->isPending()) {
+      $actions[] = l('approve', $url_prefix . '/approve', $url_options);
+      $actions[] = l('decline', $url_prefix . '/decline', $url_options);
+    }
+    return implode(' ', $actions);
+  }
+
+  /**
+   * Returns a single row for a transaction listing.
+   *
+   * @param $settings
+   *   Array with settings about which column shall be displayed. All settings
+   *   default to TRUE.
+   *   - show_category, show category column.
+   *   - show_user, show user column.
+   *   - show_status, show status column.
+   *
+   * @return
+   *   A table row array for use with theme_table().
+   */
+  function getTableRow($settings = array()) {
+    $settings += array(
+      'show_user' => TRUE,
+      'show_status' => TRUE,
+    );
+
+    $stati = userpoints_txn_status();
+    $css_stati = array(
+      USERPOINTS_TXN_STATUS_APPROVED => 'approved',
+      USERPOINTS_TXN_STATUS_DECLINED => 'declined',
+      USERPOINTS_TXN_STATUS_PENDING => 'pending',
+    );
+    $row = array('class' => array(
+      'userpoints-transaction-row-status-' . $css_stati[$this->getStatus()],
+      'userpoints-transaction-row-category-' . $this->getTid()),
+    );
+    if ($settings['show_user']) {
+      $row['data'][] = array(
+        'data' => theme('username', array('account' => $this->getUser())),
+        'class' => array('userpoints-transactions-field-user'),
+      );
+    }
+    $row['data'][] = array(
+      'data' => $this->getPoints(),
+      'class' => array('userpoints-transactions-field-points', 'userpoints-transaction-points-' . ($this->getPoints() > 0 ? 'positive' : 'negative')),
+    );
+
+    $categories = userpoints_get_categories();
+    if (count($categories) > 1) {
+      $row['data'][] = array(
+        'data' => $this->getCategory(),
+        'class' => array('userpoints-transactions-field-category'),
+      );
+    }
+    $row['data'][] = array(
+      'data' => format_date($this->getTimestamp(), 'small'),
+      'class' => array('userpoints-transactions-field-timestamp'),
+    );
+    $row['data'][] = array(
+      'data' => $this->getReason(),
+      'class' => array('userpoints-transactions-field-reason'),
+    );
+    if ($settings['show_status']) {
+      $row['data'][] = array(
+        'data' => $stati[$this->getStatus()],
+        'class' => array('userpoints-transactions-field-status'),
+      );
+    }
+    $row['data'][] = array(
+      'data' => $this->getActions(),
+      'class' => array('userpoints-transactions-field-actions'),
+    );
+    return $row;
   }
 
   function  __destruct() {
     // Automatically save new transactions to improve DX.
-    if (!$this->getTransactionId()) {
+    if (!$this->getTxnId()) {
       $this->save();
+    }
+  }
+
+  /**
+   * Magic function to allow access to property by name.
+   */
+  function __get($name) {
+    $method = str_replace('_', '', 'get' . ucfirst($name));
+    if (method_exists($this, $method)) {
+      return $this->$method();
+    } else {
+      throw new UserpointsInvalidPropertyException($name);
     }
   }
 }
@@ -706,3 +948,16 @@ class UserpointsChangeException extends Exception
 {
 
 }
+
+class UserpointsInvalidPropertyException extends Exception
+{
+  function __construct($name, $code = NULL, $previous = NULL) {
+    parent::__construct(t('Userpoints transaction does not have a @property property.', array('@property' => $name)), $code, $previous);
+  }
+}
+
+
+class UserpointsInvalidArgumentException extends Exception
+{
+}
+

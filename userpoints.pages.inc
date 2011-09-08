@@ -35,7 +35,7 @@ function userpoints_list_transactions($form, &$form_state, $account = NULL, $tid
   $header = userpoints_get_transaction_header($settings);
 
   $query = db_select('userpoints_txn', 'p')->extend('PagerDefault')->extend('TableSort')
-    ->fields('p')
+    ->fields('p', array('txn_id'))
     ->condition('p.uid', $account->uid)
     ->orderByHeader($header)
     // Enforce consistent sort order.
@@ -65,8 +65,10 @@ function userpoints_list_transactions($form, &$form_state, $account = NULL, $tid
   }
 
   $rows = array();
-  foreach ($query->execute() as $transaction) {
-    $rows[] = userpoints_get_transaction_row($transaction, $settings);
+  $result = $query->execute();
+  $transactions = userpoints_transaction_load_multiple($result->fetchCol());
+  foreach ($transactions as $transaction) {
+    $rows[] = $transaction->getTableRow($settings);
   }
 
   // Store context in the output array so that modules have access to it.
@@ -267,7 +269,7 @@ function userpoints_view_transaction($transaction) {
   $content['details']['reason'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('Reason'),
-    '#value' => userpoints_create_description($transaction, array('truncate' => FALSE)),
+    '#value' => $transaction->getReason(array('truncate' => FALSE)),
     '#weight' => 30,
     '#attributes' => array('class' => array('userpoints-item-reason')),
   );

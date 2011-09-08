@@ -26,6 +26,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
   drupal_add_css(drupal_get_path('module', 'userpoints') . '/userpoints.css');
 
   $timestamp = format_date(REQUEST_TIME, 'custom', 'Y-m-d H:i O');
+
   if ($mode == 'edit') {
     drupal_set_title(t('Edit !points transaction', userpoints_translation()));
     $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i:s O');
@@ -60,7 +61,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#title' => t('Points'),
       '#size' => 10,
       '#maxlength' => 10,
-      '#default_value' => isset($txn->points) ? $txn->points : 0,
+      '#default_value' => $txn ? $txn->points : 0,
       '#description' => t('The number of !points to add or subtract.  For example, enter %positive to add !points or %negative to deduct !points.', array('%positive' => 25, '%negative' => -25) + userpoints_translation()),
       '#required' => TRUE,
       '#weight' => -15,
@@ -71,7 +72,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
     $form['tid'] = array(
       '#type' => 'select',
       '#title' => t('Category'),
-      '#default_value' => isset($txn->tid) ? $txn->tid : userpoints_get_default_tid(),
+      '#default_value' => $txn ? $txn->tid : userpoints_get_default_tid(),
       '#options' => $options,
       '#description' => t('The !points category that should apply to this transaction.', userpoints_translation()),
       '#weight' => 0,
@@ -156,7 +157,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
   $form['reason']['operation'] = array(
       '#type' => 'textfield',
       '#title' => t('Operation'),
-      '#default_value' => isset($txn->operation) ? $txn->operation : t('admin'),
+      '#default_value' => isset($txn) ? $txn->operation : t('admin'),
       '#maxlength' => 48,
       '#description' => t('The operation type for this transaction (default is %admin). Any value is valid but using a defined operation will cause an auto-generated description (specific to the chosen operation) to be included. This description can be translated into multiple languages.', array('%admin' => t('admin'))),
       '#weight' => 5,
@@ -167,7 +168,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
   $form['reason']['description'] = array(
       '#type' => 'textarea',
       '#title' => t('Description'),
-      '#default_value' => isset($txn->description) ? $txn->description : '',
+      '#default_value' => isset($txn) ? $txn->description : '',
       '#rows' => 7,
       '#cols' => 40,
       '#description' => t('Enter an optional description for this transaction, such as the reason !points were added or subtracted.', userpoints_translation()),
@@ -189,7 +190,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
     '#title' => t('Linked entity'),
     '#weight' => 0,
     '#options' => $options,
-    '#default_value' => isset($txn->entity_type) ? $txn->entity_type : '',
+    '#default_value' => isset($txn) ? $txn->entity_type : '',
   );
 
   $form['reference']['entity_id'] = array(
@@ -199,21 +200,21 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
     '#weight' => 5,
     '#size' => 5,
     '#maxlength' => 20,
-    '#default_value' => isset($txn->entity_id) ? $txn->entity_id : '',
+    '#default_value' => isset($txn) ? $txn->entity_id : '',
     '#description' => t('Choose the entity type and ID to be referenced. A link to the entity will be shown.'),
   );
 
   $form['reference']['reference'] = array(
       '#type' => 'textfield',
       '#title' => t('Internal reference'),
-      '#default_value' => isset($txn->reference) ? $txn->reference : '',
+      '#default_value' => isset($txn) ? $txn->reference : '',
       '#size' => 30,
       '#maxlength' => 128,
       '#description' => t('Enter an optional reference code for this transaction. This is for internal tracking and is not shown to the end user.', userpoints_translation()),
       '#weight' => 10,
   );
 
-  $approved_by = !empty($txn->approver_uid) ? user_load($txn->approver_uid) : NULL;
+  $approved_by = $txn ? $txn->getApprover() : NULL;
   if ($approved_by) {
     $form['status']['approver'] = array(
       '#type' => 'textfield',
@@ -311,63 +312,57 @@ function userpoints_admin_txn_validate($form, &$form_state) {
  */
 function userpoints_admin_txn_submit($form, &$form_state) {
   global $user;
+
+  // Check if this is a new transaction or if we are editing an existing one.
   if ($form_state['values']['mode'] == 'add') {
-    $params = array(
-      'points' => $form_state['values']['points'],
-      'uid' => $form_state['values']['txn_user']->uid,
-      'operation' => $form_state['values']['operation'],
-      'description' => $form_state['values']['description'],
-      'reference' => $form_state['values']['reference'],
-      'tid' => $form_state['values']['tid'],
-      'time_stamp' => strtotime($form_state['values']['time_stamp']),
-      'moderate' => (bool)$form_state['values']['moderate'],
-      'approver_uid' => $user->uid,
-    );
-    if ($form_state['values']['expirydate']) {
-      // Check for the existence of an expirydate.
-      $params['expirydate'] = strtotime($form_state['values']['expirydate']);
+
+    // Create a new transaction object.
+    $transaction = userpoints_grant_points($form_state['values']['operation'], $form_state['values']['points'], $form_state['values']['txn_user']->uid)
+      ->setTimestamp($form_state['values']['time_stamp']);
+
+    // If the transaction should be moderated, set it to pending.
+    if ($form_state['values']['moderate']) {
+      $transaction->pending();
     }
-    if (!empty($form_state['values']['entity_id']) && !empty($form_state['values']['entity_type'])) {
-      $params['entity_type'] = $form_state['values']['entity_type'];
-      $params['entity_id'] = (int)$form_state['values']['entity_id'];
+
+    // New transactions are always "approved" by the current user.
+    $transaction->setApproverUid($user->uid);
+
+    // Check for the existence of an expirydate.
+    if ($form_state['values']['expirydate']) {
+      $transaction->setExpirationDate(strtotime($form_state['values']['expirydate']));
     }
   }
   else {
-    $expirydate = 0;
+
+    // Updating an existing transaction, load and update values.
+    $transaction = userpoints_transaction_load($form_state['values']['txn']->txn_id)
+      ->setPoints($form_state['values']['points'])
+      ->setStatus($form_state['values']['status'])
+      // We display a custom message instead of the default.
+      ->setMessage(t('Changes to the !points transaction have been saved.', userpoints_translation()));
+
+    // Allow to remove expiration date, first set it to 0 and only set it back
+    // if explicitly set.
+    $transaction->setExpirationDate(0);
     if (!empty($form_state['values']['expirydate'])) {
-      $expirydate = strtotime($form_state['values']['expirydate']);
+      $transaction->setExpirationDate(strtotime($form_state['values']['expirydate']));
     }
 
-    // If status changed, the current user is the new approver, when not
-    // changed, then the current approver is kept.
-    if ($form_state['values']['txn']->status == $form_state['values']['status']) {
-      $approver_uid = $form_state['values']['txn']->approver_uid;
+    // If status changed, the current user is the new approver.
+    if ($form_state['values']['txn']->status != $form_state['values']['status']) {
+      $transaction->setApproverUid($user->uid);
     }
-    else {
-      $approver_uid = $user->uid;
-    }
-
-    $params = array(
-      'uid' => $form_state['values']['txn']->uid,
-      'approver_uid' => $approver_uid,
-      'points' => $form_state['values']['points'],
-      'tid' => $form_state['values']['tid'],
-      'time_stamp' => strtotime($form_state['values']['time_stamp']),
-      'operation' => $form_state['values']['operation'],
-      'description' => $form_state['values']['description'],
-      'reference' => $form_state['values']['reference'],
-      'status' => $form_state['values']['status'],
-      'expirydate' => $expirydate,
-      'txn_id' => $form_state['values']['txn']->txn_id,
-      'display' => FALSE,
-    );
-    if (!empty($form_state['values']['entity_id']) && !empty($form_state['values']['entity_type'])) {
-      $params['entity_type'] = $form_state['values']['entity_type'];
-      $params['entity_id'] = (int)$form_state['values']['entity_id'];
-    }
-    drupal_set_message(t('Changes to the !points transaction have been saved.', userpoints_translation()));
   }
-  userpoints_userpointsapi($params);
+
+  // Set common properties and save the transaction.
+  $transaction
+    ->setTid($form_state['values']['tid'])
+    ->setOperation($form_state['values']['operation'])
+    ->setReference($form_state['values']['reference'])
+    ->setDescription($form_state['values']['description'])
+    ->setEntity($form_state['values']['entity_type'], $form_state['values']['entity_id'])
+    ->save();
 
   $form_state['redirect'] = 'admin/config/people/userpoints';
 }
@@ -490,8 +485,10 @@ function userpoints_admin_transactions($form, &$form_state, $moderate) {
   }
 
   $rows = array();
-  foreach ($query->execute() as $transaction) {
-    $rows[] = userpoints_get_transaction_row($transaction, $settings);
+  $result = $query->execute();
+  $transactions = userpoints_transaction_load_multiple($result->fetchCol());
+  foreach ($transactions as $transaction) {
+    $rows[] = $transaction->getTableRow($settings);
   }
 
   // Store context in the output array so that modules have access to it.

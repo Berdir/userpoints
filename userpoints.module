@@ -384,13 +384,7 @@ function userpoints_access_my_points($account = NULL) {
  *   TRUE if the user has permissions to view the transaction.
  */
 function userpoints_access_view_transaction($transaction) {
-  if (empty($transaction->user)) {
-    $account = user_load($transaction->uid);
-  }
-  else {
-    $account = $transaction->user;
-  }
-  return userpoints_access_my_points($account);
+  return userpoints_access_my_points($transaction->getUser());
 }
 
 /**
@@ -721,33 +715,6 @@ function userpoints_get_default_expiry_date() {
     }
   }
   return (int) $expirydate;
-}
-
-/*
- * Checks to ensure that a user exists corresponding to a category.
- *
- * @param $uid
- *   User ID to check for existence of points for the user.
- * @param $tid
- *   taxonomy id of the category to limit to, if omitted
- *   if the use has points in any category the return is TRUE.
- * @return
- *  TRUE if user found, FALSE otherwise.
- */
-
-function _userpoints_user_exists($uid, $tid = NULL) {
-  if (is_numeric($tid)) {
-    return (int) db_query('SELECT COUNT(uid)
-      FROM {userpoints}
-      WHERE uid = :uid AND tid = :tid',
-            array(':uid' => $uid, ':tid' => $tid))->fetchField();
-  }
-  else {
-    return (int) db_query('SELECT COUNT(uid)
-      FROM {userpoints}
-      WHERE uid = :uid',
-            array(':uid' => $uid))->fetchField();
-  }
 }
 
 /**
@@ -1254,91 +1221,6 @@ function userpoints_get_info($operation = NULL) {
 }
 
 /**
- * Creates a descriptive reason for a userpoints_transaction.
- *
- * The following resources are considered, in this order:
- *
- *  * description key in the information array for that operation.
- *  * description of the transaction.
- *  * name of the operation.
- *
- * @param $transaction
- *   The transaction object for which the description shall be generated.
- *
- * @param $options
- *   Array of options:
- *   - link: If FALSE, no link is generated to the linked entity even if there
- *     were one. Defaults to TRUE.
- *   - truncate: Define if the reason should be truncated. Defaults to TRUE.
- *   - skip_description: Allows to skip the eventually existing custom
- *     description a transaction has and always uses the generated description.
- *
- * @return
- *   The reason for that transaction, linked to the referenced
- *   entity if available.
- */
-function userpoints_create_description($transaction, array $options = array()) {
-
-  // Default options.
-  $options += array(
-    'link' => TRUE,
-    'truncate' => TRUE,
-  );
-
-  // Check if there is a valid entity referenced and which can be linked to.
-  $entity = NULL;
-  if ($transaction->entity_type && entity_get_info($transaction->entity_type)) {
-    $entity = entity_load($transaction->entity_type, array($transaction->entity_id));
-    $entity = reset($entity);
-  }
-  $safe = FALSE;
-  // Check transaction description first to allow custom overrides.
-  if (!empty($transaction->description) && empty($options['skip_description'])) {
-    $description = $transaction->description;
-  } else {
-    $info = userpoints_get_info($transaction->operation);
-    // Check if there is a valid description callback defined for this
-    // operation.
-    if (!empty($info['description callback']) && function_exists($info['description callback'])) {
-      $description = $info['description callback']($transaction, $entity);
-      $safe = TRUE;
-    }
-    // Try static description key.
-    elseif (!empty($info['description'])) {
-      $description = $info['description'];
-      $safe = TRUE;
-    }
-  }
-  // Fallback to the operation name if there is no source.
-  if (empty($description)) {
-    $description = $transaction->operation;
-  }
-
-  // Truncate description.
-  $attributes = array();
-  $stripped_description = strip_tags($description);
-  if ($options['truncate'] && drupal_strlen($stripped_description) > variable_get('userpoints_truncate', 30) + 3) {
-    // The title attribute will be check_plain()'d again drupal_attributes(),
-    // avoid double escaping.
-    $attributes['title'] = html_entity_decode($stripped_description, ENT_QUOTES);
-    $description = truncate_utf8($stripped_description, variable_get('userpoints_truncate', 30), FALSE, TRUE);
-  }
-
-  // Link to the referenced entity, if available.
-  if ($entity && $options['link']) {
-    $uri = entity_uri($transaction->entity_type, $entity);
-    if ($uri) {
-      $description = l($description, $uri['path'], $uri['options'] + array('html' => $safe, 'attributes' => $attributes));
-    }
-  }
-  if ((empty($entity) || empty($uri)) && !$safe) {
-    // Escape possible user provided reason.
-    $description = check_plain($description);
-  }
-  return $description;
-}
-
-/**
  * Implements hook_userpoints_info().
  */
 function userpoints_userpoints_info() {
@@ -1356,7 +1238,7 @@ function userpoints_userpoints_info() {
  * @param $txn_id
  *   Userpoints transaction Id.
  *
- * @return
+ * @return UserpointsTransaction
  *   A loaded userpoints transaction object.
  */
 function userpoints_transaction_load($txn_id, $reset = FALSE) {
@@ -1475,74 +1357,6 @@ function userpoints_get_list_row($data) {
     $row[] = array('data' => isset($categories[$data->tid]) ? $categories[$data->tid] : $categories[0], 'align' => 'right');
   }
   $row[] = array('data' => $data->points, 'align' => 'right');
-  return $row;
-}
-
-/**
- * Returns a single row for a transaction listing.
- * @param $transaction
- *   Transaction object.
- * @param $settings
- *   Array with settings about which column shall be displayed. All settings
- *   default to TRUE.
- *   - show_category, show category column.
- *   - show_user, show user column.
- *   - show_status, show status column.
- * @return
- *   A table row array for use with theme_table().
- */
-function userpoints_get_transaction_row($transaction, $settings = array()) {
-  $settings += array(
-    'show_user' => TRUE,
-    'show_status' => TRUE,
-  );
-
-  $stati = userpoints_txn_status();
-  $css_stati = array(
-    USERPOINTS_TXN_STATUS_APPROVED => 'approved',
-    USERPOINTS_TXN_STATUS_DECLINED => 'declined',
-    USERPOINTS_TXN_STATUS_PENDING => 'pending',
-  );
-  $row = array('class' => array(
-    'userpoints-transaction-row-status-' . $css_stati[$transaction->status],
-    'userpoints-transaction-row-category-' . $transaction->tid),
-  );
-  if ($settings['show_user']) {
-    $row['data'][] = array(
-      'data' => theme('username', array('account' => user_load($transaction->uid))),
-      'class' => array('userpoints-transactions-field-user'),
-    );
-  }
-  $row['data'][] = array(
-    'data' => $transaction->points,
-    'class' => array('userpoints-transactions-field-points', 'userpoints-transaction-points-' . ($transaction->points > 0 ? 'positive' : 'negative')),
-  );
-
-  $categories = userpoints_get_categories();
-  if (count($categories) > 1) {
-    $row['data'][] = array(
-      'data' => isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[0],
-      'class' => array('userpoints-transactions-field-category'),
-    );
-  }
-  $row['data'][] = array(
-    'data' => format_date($transaction->time_stamp, 'small'),
-    'class' => array('userpoints-transactions-field-timestamp'),
-  );
-  $row['data'][] = array(
-    'data' => userpoints_create_description($transaction),
-    'class' => array('userpoints-transactions-field-reason'),
-  );
-  if ($settings['show_status']) {
-    $row['data'][] = array(
-      'data' => $stati[$transaction->status],
-      'class' => array('userpoints-transactions-field-status'),
-    );
-  }
-  $row['data'][] = array(
-    'data' => userpoints_get_transaction_actions($transaction),
-    'class' => array('userpoints-transactions-field-actions'),
-  );
   return $row;
 }
 
@@ -1725,16 +1539,78 @@ function userpoints_transaction_uri_callback($transaction, $prefix_only = FALSE)
  * Userpoints transaction controller.
  */
 class UserpointsTransactionController extends DrupalDefaultEntityController {
+    
+  /**
+   * Overrides DrupalDefaultEntityController::load().
+   */
+  public function load($ids = array(), $conditions = array()) {
+    $entities = array();
 
-  protected function attachLoad(&$transactions, $revision_id = FALSE) {
-    $categories = userpoints_get_categories();
-    foreach ($transactions as $transaction) {
-        // Load corresponding user object.
-        $transaction->user = user_load($transaction->uid);
-
-        // Load category.
-        $transaction->category = isset($categories[$transaction->tid]) ? $categories[$transaction->tid] : $categories[userpoints_get_default_tid()];
+    // Revisions are not statically cached, and require a different query to
+    // other conditions, so separate the revision id into its own variable.
+    if ($this->revisionKey && isset($conditions[$this->revisionKey])) {
+      $revision_id = $conditions[$this->revisionKey];
+      unset($conditions[$this->revisionKey]);
     }
-    parent::attachLoad($transactions, $revision_id);
+    else {
+      $revision_id = FALSE;
+    }
+
+    // Create a new variable which is either a prepared version of the $ids
+    // array for later comparison with the entity cache, or FALSE if no $ids
+    // were passed. The $ids array is reduced as items are loaded from cache,
+    // and we need to know if it's empty for this reason to avoid querying the
+    // database when all requested entities are loaded from cache.
+    $passed_ids = !empty($ids) ? array_flip($ids) : FALSE;
+    // Try to load entities from the static cache, if the entity type supports
+    // static caching.
+    if ($this->cache && !$revision_id) {
+      $entities += $this->cacheGet($ids, $conditions);
+      // If any entities were loaded, remove them from the ids still to load.
+      if ($passed_ids) {
+        $ids = array_keys(array_diff_key($passed_ids, $entities));
+      }
+    }
+
+    // Load any remaining entities from the database. This is the case if $ids
+    // is set to FALSE (so we load all entities), if there are any ids left to
+    // load, if loading a revision, or if $conditions was passed without $ids.
+    if ($ids === FALSE || $ids || $revision_id || ($conditions && !$passed_ids)) {
+      // Build the query.
+      $query = $this->buildQuery($ids, $conditions, $revision_id);
+      $queried_entities = array();
+      $result = $query->execute();
+      foreach ($result->fetchAllAssoc($this->idKey, PDO::FETCH_ASSOC) as $row) {
+          $queried_entities[$row[$this->idKey]] = new UserpointsTransaction($row);
+      }
+    }
+
+    // Pass all entities loaded from the database through $this->attachLoad(),
+    // which attaches fields (if supported by the entity type) and calls the
+    // entity type specific load callback, for example hook_node_load().
+    if (!empty($queried_entities)) {
+      $this->attachLoad($queried_entities, $revision_id);
+      $entities += $queried_entities;
+    }
+
+    if ($this->cache) {
+      // Add entities to the cache if we are not loading a revision.
+      if (!empty($queried_entities) && !$revision_id) {
+        $this->cacheSet($queried_entities);
+      }
+    }
+
+    // Ensure that the returned array is ordered the same as the original
+    // $ids array if this was passed in and remove any invalid ids.
+    if ($passed_ids) {
+      // Remove any invalid ids from the array.
+      $passed_ids = array_intersect_key($passed_ids, $entities);
+      foreach ($entities as $entity) {
+        $passed_ids[$entity->{$this->idKey}] = $entity;
+      }
+      $entities = $passed_ids;
+    }
+
+    return $entities;
   }
 }

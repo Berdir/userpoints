@@ -29,11 +29,11 @@ class UserpointsBaseTestCase extends DrupalWebTestCase {
    *   The most recent transaction id, assuming that this belongs to this
    *   transaction.
    */
-  function addPoints($points, $user, $total = NULL) {
+  function addPoints($points, $user, $total = NULL, $additional = array()) {
     $edit = array(
       'txn_user' => $user->name,
       'points' => $points,
-    );
+    ) + $additional;
     $this->drupalPost('admin/config/people/userpoints/add', $edit, t('Save'));
     if ($total !== NULL) {
       $categories = userpoints_get_categories();
@@ -744,12 +744,13 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $category = $categories[$tid];
 
     // Grant some points with admin user.
-    $txn_id = $this->addPoints(10, $user, 10);
+    $txn_id = $this->addPoints(10, $user, NULL, array('moderate' => 1));
+    $this->assertText(t('@user just earned @points points, pending administrator approval.', array('@user' => $user->name, '@points' => 10)));
 
-    // Go to the listing page, verify that the user is shown.
+    // Go to the listing page, verify that the user is not shown yet, as the
+    // points are still pending.
     $row = $this->xpath('//table/tbody/tr');
-    //$this->assertEqual(strip_tags((string)$row[0]->td[0]), t('@name (details)', array('@name' => $user->name)), t('User name with details link displayed.'));
-    $this->assertEqual((string)$row[0]->td[1], 10, t('Points correctly displayed.'));
+    $this->assertTrue(empty($row));
 
     // Go to the transaction listing page, verify that the transaction is shown.
     $this->clickLink(t('Transactions'));
@@ -759,12 +760,12 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $this->assertEqual((string)$row[0]->td[1], 10, t('Points correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[2], format_date($transaction->time_stamp, 'small'), t('Date correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[3], 'admin', t('Reason correctly displayed.'));
-    $this->assertEqual((string)$row[0]->td[4], t('Approved'), t('Status correctly displayed.'));
+    $this->assertEqual((string)$row[0]->td[4], t('Pending'), t('Status correctly displayed.'));
 
     $this->clickLink(t('edit'));
 
     // Verify default values.
-    $this->assertFieldByName('points', 10);
+    $this->assertFieldByName('points', 10, t('Points default value is correct.'));
     $value = $this->xpath("//input[@name=:name and @disabled=:disabled]/@value", array(':name' => 'txn_user', ':disabled' => 'disabled'));
     $this->assertEqual($value[0]['value'], $user->name, t('User field has the correct value and is disabled.'));
     $this->assertFieldByName('approver', $this->admin_user->name);
@@ -774,6 +775,7 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
       'operation' => $this->randomName(),
       'description' => $this->randomName(),
       'reference' => $this->randomName(),
+      'status' => USERPOINTS_TXN_STATUS_APPROVED,
     );
     $this->drupalPost(NULL, $edit, t('Save'));
 
@@ -835,46 +837,59 @@ class UserpointsGrantPointsTestCase extends UserpointsBaseTestCase {
     $this->drupalLogin($this->non_admin_user);
   }
 
+  /**
+   * Test basic usage of the API to create and update transactions.
+   */
   function testGrantPoints() {
-    userpoints_grant_points('test', 10, $this->non_admin_user->uid)
-      ->save();
-
+    // Most basic usage, with automated saving.
+    userpoints_grant_points('test', 10, $this->non_admin_user->uid);
     $this->verifyPoints($this->non_admin_user->uid, 10, 10);
 
+    // Negative points, use of save().
     userpoints_grant_points('test', -5, $this->non_admin_user->uid)
       ->save();
-
     $this->verifyPoints($this->non_admin_user->uid, 5, 10);
 
+    // Verify that pending points are not added to the total.
     $transaction = userpoints_grant_points('test', 7, $this->non_admin_user->uid)
       ->pending()
       ->save();
-
     $this->verifyPoints($this->non_admin_user->uid, 5, 10);
 
+    // Make sure that loaded transactions can be updated, and after marked as
+    // approved, the points are correct.
+    $transaction = userpoints_transaction_load($transaction->getTxnId());
     $transaction
       ->approve()
       ->save();
-
     $this->verifyPoints($this->non_admin_user->uid, 12, 12);
+
+    try {
+      // Approved transaction must not be changed.
+      $transaction
+        ->setPoints(123)
+        ->save();
+      $this->fail(t('Changing a approved transaction was not denied.'));
+    } catch (UserpointsChangeException $e) {
+      $this->pass(t('Changing a approved transaction was denied.'));
+    }
 
     $transaction = userpoints_grant_points('test', 19, $this->non_admin_user->uid)
       ->pending()
       ->save();
-
     $this->verifyPoints($this->non_admin_user->uid, 12, 12);
 
+    // Transactions can be declined.
     $transaction
       ->decline()
       ->save();
-
     $this->verifyPoints($this->non_admin_user->uid, 12, 12);
 
     try {
+      // Declined transaction must not be changed.
       $transaction
         ->setPoints(123)
         ->save();
-
       $this->fail(t('Changing a declined transaction was not denied.'));
     } catch (UserpointsChangeException $e) {
       $this->pass(t('Changing a declined transaction was denied.'));
