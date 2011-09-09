@@ -23,7 +23,7 @@ class UserpointsTransaction {
   protected $description;
   protected $status;
   protected $reference;
-  protected $expired;
+  protected $expired = 0;
   protected $expirydate;
   protected $time_stamp;
   protected $changed;
@@ -36,6 +36,8 @@ class UserpointsTransaction {
   protected $display = TRUE;
   protected $message;
   protected $orig_status;
+
+  protected $aborted = FALSE;
 
   /**
    * Start a new transaction or update an existing one.
@@ -134,6 +136,7 @@ class UserpointsTransaction {
 
     // Check allowed values.
     if (!in_array($status, array(UserpointsTransaction::STATUS_APPROVED, UserpointsTransaction::STATUS_DECLINED, UserpointsTransaction::STATUS_PENDING))) {
+      $this->aborted = TRUE;
       throw new UserpointsChangeException(t('Invalid status'));
     }
 
@@ -158,11 +161,13 @@ class UserpointsTransaction {
   function setExpirationDate($expirydate) {
     $this->checkChange();
 
-    if ($expirydate < REQUEST_TIME) {
-      $this->setExpired(TRUE);
+    if ($expirydate > 0 || $expirydate === 0 || $expirydate === NULL) {
+      $this->expirydate = (int)$expirydate;
     }
-
-    $this->expirydate = $expirydate;
+    else {
+      $this->aborted = TRUE;
+      throw new UserpointsInvalidArgumentException(t('Expiration date must be an integer'));
+    }
     return $this;
   }
 
@@ -224,6 +229,7 @@ class UserpointsTransaction {
 
     // Empty points amount is not allowed.
     if (empty($points)) {
+      $this->aborted = TRUE;
       throw new UserpointsInvalidArgumentException();
     }
 
@@ -502,12 +508,14 @@ class UserpointsTransaction {
 
   function save() {
     if (empty($this->points) || empty($this->uid) || empty($this->operation)) {
+      $this->aborted = TRUE;
       throw new UserpointsTransactionIncompleteException();
     }
 
     module_invoke_all('userpoints_transaction_before', $this);
 
     if ($this->isDenied()) {
+      $this->aborted = TRUE;
       throw new UserpointsTransactionDeniedException($this->getDenyReasons());
     }
 
@@ -527,6 +535,8 @@ class UserpointsTransaction {
       'status' => $this->status,
       'tid' => $this->tid,
       'approver_uid' => $this->approver_uid,
+      'expirydate' => $this->expirydate,
+      'expired' => $this->expired,
     );
 
     if (empty($this->txn_id)) {
@@ -542,7 +552,7 @@ class UserpointsTransaction {
     }
 
     // Update totals.
-    if ($this->getStatus() == UserpointsTransaction::STATUS_APPROVED) {
+    if ($this->getStatus() == UserpointsTransaction::STATUS_APPROVED && !$this->getExpired()) {
       $this->updateTotals();
     }
 
@@ -595,6 +605,7 @@ class UserpointsTransaction {
 
   protected function checkChange($only_new = FALSE) {
     if (!empty($this->txn_id) && ($only_new || $this->orig_status <> UserpointsTransaction::STATUS_PENDING)) {
+      $this->aborted = TRUE;
       throw new UserpointsChangeException(t('This transaction is saved and approved or pending and can not be changed.'));
     }
   }
@@ -633,6 +644,7 @@ class UserpointsTransaction {
     $view_own_points = user_access('view own userpoints') || user_access('view userpoints') || user_access('administer userpoints');
     $view_all_points = user_access('view userpoints') || user_access('administer userpoints');
 
+    $message = NULL;
     if ($this->isDeclined()) {
       // Points have been declined.
       if ($this->getUid() == $user->uid && $view_own_points) {
@@ -865,7 +877,7 @@ class UserpointsTransaction {
 
   function __destruct() {
     // Automatically save new transactions to improve DX.
-    if (!$this->getTxnId()) {
+    if (!$this->getTxnId() && !$this->aborted) {
       $this->save();
     }
   }

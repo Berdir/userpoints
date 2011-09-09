@@ -7,13 +7,10 @@
 
 function userpoints_confirm_approve_submit($form, &$form_state) {
   global $user;
-
-  $params = array(
-    'txn_id' => $form_state['values']['txn_id'],
-    'approver_uid' => $user->uid,
-    'status' => $form_state['values']['operation'],
-  );
-  userpoints_userpointsapi($params);
+  userpoints_transaction_load($form_state['values']['txn_id'])
+    ->setApproverUid($user->uid)
+    ->setStatus($form_state['values']['operation'])
+    ->save();
 
   $form_state['redirect'] = 'admin/config/people/userpoints/moderate';
 }

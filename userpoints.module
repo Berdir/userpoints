@@ -1051,40 +1051,33 @@ function userpoints_date_to_timestamp($date) {
  * opposite transactions (sum of 0).
  */
 function userpoints_expire_transactions() {
-  $sql = "SELECT txn_id, uid, points, time_stamp, operation, description, tid
+  $sql = "SELECT txn_id
           FROM {userpoints_txn}
           WHERE status = 0 AND expired = 0
           AND (expirydate < :expiry_date AND expirydate != 0)";
-  $result = db_query($sql, array(':expiry_date' => REQUEST_TIME));
-  foreach ($result as $line) {
-    $time_stamp_formatted = format_date($line->time_stamp, 'custom', 'Y-m-d H:i');
+  $txn_ids = db_query($sql, array(':expiry_date' => REQUEST_TIME))->fetchCol();
+  foreach (userpoints_transaction_load_multiple($txn_ids) as $transaction) {
+    $time_stamp_formatted = format_date($transaction->time_stamp, 'custom', 'Y-m-d H:i');
     $arguments = array_merge(userpoints_translation(), array(
-      '!operation' => $line->operation,
-      '!description' => $line->description,
-      '!txn_id' => $line->txn_id,
+      '!operation' => $transaction->operation,
+      '!description' => $transaction->description,
+      '!txn_id' => $transaction->txn_id,
       '!date' => $time_stamp_formatted,
     ));
     $description = strtr(variable_get(USERPOINTS_EXPIRY_DESCRIPTION, NULL), $arguments);
 
-    $params = array(
-      'points' => -$line->points,
-      'uid' => $line->uid,
-      'operation' => 'expiry',
-      'description' => $description,
-      'parent_txn_id' => $line->txn_id,
-      'moderate' => FALSE,
-      'tid' => $line->tid,
-      'time_stamp' => $line->time_stamp,
-      'expirydate' => 0,
-    );
-    userpoints_userpointsapi($params);
-    // Ok we've expired the entry lets update the original entry to set the
-    // expired flag.
-    $params = array(
-        'txn_id' => $line->txn_id,
-        'expired' => 1,
-    );
-    userpoints_userpointsapi($params);
+    userpoints_grant_points('expiry', -$transaction->points, $transaction->uid)
+      ->setDescription($description)
+      ->setParent($transaction->txn_id)
+      ->setTid($transaction->tid)
+      ->setExpirationDate(0)
+      ->save();
+
+    // Ok we've expired the entry, now the original transaction needs to be
+    // marked as expired.
+    $transaction
+      ->setExpired(1)
+      ->save();
   }
 }
 
