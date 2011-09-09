@@ -48,7 +48,7 @@ function userpoints_list_transactions($form, &$form_state, $account = NULL, $tid
 
   $unapproved_query = db_select('userpoints_txn', 'p')
     ->condition('uid', $account->uid)
-    ->condition('status', USERPOINTS_TXN_STATUS_PENDING);
+    ->condition('status', UserpointsTransaction::STATUS_PENDING);
   $unapproved_query->addExpression('SUM(points)');
 
   $values = userpoints_filter_parse_input($form_state, $tid);
@@ -221,9 +221,9 @@ function userpoints_view_transaction($transaction) {
   drupal_set_title(t('View transaction #@txn_id', array('@txn_id' => $transaction->txn_id)));
 
   $css_stati = array(
-    USERPOINTS_TXN_STATUS_APPROVED => 'approved',
-    USERPOINTS_TXN_STATUS_DECLINED => 'declined',
-    USERPOINTS_TXN_STATUS_PENDING => 'pending',
+    UserpointsTransaction::STATUS_APPROVED => 'approved',
+    UserpointsTransaction::STATUS_DECLINED => 'declined',
+    UserpointsTransaction::STATUS_PENDING => 'pending',
   );
   $classes = 'userpoints-view-' . $css_stati[$transaction->status] . ' userpoints-view-category-' . $transaction->tid . ' userpoints-view-' . ($transaction->points > 0 ? 'positive' : 'negative');
   if (!empty($transaction->expirydate)) {

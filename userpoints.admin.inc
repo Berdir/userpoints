@@ -457,7 +457,7 @@ function userpoints_admin_transactions($form, &$form_state, $moderate) {
     ->limit(variable_get(USERPOINTS_REPORT_USERCOUNT, 30));
 
   if ($moderate) {
-    $query->condition('p.status', USERPOINTS_TXN_STATUS_PENDING);
+    $query->condition('p.status', UserpointsTransaction::STATUS_PENDING);
   }
 
   if (module_exists('taxonomy')) {
@@ -540,7 +540,7 @@ function userpoints_confirm_approve($form, $form_state, $operation, $transaction
     $description = format_plural($transaction->points, 'Do you want to approve @count !point for !user in the %category category?', 'Do you want to approve @count !points for !user in the %category category?', $arguments);
     $form['operation'] = array(
       '#type' => 'value',
-      '#value' => USERPOINTS_TXN_STATUS_APPROVED,
+      '#value' => UserpointsTransaction::STATUS_APPROVED,
     );
   }
   else {
@@ -548,7 +548,7 @@ function userpoints_confirm_approve($form, $form_state, $operation, $transaction
     $description = format_plural($transaction->points, 'Do you want to decline @count !point for !user in the %category category?', 'Do you want to decline @count !points for !user in the %category category?', $arguments);
     $form['operation'] = array(
       '#type' => 'value',
-      '#value' => USERPOINTS_TXN_STATUS_DECLINED,
+      '#value' => UserpointsTransaction::STATUS_DECLINED,
     );
   }
 

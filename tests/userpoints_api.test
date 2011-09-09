@@ -629,7 +629,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     // Change status to pending.
     $params = array(
       'txn_id' => $txn_id,
-      'status' => USERPOINTS_TXN_STATUS_PENDING,
+      'status' => UserpointsTransaction::STATUS_PENDING,
     );
     userpoints_userpointsapi($params);
     $this->verifyPoints($uid, 100, 105, 0);
@@ -637,7 +637,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     // Change status back to approved.
     $params = array(
       'txn_id' => $txn_id,
-      'status' => USERPOINTS_TXN_STATUS_APPROVED,
+      'status' => UserpointsTransaction::STATUS_APPROVED,
     );
     userpoints_userpointsapi($params);
     $this->verifyPoints($uid, 95, 105, 0);
@@ -655,7 +655,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $params = array(
       'txn_id' => $txn_id,
       'points' => 3,
-      'status' => USERPOINTS_TXN_STATUS_PENDING,
+      'status' => UserpointsTransaction::STATUS_PENDING,
     );
     userpoints_userpointsapi($params);
     $this->verifyPoints($uid, 100, 105, 0);
@@ -664,7 +664,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     // Change status back to approved.
     $params = array(
       'txn_id' => $txn_id,
-      'status' => USERPOINTS_TXN_STATUS_APPROVED,
+      'status' => UserpointsTransaction::STATUS_APPROVED,
     );
     userpoints_userpointsapi($params);
     $this->verifyPoints($uid, 53, 53, 1);
@@ -684,7 +684,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
       'txn_id' => $txn_id,
       'points' => 10,
       'tid' => 1,
-      'status' => USERPOINTS_TXN_STATUS_DECLINED,
+      'status' => UserpointsTransaction::STATUS_DECLINED,
     );
     userpoints_userpointsapi($params);
     $this->verifyPoints($uid, 100, 109, 0);
@@ -694,7 +694,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $params = array(
       'txn_id' => $txn_id,
       'points' => 4,
-      'status' => USERPOINTS_TXN_STATUS_APPROVED,
+      'status' => UserpointsTransaction::STATUS_APPROVED,
     );
     userpoints_userpointsapi($params);
     $this->verifyPoints($uid, 100, 109, 0);
@@ -775,7 +775,7 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
       'operation' => $this->randomName(),
       'description' => $this->randomName(),
       'reference' => $this->randomName(),
-      'status' => USERPOINTS_TXN_STATUS_APPROVED,
+      'status' => UserpointsTransaction::STATUS_APPROVED,
     );
     $this->drupalPost(NULL, $edit, t('Save'));
 

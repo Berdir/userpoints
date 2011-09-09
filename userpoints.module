@@ -11,11 +11,6 @@ define('USERPOINTS_STATUS', 'userpoints_status');
 
 define('USERPOINTS_POINTS_MODERATION', 'userpoints_points_moderation');
 
-define('USERPOINTS_TXN_STATUS_APPROVED', 0);
-define('USERPOINTS_TXN_STATUS_PENDING', 1);
-define('USERPOINTS_TXN_STATUS_DECLINED', 2);
-
-
 define('USERPOINTS_EXPIRY_DESCRIPTION', 'userpoints_expiry_description');
 define('USERPOINTS_EXPIREON_DATE', 'userpoints_expireon_date');
 define('USERPOINTS_EXPIREAFTER_DATE', 'userpoints_expireafter_date');
@@ -56,9 +51,9 @@ function userpoints_txn_status() {
   static $stati;
   if (empty($stati)) {
     $stati = array(
-      USERPOINTS_TXN_STATUS_APPROVED => t('Approved'),
-      USERPOINTS_TXN_STATUS_PENDING => t('Pending'),
-      USERPOINTS_TXN_STATUS_DECLINED => t('Declined'),
+      UserpointsTransaction::STATUS_APPROVED => t('Approved'),
+      UserpointsTransaction::STATUS_PENDING => t('Pending'),
+      UserpointsTransaction::STATUS_DECLINED => t('Declined'),
     );
   }
   return $stati;
@@ -357,8 +352,8 @@ function userpoints_menu_local_tasks_alter(&$data, $router_item, $root_path) {
  *
  * Only pending transactions can be approved or declined.
  */
-function userpoints_admin_access_transaction_pending($transaction) {
-  return $transaction->status == USERPOINTS_TXN_STATUS_PENDING && userpoints_admin_access('moderate');
+function userpoints_admin_access_transaction_pending(UserpointsTransaction $transaction) {
+  return $transaction->isPending() && userpoints_admin_access('moderate');
 }
 
 /**
@@ -1249,38 +1244,6 @@ function userpoints_transaction_load($txn_id, $reset = FALSE) {
 
 function userpoints_transaction_load_multiple(array $txn_ids, $conditions = array(), $reset = FALSE) {
   return entity_load('userpoints_transaction', $txn_ids, $conditions, $reset);
-}
-
-/**
- * Returns a list of operations as links.
- *
- * @param $transaction
- *   Transaction object.
- *
- * @param $show_view
- *   FALSE if the view link should not be displayed. Defaults to TRUE.
- *
- * @return
- *   A string with operation links.
- */
-function userpoints_get_transaction_actions($transaction, $show_view = TRUE) {
-  $actions = array();
-  $url_options = array('query' => drupal_get_destination());
-
-  $uri = userpoints_transaction_uri_callback($transaction, TRUE);
-  $url_prefix = $uri['path'];
-
-  if ($show_view && userpoints_access_view_transaction($transaction)) {
-    $actions[] = l('view', $url_prefix . '/view');
-  }
-  if (userpoints_admin_access('edit')) {
-    $actions[] = l('edit', $url_prefix . '/edit', $url_options);
-  }
-  if (userpoints_admin_access('moderate') && $transaction->status == USERPOINTS_TXN_STATUS_PENDING) {
-    $actions[] = l('approve', $url_prefix . '/approve', $url_options);
-    $actions[] = l('decline', $url_prefix . '/decline', $url_options);
-  }
-  return implode(' ', $actions);
 }
 
 /**

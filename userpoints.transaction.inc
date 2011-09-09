@@ -1,87 +1,25 @@
 <?php
 
-interface UserpointsTransactionInterface
-{
-
-  function setEntity($entity_type, $entity_id);
-
-  function setReference($reference);
-
-  function setDescription($description);
-
-  function setStatus($status);
-
-  function setExpirationDate($expirydate);
-
-  function setExpired($expired);
-
-  function setUid($uid);
-
-  function setApproverUid($uid);
-
-  function setPoints($points);
-
-  function setTimestamp($timestamp);
-
-  function setParent($txn_id);
-
-  function setTid($tid);
-
-  function setOperation($operation);
-
-  function setDisplay($display);
-
-  function getEntity();
-
-  function getReference();
-
-  function getDescription();
-
-  function getStatus();
-
-  function getExpirationDate();
-
-  function getExpired();
-
-  function getUid();
-
-  function getApproverUid();
-
-  function getPoints();
-
-  function getTimestamp();
-
-  function getChanged();
-
-  function getParent();
-
-  function getTid();
-
-  function getOperation();
-
-  function getDisplay();
-
-  function save();
-
-  function deny($reason);
-
-  function isDenied();
-
-  function getDenyReasons();
-}
+/**
+ * @file
+ * Contains the UserpointsTransaction and related classes.
+ */
 
 /**
  * A Userpoints transaction.
  *
  * @ingroup userpoints_api
  */
-class UserpointsTransaction
-{
+class UserpointsTransaction {
+
+  const STATUS_APPROVED = 0;
+  const STATUS_PENDING = 1;
+  const STATUS_DECLINED = 2;
 
   protected $txn_id;
   protected $uid;
   protected $points;
-  protected $approver_uid;
+  protected $approver_uid = 0;
   protected $description;
   protected $status;
   protected $reference;
@@ -97,7 +35,6 @@ class UserpointsTransaction
   protected $denied_reasons = array();
   protected $display = TRUE;
   protected $message;
-
   protected $orig_status;
 
   /**
@@ -116,7 +53,7 @@ class UserpointsTransaction
     }
     else {
       // Set default values.
-      $this->status = variable_get('userpoints_points_moderation', USERPOINTS_TXN_STATUS_APPROVED);
+      $this->status = variable_get('userpoints_points_moderation', UserpointsTransaction::STATUS_APPROVED);
       $this->tid = userpoints_get_default_tid();
       $this->expirydate = userpoints_get_default_expiry_date();
       $this->time_stamp = REQUEST_TIME;
@@ -187,8 +124,8 @@ class UserpointsTransaction
    * You can use the approve(), decline() and pending() functions as a shortcut.
    *
    * @param $status
-   *   One of the following constants: USERPOINTS_TXN_STATUS_APPROVED,
-   *   USERPOINTS_TXN_STATUS_DECLINED, USERPOINTS_TXN_STATUS_PENDING.
+   *   One of the following constants: UserpointsTransaction::STATUS_APPROVED,
+   *   UserpointsTransaction::STATUS_DECLINED, UserpointsTransaction::STATUS_PENDING.
    *
    * @return UserpointsTransaction
    */
@@ -196,7 +133,7 @@ class UserpointsTransaction
     $this->checkChange();
 
     // Check allowed values.
-    if (!in_array($status, array(USERPOINTS_TXN_STATUS_APPROVED, USERPOINTS_TXN_STATUS_DECLINED, USERPOINTS_TXN_STATUS_PENDING))) {
+    if (!in_array($status, array(UserpointsTransaction::STATUS_APPROVED, UserpointsTransaction::STATUS_DECLINED, UserpointsTransaction::STATUS_PENDING))) {
       throw new UserpointsChangeException(t('Invalid status'));
     }
 
@@ -269,7 +206,7 @@ class UserpointsTransaction
    */
   function setApproverUid($uid) {
     $this->checkChange();
-    $this->approver_uid = $uid;
+    $this->approver_uid = (int)$uid;
     return $this;
   }
 
@@ -444,7 +381,6 @@ class UserpointsTransaction
     return $this->description;
   }
 
-
   /**
    * The status of this transaction.
    *
@@ -538,30 +474,30 @@ class UserpointsTransaction
   }
 
   function pending() {
-    $this->setStatus(USERPOINTS_TXN_STATUS_PENDING);
+    $this->setStatus(UserpointsTransaction::STATUS_PENDING);
     return $this;
   }
 
   function approve() {
-    $this->setStatus(USERPOINTS_TXN_STATUS_APPROVED);
+    $this->setStatus(UserpointsTransaction::STATUS_APPROVED);
     return $this;
   }
 
   function decline() {
-    $this->setStatus(USERPOINTS_TXN_STATUS_DECLINED);
+    $this->setStatus(UserpointsTransaction::STATUS_DECLINED);
     return $this;
   }
 
   function isPending() {
-    return $this->getStatus() == USERPOINTS_TXN_STATUS_PENDING;
+    return $this->getStatus() == UserpointsTransaction::STATUS_PENDING;
   }
 
   function isDeclined() {
-    return $this->getStatus() == USERPOINTS_TXN_STATUS_DECLINED;
+    return $this->getStatus() == UserpointsTransaction::STATUS_DECLINED;
   }
 
   function isApproved() {
-    return $this->getStatus() == USERPOINTS_TXN_STATUS_APPROVED;
+    return $this->getStatus() == UserpointsTransaction::STATUS_APPROVED;
   }
 
   function save() {
@@ -606,7 +542,7 @@ class UserpointsTransaction
     }
 
     // Update totals.
-    if ($this->getStatus() == USERPOINTS_TXN_STATUS_APPROVED) {
+    if ($this->getStatus() == UserpointsTransaction::STATUS_APPROVED) {
       $this->updateTotals();
     }
 
@@ -615,6 +551,9 @@ class UserpointsTransaction
     if ($this->getDisplay() && $message = $this->getMessage()) {
       drupal_set_message($message);
     }
+
+    // Reset original status to current one.
+    $this->orig_status = $this->getStatus();
 
     return $this;
   }
@@ -655,8 +594,7 @@ class UserpointsTransaction
   }
 
   protected function checkChange($only_new = FALSE) {
-    if (!empty($this->txn_id) && ($only_new || $this->orig_status <> USERPOINTS_TXN_STATUS_PENDING)) {
-      debug_print_backtrace();
+    if (!empty($this->txn_id) && ($only_new || $this->orig_status <> UserpointsTransaction::STATUS_PENDING)) {
       throw new UserpointsChangeException(t('This transaction is saved and approved or pending and can not be changed.'));
     }
   }
@@ -684,13 +622,13 @@ class UserpointsTransaction
     if (!empty($this->message)) {
       return $this->message;
     }
-       // Prepare arguments. They are the same for all string combinations.
+    // Prepare arguments. They are the same for all string combinations.
     $categories = userpoints_get_categories();
     $arguments = array_merge(userpoints_translation(), array(
-      '!username' => theme('username', array('account' => $this->getUser())),
-      '%total' => userpoints_get_current_points($this->getUid(), $this->getTid()),
-      '%category' => $this->getCategory(),
-    ));
+        '!username' => theme('username', array('account' => $this->getUser())),
+        '%total' => userpoints_get_current_points($this->getUid(), $this->getTid()),
+        '%category' => $this->getCategory(),
+      ));
 
     $view_own_points = user_access('view own userpoints') || user_access('view userpoints') || user_access('administer userpoints');
     $view_all_points = user_access('view userpoints') || user_access('administer userpoints');
@@ -784,7 +722,8 @@ class UserpointsTransaction
     // Check transaction description first to allow custom overrides.
     if (empty($options['skip_description']) && $description = $this->getDescription()) {
       $reason = $description;
-    } else {
+    }
+    else {
       $info = $this->getOperationInfo();
       // Check if there is a valid description callback defined for this
       // operation.
@@ -877,13 +816,13 @@ class UserpointsTransaction
 
     $stati = userpoints_txn_status();
     $css_stati = array(
-      USERPOINTS_TXN_STATUS_APPROVED => 'approved',
-      USERPOINTS_TXN_STATUS_DECLINED => 'declined',
-      USERPOINTS_TXN_STATUS_PENDING => 'pending',
+      UserpointsTransaction::STATUS_APPROVED => 'approved',
+      UserpointsTransaction::STATUS_DECLINED => 'declined',
+      UserpointsTransaction::STATUS_PENDING => 'pending',
     );
     $row = array('class' => array(
-      'userpoints-transaction-row-status-' . $css_stati[$this->getStatus()],
-      'userpoints-transaction-row-category-' . $this->getTid()),
+        'userpoints-transaction-row-status-' . $css_stati[$this->getStatus()],
+        'userpoints-transaction-row-category-' . $this->getTid()),
     );
     if ($settings['show_user']) {
       $row['data'][] = array(
@@ -924,7 +863,7 @@ class UserpointsTransaction
     return $row;
   }
 
-  function  __destruct() {
+  function __destruct() {
     // Automatically save new transactions to improve DX.
     if (!$this->getTxnId()) {
       $this->save();
@@ -938,26 +877,27 @@ class UserpointsTransaction
     $method = str_replace('_', '', 'get' . ucfirst($name));
     if (method_exists($this, $method)) {
       return $this->$method();
-    } else {
+    }
+    else {
       throw new UserpointsInvalidPropertyException($name);
     }
   }
-}
-
-class UserpointsChangeException extends Exception
-{
 
 }
 
-class UserpointsInvalidPropertyException extends Exception
-{
+class UserpointsChangeException extends Exception {
+
+}
+
+class UserpointsInvalidPropertyException extends Exception {
+
   function __construct($name, $code = NULL, $previous = NULL) {
     parent::__construct(t('Userpoints transaction does not have a @property property.', array('@property' => $name)), $code, $previous);
   }
+
 }
 
+class UserpointsInvalidArgumentException extends Exception {
 
-class UserpointsInvalidArgumentException extends Exception
-{
 }
 
