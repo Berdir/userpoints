@@ -27,7 +27,9 @@ class UserpointsTransaction {
   const STATUS_DECLINED = 2;
 
   /**
-   * The transaction id (primary key) of this transaction.
+   * The transaction id (primary key) of this transaction
+   *
+   * @var int
    */
   protected $txn_id = NULL;
 
@@ -35,21 +37,46 @@ class UserpointsTransaction {
    * The actual fields of this transaction.
    *
    * Stored in this array to simplify the save/update process.
+   *
+   * @var array
    */
   protected $fields = array();
 
   /**
-   * Deny reaaons.
+   * Deny reasons.
+   *
+   * @var array
    */
   protected $denied_reasons = array();
 
   /**
+   * TRUE if the transaction should display a message.
    *
+   * @var boolean
    */
   protected $display = TRUE;
+
+  /**
+   * Overriden message, is used instead of the default in
+   * UserpointsTransaction::getReason() if existend.
+   *
+   * @var string
+   */
   protected $message;
+
+  /**
+   * The original status of this transaction, used for denying changes to this
+   * transaction if is is not pending anymore.
+   *
+   * @var int
+   */
   protected $orig_status;
 
+  /**
+   * If a transaction is aborted, it will not be saved automatically.
+   *
+   * Automatically set whenever an exception occurs.
+   */
   protected $aborted = FALSE;
 
   /**
@@ -91,10 +118,16 @@ class UserpointsTransaction {
     }
   }
 
+  /**
+   * Marks this transaction as aborted.
+   */
   function abort() {
     $this->aborted = TRUE;
   }
 
+  /**
+   * Checks if this transaction is aborted.
+   */
   function isAborted() {
     return $this->aborted;
   }
@@ -164,7 +197,8 @@ class UserpointsTransaction {
    *
    * @param $status
    *   One of the following constants: UserpointsTransaction::STATUS_APPROVED,
-   *   UserpointsTransaction::STATUS_DECLINED, UserpointsTransaction::STATUS_PENDING.
+   *   UserpointsTransaction::STATUS_DECLINED,
+   *   UserpointsTransaction::STATUS_PENDING.
    *
    * @return UserpointsTransaction
    */
@@ -465,108 +499,258 @@ class UserpointsTransaction {
     return $this->fields['expired'];
   }
 
+  /**
+   * Returns the UID of the user this transaction belongs to.
+   *
+   * @return
+   *   The uid of the user.
+   *
+   * @see UserpointsTransaction::setUid()
+   */
   function getUid() {
     return $this->fields['uid'];
   }
 
+  /**
+   * Returns the user object this transaction belongs to.
+   *
+   * @return
+   *   loaded user object for the user this transaction belongs to.
+   *
+   * @see UserpointsTransaction::setUid()
+   * @see UserpointsTransaction::getUid()
+   */
   function getUser() {
     return user_load($this->fields['uid']);
   }
 
+  /**
+   * Returns the uid of the user who approved this transaction.
+   *
+   * @return
+   *   The approver uid.
+   *
+   * @see UserpointsTransaction::setApproverUid()
+   */
   function getApproverUid() {
     return $this->fields['approver_uid'];
   }
 
+  /**
+   * The loaded user object of the user who approved this transaction.
+   *
+   * @return
+   *   User object.
+   *
+   * @see UserpointsTransaction::setApproverUid()
+   * @see UserpointsTransaction::getApproverUid()
+   */
   function getApprover() {
     return user_load($this->fields['approver_uid']);
   }
 
+  /**
+   * The amount of points of this transaction.
+   *
+   * @return
+   *   Points as an integer.
+   *
+   * @see UserpointsTransaction::setPoints()
+   */
   function getPoints() {
     return $this->fields['points'];
   }
 
+  /**
+   * The timestamp of when this transaction was created.
+   *
+   * @return
+   *   Unix timestamp of the creation date.
+   *
+   * @see UserpointsTransaction::setTimestamp()
+   */
   function getTimestamp() {
     return $this->fields['time_stamp'];
   }
 
+  /**
+   * The timestamp of when this transaction last changed.
+   *
+   * @return
+   *   Unix timestamp of the changed date.
+   */
   function getChanged() {
     return $this->fields['changed'];
   }
 
+  /**
+   * Returns the parent transaction if there is any.
+   *
+   * @return UserpointsTransaction
+   *   A userpoints transaction or NULL.
+   *
+   * @see UserpointsTransaction::setParent()
+   */
   function getParent() {
     if (!empty($this->fields['parent_txn_id'])) {
       return userpoints_transaction_load($this->fields['parent_txn_id']);
     }
   }
 
+  /**
+   * The category id (term id) this transaction belongs to.
+   *
+   * Use UserpointsTransaction::getCategory() to get the name of the category.
+   *
+   * @return
+   *   Term Id of this transaction.
+   *
+   * @see UserpointsTransaction::setTid()
+   * @see UserpointsTransaction::getCategory()
+   */
   function getTid() {
     return $this->fields['tid'];
   }
 
+  /**
+   * The operation of this transaction.
+   *
+   * @return
+   *   The operation string of this transaction.
+   *
+   * @see UserpointsTransaction::setOperation()
+   */
   function getOperation() {
     return $this->fields['operation'];
   }
 
+  /**
+   * The transaction id of this transaction.
+   *
+   * @return
+   *   The id of this transaction as an integer. NULL if this transaction has
+   *   not yet been saved.
+   */
   function getTxnId() {
     return $this->txn_id;
   }
 
+  /**
+   * Check if a message about this transaction should be displayed.
+   *
+   * @return
+   *   TRUE if a message should be displayed, FALSE otherwise.
+   *
+   * @see UserpointsTransaction::setDisplay()
+   */
   function getDisplay() {
     return $this->display;
   }
 
+  /**
+   * The category of this transaction.
+   *
+   * @return
+   *   The name of the category as a string. Name of th default category the
+   *   term of this category has been deleted.
+   *
+   * @see UserpointsTransaction::setTid()
+   * @see UserpointsTransaction::getTid()
+   */
   function getCategory() {
     // Load categories.
     $categories = userpoints_get_categories();
     return isset($categories[$this->getTid()]) ? $categories[$this->getTid()] : $categories[userpoints_get_default_tid()];
   }
 
+  /**
+   * Mark this transaction as pending.
+   *
+   * @see UserpointsTransaction::setStatus
+   */
   function pending() {
     $this->setStatus(UserpointsTransaction::STATUS_PENDING);
     return $this;
   }
 
+  /**
+   * Mark this transaction as approved.
+   *
+   * @see UserpointsTransaction::setStatus
+   */
   function approve() {
     $this->setStatus(UserpointsTransaction::STATUS_APPROVED);
     return $this;
   }
 
+  /**
+   * Mark this transaction as declined.
+   *
+   * @see UserpointsTransaction::setStatus
+   */
   function decline() {
     $this->setStatus(UserpointsTransaction::STATUS_DECLINED);
     return $this;
   }
 
+  /**
+   * Check if this transaction is pending.
+   *
+   * @see UserpointsTransaction::getStatus
+   */
   function isPending() {
     return $this->getStatus() == UserpointsTransaction::STATUS_PENDING;
   }
 
+  /**
+   * Check if this transaction is declined.
+   *
+   * @see UserpointsTransaction::getStatus
+   */
   function isDeclined() {
     return $this->getStatus() == UserpointsTransaction::STATUS_DECLINED;
   }
 
+  /**
+   * Check if this transaction is approved.
+   *
+   * @see UserpointsTransaction::getStatus
+   */
   function isApproved() {
     return $this->getStatus() == UserpointsTransaction::STATUS_APPROVED;
   }
 
+  /**
+   * Save or update this transaction.
+   *
+   * It is not permitted to update a approved or denied transaction except
+   * marking it as expird. Any attemt to change a property of such a transaction
+   * will result in an immediate exception.
+   */
   function save() {
+    // Prevent saving when any of the required properties are missing.
     if (!$this->getPoints() || !$this->getUid() || !$this->getOperation()) {
       $this->abort();
       throw new UserpointsTransactionIncompleteException();
     }
 
+    // Call the before hook to allow modules to change and deny this.
     module_invoke_all('userpoints_transaction_before', $this);
 
+    // Abort if the transaction has been denied.
     if ($this->isDenied()) {
       $this->abort();
       throw new UserpointsTransactionDeniedException($this->getDenyReasons());
     }
 
     if (empty($this->txn_id)) {
+      // This is a new transaction, save.
       $this->txn_id = db_insert('userpoints_txn')
           ->fields($this->fields)
           ->execute();
     }
     else {
+      // Existing transaction, update.
       db_update('userpoints_txn')
         ->condition('txn_id', $this->txn_id)
         ->fields($this->fields)
@@ -577,6 +761,8 @@ class UserpointsTransaction {
     if ($this->isApproved() && !$this->isExpired()) {
       $this->updateTotals();
     }
+
+    // Call the after hook so that modules can react on this.
     module_invoke_all('userpoints_transaction_after', $this);
 
     // Display a message unless disabled or no message exists.
@@ -589,17 +775,30 @@ class UserpointsTransaction {
     return $this;
   }
 
+  /**
+   * Update the total aggregations of the corresponding user.
+   */
   protected function updateTotals() {
+    // Update this category.
     $this->updateTotalsCategory($this->getTid());
+    // Update the total over all categories.
     $this->updateTotalsCategory('all');
   }
 
+  /**
+   * Update the totals of a specific category.
+   *
+   * Updating the total of all categories is supported by using 'all' for the
+   * $tid.
+   */
   protected function updateTotalsCategory($tid) {
     $table = 'userpoints';
     if ($tid === 'all') {
+      // Use a different table for the overall total.
       $table = 'userpoints_total';
     }
 
+    // Always update the time stamp and the total points.
     $total = array(
       'last_update' => REQUEST_TIME,
       'points' => $this->getPoints() + userpoints_get_current_points($this->getUid(), $tid),
@@ -610,6 +809,7 @@ class UserpointsTransaction {
       $total['max_points'] = $total['points'];
     }
 
+    // The keys for the merge query. The tid is only added when not 'all'.
     $keys = array(
       'uid' => $this->getUid(),
     );
@@ -617,12 +817,23 @@ class UserpointsTransaction {
       $keys['tid'] = $tid;
     }
 
+    // Save the updates.
     db_merge($table)
       ->key($keys)
       ->fields($total)
       ->execute();
   }
 
+  /**
+   * Checks if a change is allowed.
+   *
+   * Once a transaction is saved and either approved or declined, no alterations
+   * of the data is allowed except marking it as expired.
+   *
+   * @param $only_new
+   *   If TRUE, only allows changes if this transaction is new. Defaults to
+   *   FALSE.
+   */
   protected function checkChange($only_new = FALSE) {
     if (!empty($this->txn_id) && ($only_new || $this->orig_status <> UserpointsTransaction::STATUS_PENDING)) {
       $this->abort();
@@ -630,26 +841,78 @@ class UserpointsTransaction {
     }
   }
 
+  /**
+   * Deny this transaction from being saved.
+   *
+   * This is typically called in hook_userpoints_transaction_before().
+   *
+   * @see UserpointsTransaction::isDenied()
+   * @see UserpointsTransaction::getDenyReasons()
+   */
   function deny($reason) {
     $this->denied_reasons[] = $reason;
   }
 
+  /**
+   * Check if this transaction is denied.
+   *
+   * A transaction is denied if there are any deny reasons.
+   *
+   * @see UserpointsTransaction::deny().
+   * @see UserpointsTransaction::getDenyReasons()
+   */
   function isDenied() {
     return!empty($this->denied_reasons);
   }
 
+  /**
+   * Returns the deny reasons for this transaction.
+   *
+   * @return
+   *   An array with the reasons why this transaction was denied.
+   *
+   * @see UserpointsTransaction::deny()
+   * @see UserpointsTransaction::isDenied()
+   * @see UserpointsTransaction::getDenyReasons()
+   */
   function getDenyReasons() {
     return $this->denied_reasons;
   }
 
+  /**
+   * Override the generated default message of this transaction.
+   *
+   * @param $message
+   *   The message that should be displayed if configured to do so.
+   *
+   * @return UserpointsTransaction
+   *
+   * @see UserpointsTransaction::getMessage()
+   * @see UserpointsTransaction::setDisplay()
+   */
   function setMessage($message) {
     $this->message = $message;
     return $this;
   }
 
+  /**
+   * A message that can be displayed to the current user.
+   *
+   * If set, the message defined by UserpointsTransaction::setMessage() is used.
+   * Otherwise, a message is displayed that takes into account the points amount
+   * (negative or positive), the category, the status and if the transaction is
+   * for the currently logged in user or not.
+   *
+   * @return
+   *   A message string that describes this transaction to the currently logged
+   *   in user. Can be empty if not automated message could have been generated.
+   *
+   * @see UserpointsTransaction::setMessage().
+   */
   function getMessage() {
     global $user;
 
+    // If set, use the overriden message.
     if (!empty($this->message)) {
       return $this->message;
     }
@@ -717,6 +980,14 @@ class UserpointsTransaction {
     return $message;
   }
 
+  /**
+   * Returns additional information about the operation of this transaction.
+   *
+   * @return
+   *   Information about this operation as an array.
+   *
+   * @see userpoints_get_info()
+   */
   function getOperationInfo() {
     return userpoints_get_info($this->getOperation());
   }
@@ -736,7 +1007,7 @@ class UserpointsTransaction {
    *     were one. Defaults to TRUE.
    *   - truncate: Define if the reason should be truncated. Defaults to TRUE.
    *   - skip_description: Allows to skip the eventually existing custom
-   *     description a transaction has and always uses the generated description.
+   *     description a transaction has and always use the generated description.
    *
    * @return
    *   The reason for that transaction, linked to the referenced entity if
@@ -895,6 +1166,9 @@ class UserpointsTransaction {
     return $row;
   }
 
+  /**
+   * Automatically called if this object is goes out of scope and is destructed.
+   */
   function __destruct() {
     // Automatically save new transactions to improve DX.
     if (!$this->getTxnId() && !$this->isAborted()) {
@@ -926,21 +1200,34 @@ class UserpointsTransaction {
 
 }
 
+/**
+ * This exception is thrown when a property is changed after a saved transaction
+ * has been approved or declined.
+ */
 class UserpointsChangeException extends Exception {
 
 }
 
+/**
+ * This exception is thrown when trying to access an unknown property through
+ * the magic UserpointsTransaction::__get() method.
+ */
 class UserpointsInvalidPropertyException extends Exception {
   function __construct($name, $code = NULL, $previous = NULL) {
     parent::__construct(t('Userpoints transaction does not have a @property property.', array('@property' => $name)), $code, $previous);
   }
 }
 
+/**
+ * Thrown when trying to set a property to an invalid value.
+ */
 class UserpointsInvalidArgumentException extends Exception {
 
 }
 
+/**
+ * Thrown when trying to save a transaction without points, uid or operation.
+ */
 class UserpointsTransactionIncompleteException extends Exception {
 
 }
-
