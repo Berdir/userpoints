@@ -1537,7 +1537,7 @@ class UserpointsTransactionController extends DrupalDefaultEntityController {
       $queried_entities = array();
       $result = $query->execute();
       foreach ($result->fetchAllAssoc($this->idKey, PDO::FETCH_ASSOC) as $row) {
-          $queried_entities[$row[$this->idKey]] = new UserpointsTransaction($row);
+        $queried_entities[$row[$this->idKey]] = new UserpointsTransaction($row);
       }
     }
 

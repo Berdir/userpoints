@@ -205,6 +205,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
       $sum_points += $points;
 
       // Check update point to 'userpoints' table.
+      debug(db_query('SELECT *  FROM {userpoints}')->fetchAll());
       $this->assertEqual($this->getPoints($this->non_admin_user->uid), $sum_points, t($time['string'] . "Successfully verified that the summary table was updated"));
     }
 

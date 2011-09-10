@@ -12,27 +12,40 @@
  */
 class UserpointsTransaction {
 
+  /**
+   * The transaction has been approved.
+   */
   const STATUS_APPROVED = 0;
+  /**
+   * The transaction is pending for approval.
+   */
   const STATUS_PENDING = 1;
+
+  /**
+   * The transaction has been declined.
+   */
   const STATUS_DECLINED = 2;
 
-  protected $txn_id;
-  protected $uid;
-  protected $points;
-  protected $approver_uid = 0;
-  protected $description;
-  protected $status;
-  protected $reference;
-  protected $expired = 0;
-  protected $expirydate;
-  protected $time_stamp;
-  protected $changed;
-  protected $parent_txn_id = 0;
-  protected $tid;
-  protected $operation;
-  protected $entity_type;
-  protected $entity_id = 0;
+  /**
+   * The transaction id (primary key) of this transaction.
+   */
+  protected $txn_id = NULL;
+
+  /**
+   * The actual fields of this transaction.
+   *
+   * Stored in this array to simplify the save/update process.
+   */
+  protected $fields = array();
+
+  /**
+   * Deny reaaons.
+   */
   protected $denied_reasons = array();
+
+  /**
+   *
+   */
   protected $display = TRUE;
   protected $message;
   protected $orig_status;
@@ -47,19 +60,43 @@ class UserpointsTransaction {
    */
   function __construct($values = FALSE) {
     if ($values) {
-      // @todo Improve this.
-      foreach ($values as $property => $value) {
-        $this->$property = $value;
-      }
-      $this->orig_status = $this->status;
+
+      // The txn_id is stored in a separate property.
+      $this->txn_id = $values['txn_id'];
+      unset($values['txn_id']);
+
+      // All other values are stored in the fields property.
+      $this->fields = $values;
+      $this->orig_status = $this->getStatus();
     }
     else {
-      // Set default values.
-      $this->status = variable_get('userpoints_points_moderation', UserpointsTransaction::STATUS_APPROVED);
-      $this->tid = userpoints_get_default_tid();
-      $this->expirydate = userpoints_get_default_expiry_date();
-      $this->time_stamp = REQUEST_TIME;
+      // Initalize fields.
+      $this->fields = array(
+        'uid' => 0,
+        'points' => NULL,
+        'operation' => NULL,
+        'status' => variable_get('userpoints_points_moderation', UserpointsTransaction::STATUS_APPROVED),
+        'tid' => userpoints_get_default_tid(),
+        'expirydate' => userpoints_get_default_expiry_date(),
+        'expired' => 0,
+        'time_stamp' => REQUEST_TIME,
+        'changed' => REQUEST_TIME,
+        'approver_uid' => 0,
+        'description' => '',
+        'reference' => '',
+        'parent_txn_id' => 0,
+        'entity_type' => NULL,
+        'entity_id' => 0,
+      );
     }
+  }
+
+  function abort() {
+    $this->aborted = TRUE;
+  }
+
+  function isAborted() {
+    return $this->aborted;
   }
 
   /**
@@ -80,8 +117,8 @@ class UserpointsTransaction {
       return $this;
     }
 
-    $this->entity_type = $entity_type;
-    $this->entity_id = $entity_id;
+    $this->fields['entity_type'] = $entity_type;
+    $this->fields['entity_id'] = $entity_id;
     return $this;
   }
 
@@ -96,7 +133,7 @@ class UserpointsTransaction {
   function setReference($reference) {
     $this->checkChange();
 
-    $this->reference = $reference;
+    $this->fields['reference'] = $reference;
     return $this;
   }
 
@@ -116,7 +153,7 @@ class UserpointsTransaction {
   function setDescription($description) {
     $this->checkChange();
 
-    $this->description = $description;
+    $this->fields['description'] = $description;
     return $this;
   }
 
@@ -136,15 +173,15 @@ class UserpointsTransaction {
 
     // Check allowed values.
     if (!in_array($status, array(UserpointsTransaction::STATUS_APPROVED, UserpointsTransaction::STATUS_DECLINED, UserpointsTransaction::STATUS_PENDING))) {
-      $this->aborted = TRUE;
+      $this->abort();
       throw new UserpointsChangeException(t('Invalid status'));
     }
 
     // Preserve the original status to be able to check if changes in this
     // transaction are still allowed.
-    $this->orig_status = $this->status;
+    $this->orig_status = $this->getStatus();
 
-    $this->status = $status;
+    $this->fields['status'] = $status;
     return $this;
   }
 
@@ -162,10 +199,10 @@ class UserpointsTransaction {
     $this->checkChange();
 
     if ($expirydate > 0 || $expirydate === 0 || $expirydate === NULL) {
-      $this->expirydate = (int)$expirydate;
+      $this->fields['expirydate'] = (int)$expirydate;
     }
     else {
-      $this->aborted = TRUE;
+      $this->abort();
       throw new UserpointsInvalidArgumentException(t('Expiration date must be an integer'));
     }
     return $this;
@@ -183,7 +220,12 @@ class UserpointsTransaction {
    * @return UserpointsTransaction
    */
   function setExpired($expired) {
-    $this->expired = $expired;
+
+    // A transaction can always be expired but this can not be reversed.
+    if (!$expired && $this->fields['expired']) {
+      $this->checkChange();
+    }
+    $this->fields['expired'] = $expired;
     return $this;
   }
 
@@ -197,7 +239,7 @@ class UserpointsTransaction {
    */
   function setUid($uid) {
     $this->checkChange();
-    $this->uid = $uid;
+    $this->fields['uid'] = $uid;
     return $this;
   }
 
@@ -211,7 +253,7 @@ class UserpointsTransaction {
    */
   function setApproverUid($uid) {
     $this->checkChange();
-    $this->approver_uid = (int)$uid;
+    $this->fields['approver_uid'] = (int)$uid;
     return $this;
   }
 
@@ -229,11 +271,11 @@ class UserpointsTransaction {
 
     // Empty points amount is not allowed.
     if (empty($points)) {
-      $this->aborted = TRUE;
+      $this->abort();
       throw new UserpointsInvalidArgumentException();
     }
 
-    $this->points = $points;
+    $this->fields['points'] = $points;
     return $this;
   }
 
@@ -255,7 +297,7 @@ class UserpointsTransaction {
     if (variable_get('userpoints_transaction_timestamp', 1)) {
       return $this;
     }
-    $this->time_stamp = $time_stamp;
+    $this->fields['time_stamp'] = $time_stamp;
     return $this;
   }
 
@@ -273,7 +315,7 @@ class UserpointsTransaction {
   function setParent($txn_id) {
     $this->checkChange();
 
-    $this->parent_txn_id = $txn_id;
+    $this->fields['parent_txn_id'] = $txn_id;
     return $this;
   }
 
@@ -287,7 +329,7 @@ class UserpointsTransaction {
    */
   function setTid($tid) {
     $this->checkChange();
-    $this->tid = $tid;
+    $this->fields['tid'] = $tid;
     return $this;
   }
 
@@ -311,7 +353,7 @@ class UserpointsTransaction {
   function setOperation($operation) {
     $this->checkChange();
 
-    $this->operation = $operation;
+    $this->fields['operation'] = $operation;
     return $this;
   }
 
@@ -338,8 +380,8 @@ class UserpointsTransaction {
    *   An entity object or NULL.
    */
   function getEntity() {
-    if (!empty($this->entity_id) && !empty($this->entity_type) && entity_get_info($this->entity_type)) {
-      return array_shift(entity_load($this->entity_type, array($this->entity_id)));
+    if (!empty($this->fields['entity_id']) && !empty($this->fields['entity_type']) && entity_get_info($this->fields['entity_type'])) {
+      return array_shift(entity_load($this->fields['entity_type'], array($this->fields['entity_id'])));
     }
   }
 
@@ -350,7 +392,7 @@ class UserpointsTransaction {
    *   The entity type as a string.
    */
   function getEntityType() {
-    return $this->entity_type;
+    return $this->fields['entity_type'];
   }
 
   /**
@@ -360,7 +402,7 @@ class UserpointsTransaction {
    *   The entity id as an integer.
    */
   function getEntityId() {
-    return $this->entity_id;
+    return $this->fields['entity_id'];
   }
 
   /**
@@ -372,7 +414,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setReference()
    */
   function getReference() {
-    return $this->reference;
+    return $this->fields['reference'];
   }
 
   /**
@@ -384,7 +426,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setDescription()
    */
   function getDescription() {
-    return $this->description;
+    return $this->fields['description'];
   }
 
   /**
@@ -396,7 +438,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setStatus()
    */
   function getStatus() {
-    return $this->status;
+    return $this->fields['status'];
   }
 
   /**
@@ -408,7 +450,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setExpirationDate()
    */
   function getExpirationDate() {
-    return $this->expirydate;
+    return $this->fields['expirydate'];
   }
 
   /**
@@ -419,50 +461,50 @@ class UserpointsTransaction {
    *
    * @see UserpointsTransaction::setExpired()
    */
-  function getExpired() {
-    return $this->expired;
+  function isExpired() {
+    return $this->fields['expired'];
   }
 
   function getUid() {
-    return $this->uid;
+    return $this->fields['uid'];
   }
 
   function getUser() {
-    return user_load($this->uid);
+    return user_load($this->fields['uid']);
   }
 
   function getApproverUid() {
-    return $this->approver_uid;
+    return $this->fields['approver_uid'];
   }
 
   function getApprover() {
-    return user_load($this->approver_uid);
+    return user_load($this->fields['approver_uid']);
   }
 
   function getPoints() {
-    return $this->points;
+    return $this->fields['points'];
   }
 
   function getTimestamp() {
-    return $this->time_stamp;
+    return $this->fields['time_stamp'];
   }
 
   function getChanged() {
-    return $this->changed;
+    return $this->fields['changed'];
   }
 
   function getParent() {
-    if (!empty($this->parent_txn_id)) {
-      return userpoints_transaction_load($this->parent_txn_id);
+    if (!empty($this->fields['parent_txn_id'])) {
+      return userpoints_transaction_load($this->fields['parent_txn_id']);
     }
   }
 
   function getTid() {
-    return $this->tid;
+    return $this->fields['tid'];
   }
 
   function getOperation() {
-    return $this->operation;
+    return $this->fields['operation'];
   }
 
   function getTxnId() {
@@ -476,7 +518,7 @@ class UserpointsTransaction {
   function getCategory() {
     // Load categories.
     $categories = userpoints_get_categories();
-    return isset($categories[$this->tid]) ? $categories[$this->tid] : $categories[userpoints_get_default_tid()];
+    return isset($categories[$this->getTid()]) ? $categories[$this->getTid()] : $categories[userpoints_get_default_tid()];
   }
 
   function pending() {
@@ -507,105 +549,83 @@ class UserpointsTransaction {
   }
 
   function save() {
-    if (empty($this->points) || empty($this->uid) || empty($this->operation)) {
-      $this->aborted = TRUE;
+    if (!$this->getPoints() || !$this->getUid() || !$this->getOperation()) {
+      $this->abort();
       throw new UserpointsTransactionIncompleteException();
     }
 
     module_invoke_all('userpoints_transaction_before', $this);
 
     if ($this->isDenied()) {
-      $this->aborted = TRUE;
+      $this->abort();
       throw new UserpointsTransactionDeniedException($this->getDenyReasons());
     }
 
-    $this->changed = REQUEST_TIME;
-
-    $fields = array(
-      'points' => $this->points,
-      'operation' => $this->operation,
-      'uid' => $this->uid,
-      'time_stamp' => $this->time_stamp,
-      'changed' => $this->changed,
-      'description' => $this->description,
-      'entity_type' => $this->entity_type,
-      'entity_id' => $this->entity_id,
-      'parent_txn_id' => $this->parent_txn_id,
-      'reference' => $this->reference,
-      'status' => $this->status,
-      'tid' => $this->tid,
-      'approver_uid' => $this->approver_uid,
-      'expirydate' => $this->expirydate,
-      'expired' => $this->expired,
-    );
-
     if (empty($this->txn_id)) {
       $this->txn_id = db_insert('userpoints_txn')
-          ->fields($fields)
+          ->fields($this->fields)
           ->execute();
     }
     else {
       db_update('userpoints_txn')
         ->condition('txn_id', $this->txn_id)
-        ->fields($fields)
+        ->fields($this->fields)
         ->execute();
     }
 
-    // Update totals.
-    if ($this->getStatus() == UserpointsTransaction::STATUS_APPROVED && !$this->getExpired()) {
+    // Update totals if the transaction is approved and not expired.
+    if ($this->isApproved() && !$this->isExpired()) {
       $this->updateTotals();
     }
-
     module_invoke_all('userpoints_transaction_after', $this);
 
+    // Display a message unless disabled or no message exists.
     if ($this->getDisplay() && $message = $this->getMessage()) {
       drupal_set_message($message);
     }
 
     // Reset original status to current one.
     $this->orig_status = $this->getStatus();
-
     return $this;
   }
 
   protected function updateTotals() {
-    $total = array(
-      'last_update' => REQUEST_TIME,
-      'points' => $this->points + userpoints_get_current_points($this->uid, $this->tid),
-    );
-    // Update the total max points if necessary.
-    $max_points_total = userpoints_get_max_points($this->uid, $this->tid);
-    if ($total['points'] > $max_points_total) {
-      $total['max_points'] = $total['points'];
+    $this->updateTotalsCategory($this->getTid());
+    $this->updateTotalsCategory('all');
+  }
+
+  protected function updateTotalsCategory($tid) {
+    $table = 'userpoints';
+    if ($tid === 'all') {
+      $table = 'userpoints_total';
     }
-    db_merge('userpoints')
-      ->key(array(
-        'uid' => $this->uid,
-        'tid' => $this->tid,
-      ))
-      ->fields($total)
-      ->execute();
 
     $total = array(
       'last_update' => REQUEST_TIME,
-      'points' => $this->points + userpoints_get_current_points($this->uid, 'all'),
+      'points' => $this->getPoints() + userpoints_get_current_points($this->getUid(), $tid),
     );
     // Update the total max points if necessary.
-    $max_points_total = userpoints_get_max_points($this->uid, 'all');
+    $max_points_total = userpoints_get_max_points($this->getUid(), $tid);
     if ($total['points'] > $max_points_total) {
       $total['max_points'] = $total['points'];
     }
-    db_merge('userpoints_total')
-      ->key(array(
-        'uid' => $this->uid,
-      ))
+
+    $keys = array(
+      'uid' => $this->getUid(),
+    );
+    if ($tid !== 'all') {
+      $keys['tid'] = $tid;
+    }
+
+    db_merge($table)
+      ->key($keys)
       ->fields($total)
       ->execute();
   }
 
   protected function checkChange($only_new = FALSE) {
     if (!empty($this->txn_id) && ($only_new || $this->orig_status <> UserpointsTransaction::STATUS_PENDING)) {
-      $this->aborted = TRUE;
+      $this->abort();
       throw new UserpointsChangeException(t('This transaction is saved and approved or pending and can not be changed.'));
     }
   }
@@ -771,7 +791,7 @@ class UserpointsTransaction {
         $reason = l($reason, $uri['path'], $uri['options'] + array('html' => $safe, 'attributes' => $attributes));
       }
     }
-    if (($this->getEntity() || empty($uri)) && !$safe) {
+    if ((!$this->getEntity() || empty($uri)) && !$safe) {
       // Escape possible user provided reason.
       $reason = check_plain($reason);
     }
@@ -877,7 +897,7 @@ class UserpointsTransaction {
 
   function __destruct() {
     // Automatically save new transactions to improve DX.
-    if (!$this->getTxnId() && !$this->aborted) {
+    if (!$this->getTxnId() && !$this->isAborted()) {
       $this->save();
     }
   }
@@ -886,7 +906,16 @@ class UserpointsTransaction {
    * Magic function to allow access to property by name.
    */
   function __get($name) {
-    $method = str_replace('_', '', 'get' . ucfirst($name));
+
+    // Compatibility with dpm().
+    if (strpos($name, 'krumo') !== FALSE) {
+      if (!isset($this->$name)) {
+        $this->$name = NULL;
+      }
+      return $this->$name;
+    }
+
+    $method = 'get' . str_replace('_', '', $name);
     if (method_exists($this, $method)) {
       return $this->$method();
     }
@@ -902,14 +931,16 @@ class UserpointsChangeException extends Exception {
 }
 
 class UserpointsInvalidPropertyException extends Exception {
-
   function __construct($name, $code = NULL, $previous = NULL) {
     parent::__construct(t('Userpoints transaction does not have a @property property.', array('@property' => $name)), $code, $previous);
   }
-
 }
 
 class UserpointsInvalidArgumentException extends Exception {
+
+}
+
+class UserpointsTransactionIncompleteException extends Exception {
 
 }
 
