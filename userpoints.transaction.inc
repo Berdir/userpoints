@@ -193,7 +193,9 @@ class UserpointsTransaction {
   /**
    * Set the status for a transaction.
    *
-   * You can use the approve(), decline() and pending() functions as a shortcut.
+   * There are helper functions available to set the status of a transaction to
+   * a specific status, e. g. UserpointsTransaction::pending(). It is
+   * recommended to use these instead.
    *
    * @param $status
    *   One of the following constants: UserpointsTransaction::STATUS_APPROVED,
@@ -201,6 +203,11 @@ class UserpointsTransaction {
    *   UserpointsTransaction::STATUS_PENDING.
    *
    * @return UserpointsTransaction
+   *
+   * @see UserpointsTransaction::pending()
+   * @see UserpointsTransaction::approve()
+   * @see UserpointsTransaction::decline()
+   *
    */
   function setStatus($status) {
     $this->checkChange();
@@ -466,10 +473,17 @@ class UserpointsTransaction {
   /**
    * The status of this transaction.
    *
+   * There are helper functions available to check if the transaction has a
+   * specific status, e. g. UserpointsTransaction::isPending(). Considering
+   * using these if possible.
+   *
    * @return
    *   The status of this transaction (approved, declined, pending).
    *
    * @see UserpointsTransaction::setStatus()
+   * @see UserpointsTransaction::isPending()
+   * @see UserpointsTransaction::isApproved()
+   * @see UserpointsTransaction::isDeclined()
    */
   function getStatus() {
     return $this->fields['status'];
