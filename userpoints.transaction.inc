@@ -841,18 +841,34 @@ class UserpointsTransaction {
   /**
    * Checks if a change is allowed.
    *
+   * @param $only_new
+   *   If TRUE, only allows changes if this transaction is new. Defaults to
+   *   FALSE.
+   *
+   * @throws UserpointsChangeException
+   */
+  protected function checkChange($only_new = FALSE) {
+    if ($this->isReadOnly($only_new)) {
+      $this->abort();
+      throw new UserpointsChangeException(t('This transaction is saved and approved or pending and can not be changed.'));
+    }
+  }
+
+  /**
+   * Checks if a change is allowed.
+   *
    * Once a transaction is saved and either approved or declined, no alterations
    * of the data is allowed except marking it as expired.
    *
    * @param $only_new
    *   If TRUE, only allows changes if this transaction is new. Defaults to
    *   FALSE.
+   *
+   * @return
+   *   TRUE if changes are allowed, FALSE if not.
    */
-  protected function checkChange($only_new = FALSE) {
-    if (!empty($this->txn_id) && ($only_new || $this->orig_status <> UserpointsTransaction::STATUS_PENDING)) {
-      $this->abort();
-      throw new UserpointsChangeException(t('This transaction is saved and approved or pending and can not be changed.'));
-    }
+  function isReadOnly($only_new = FALSE) {
+    return !empty($this->txn_id) && ($only_new || $this->orig_status <> UserpointsTransaction::STATUS_PENDING);
   }
 
   /**
@@ -1212,6 +1228,21 @@ class UserpointsTransaction {
     }
   }
 
+  /**
+   * Magic function to allow access to property by name.
+   */
+  function __set($name, $value) {
+
+    $method = 'get' . str_replace('_', '', $name);
+    if (method_exists($this, $method)) {
+      return $this->$method($value);
+    }
+    else {
+      // Some modules, e.g rdf.module and devel.module try to set custom
+      // properties on entites. Do not prevent this.
+      return $this->$name = $value;
+    }
+  }
 }
 
 /**

@@ -18,7 +18,7 @@ function userpoints_confirm_approve_submit($form, &$form_state) {
 /**
  * Form builder for add/edit userpoints transaction form.
  */
-function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
+function userpoints_admin_txn($form, &$form_state, $mode, UserpointsTransaction $txn = NULL) {
 
   drupal_add_css(drupal_get_path('module', 'userpoints') . '/userpoints.css');
 
@@ -40,6 +40,14 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       $txn_user = user_load($txn);
     }
   }
+
+  // If this transaction is read only, disable all fields.
+  $disable = $txn && $txn->isReadOnly();
+
+  if ($disable) {
+    drupal_set_message(t('This transaction is read only and can not be changed.'), 'warning');
+  }
+
   $form['txn_user'] = array(
       '#type' => 'textfield',
       '#title' => t('User Name'),
@@ -50,6 +58,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#description' => t('The name of the user who should gain or lose !points.', userpoints_translation()),
       '#required' => TRUE,
       '#weight' => -20,
+      // The user field can never be changed.
       '#disabled' => $mode == 'edit',
   );
 
@@ -62,6 +71,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#description' => t('The number of !points to add or subtract.  For example, enter %positive to add !points or %negative to deduct !points.', array('%positive' => 25, '%negative' => -25) + userpoints_translation()),
       '#required' => TRUE,
       '#weight' => -15,
+      '#disabled' => $disable,
   );
 
   if (module_exists('taxonomy')) {
@@ -75,6 +85,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#weight' => 0,
       // Only show the category if there are actually categories to choose from.
       '#access' => count($options) > 1,
+      '#disabled' => $disable,
     );
   }
 
@@ -96,6 +107,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#default_value' => variable_get(USERPOINTS_POINTS_MODERATION, 0),
       '#access' => userpoints_admin_access('moderate'),
       '#weight' => -10,
+      '#disabled' => $disable,
     );
   }
   else {
@@ -107,6 +119,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#default_value' => $txn->status,
       '#access' => userpoints_admin_access('moderate'),
       '#weight' => -10,
+      '#disabled' => $disable,
     );
   }
 
@@ -120,6 +133,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
     '#weight' => -5,
     // Do not show this if it is not allowed to change the timestamp anyway.
     '#access' => !variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1),
+    '#disabled' => $disable,
   );
 
   $expirydate = 0;
@@ -143,6 +157,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#maxlength' => 30,
       '#description' => t('The date and time that the !points should expire. Use this format: YYYY-MM-DD HH:MM +ZZZZ. Leave this field blank if the !points should never expire.', userpoints_translation()),
       '#weight' => 25,
+      '#disabled' => $disable,
   );
 
   $form['reason'] = array(
@@ -160,6 +175,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#weight' => 5,
       '#required' => FALSE,
       '#autocomplete_path' => 'userpoints/operation-autocomplete',
+      '#disabled' => $disable,
   );
 
   $form['reason']['description'] = array(
@@ -170,6 +186,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#cols' => 40,
       '#description' => t('Enter an optional description for this transaction, such as the reason !points were added or subtracted.', userpoints_translation()),
       '#weight' => 10,
+      '#disabled' => $disable,
   );
 
   $form['reference'] = array(
@@ -188,6 +205,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
     '#weight' => 0,
     '#options' => $options,
     '#default_value' => isset($txn) ? $txn->entity_type : '',
+    '#disabled' => $disable,
   );
 
   $form['reference']['entity_id'] = array(
@@ -199,6 +217,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
     '#maxlength' => 20,
     '#default_value' => isset($txn) ? $txn->entity_id : '',
     '#description' => t('Choose the entity type and ID to be referenced. A link to the entity will be shown.'),
+      '#disabled' => $disable,
   );
 
   $form['reference']['reference'] = array(
@@ -209,6 +228,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#maxlength' => 128,
       '#description' => t('Enter an optional reference code for this transaction. This is for internal tracking and is not shown to the end user.', userpoints_translation()),
       '#weight' => 10,
+      '#disabled' => $disable,
   );
 
   $approved_by = $txn ? $txn->getApprover() : NULL;
@@ -221,6 +241,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#maxlength' => 30,
       '#description' => t('The user who gave the transaction its current status.'),
       '#weight' => 30,
+      '#disabled' => $disable,
     );
   }
 
@@ -233,6 +254,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#type' => 'submit',
       '#value' => t('Save'),
       '#weight' => 50,
+      '#disabled' => $disable,
   );
   return $form;
 }
