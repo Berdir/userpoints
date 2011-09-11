@@ -327,7 +327,7 @@ function userpoints_menu_local_tasks_alter(&$data, $router_item, $root_path) {
 
     // Don't display the action link on some pages like settings and
     // approve or decline confirmation forms.
-    $blacklist = array('settings', 'approve', 'decline');
+    $blacklist = array('settings', 'approve', 'decline', 'add', 'edit');
     foreach ($blacklist as $blacklisted_path) {
       if (strpos($root_path, $blacklisted_path) !== FALSE) {
         return;
@@ -338,7 +338,7 @@ function userpoints_menu_local_tasks_alter(&$data, $router_item, $root_path) {
 
     // For the transaction view pages, we want to directly link to the
     // user for this transaction.
-    if (arg(4) == 'transaction' && (arg(6) == 'view' || arg(6) == 'edit')) {
+    if (arg(4) == 'transaction' && arg(6) == 'view') {
       $transaction = userpoints_transaction_load(arg(5));
       $item['href'] .= '/' . $transaction->uid;
     }
