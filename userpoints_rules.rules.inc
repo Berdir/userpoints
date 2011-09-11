@@ -165,28 +165,31 @@ function userpoints_action_grant_points($params) {
   $state = $params['state'];
   $entity = $state->currentArguments['entity'];
 
-  // Map $moderate value to the actual value used by the API.
-  $moderate_mapping = array(
-    'default' => NULL,
-    'approved' => FALSE,
-    'moderated' => TRUE,
-  );
-  $params = array(
+  $transaction = userpoints_grant_points($params['operation'], $params['points'])
     // User id might be a int or a EntityValueWrapper.
-    'uid' => is_object($params['user']->uid) ? $params['user']->getIdentifier() : $params['user']->uid,
-    'entity_type' => $entity ? $entity->type() : NULL,
-    'entity_id' => $entity ? $entity->getIdentifier() : NULL,
-    'moderate' => $moderate_mapping[$params['moderate']],
-    // Rules defaults to FALSE if the date format can not be parsed.
-    // Use NULL instead since FALSE means no expiration.
-    'expirydate' => $params['expirydate'] ? $params['expirydate'] : NULL,
-  ) + $params;
+    ->setUid(is_object($params['user']->uid) ? $params['user']->getIdentifier() : $params['user']->uid)
+    ->setTid($params['tid'])
+    ->setDescription($params['description'])
+    ->setReference($params['reference'])
+    ->setDisplay($params['display']);
 
-  unset($params['state']);
-  unset($params['user']);
-  unset($params['entity']);
-  unset($params['settings']);
-  userpoints_userpointsapi($params);
+  if ($entity) {
+    $transaction->setEntity($entity->type(), $entity->getIdentifier());
+  }
+
+  if ($params['moderate'] != 'default') {
+    if ($params['moderate'] == 'approved') {
+      $transaction->approve();
+    }
+    else {
+      $transaction->pending();
+    }
+  }
+
+  if ($params['expirydate']) {
+    $transaction->setExpirationDate($params['expirydate']);
+  }
+  $transaction->save();
 }
 
 function userpoints_action_grant_points_form_alter(&$form, &$form_state) {
