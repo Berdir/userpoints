@@ -79,23 +79,25 @@ function userpoints_service_add($uid, $points, $tid, $operation, $description, $
     return services_error(t('Points parameter must be a negative or positive number.'));
   }
 
-  $params = array(
-    'uid' => $uid,
-    'points' => $points,
-    'tid' => $tid,
-    'operation' => $operation,
-    'description' => $description,
-    'entity_type' => $entity_type,
-    'entity_id' => $entity_id,
-  );
-  $result = userpoints_userpointsapi($params);
+  if (!$operation) {
+    return services_error(t('Operation parameter is required'));
+  }
 
-  if (!$result['status']) {
-    return services_error(t('Adding points failed: @reason' ,array('@reason' => $result['reason'])));
+  $transaction = userpoints_grant_points($operation, $points, $uid)
+    ->setDescription($description)
+    ->setEntity($entity_type, $entity_id);
+
+  if ($tid !== NULL) {
+   $transaction->setTid($tid);
+  }
+  $transaction->save();
+
+  if (!$transaction->getTxnId()) {
+    return services_error(t('Adding points failed.'));
   }
 
   return (object) array(
-    'id' => $result['transaction']['txn_id'],
-    'uri' => services_resource_uri(array('userpoints_transaction', $result['transaction']['txn_id'])),
+    'id' => $transaction->getTxnId(),
+    'uri' => services_resource_uri(array('userpoints_transaction', $transaction->getTxnId())),
   );
 }
