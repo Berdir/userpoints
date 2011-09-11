@@ -876,7 +876,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::getDenyReasons()
    */
   function isDenied() {
-    return!empty($this->denied_reasons);
+    return !empty($this->denied_reasons);
   }
 
   /**

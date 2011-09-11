@@ -378,7 +378,7 @@ function userpoints_access_my_points($account = NULL) {
  * @return
  *   TRUE if the user has permissions to view the transaction.
  */
-function userpoints_access_view_transaction($transaction) {
+function userpoints_access_view_transaction(UserpointsTransaction $transaction) {
   return userpoints_access_my_points($transaction->getUser());
 }
 
