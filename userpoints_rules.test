@@ -1,0 +1,67 @@
+<?php
+
+/**
+ * @file
+ * Tests for Userpoints Services integration.
+ */
+
+class UserpointsRulesTestCase extends DrupalWebTestCase {
+
+  /**
+   * Implements getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Rules integration'),
+      'description' => t('Tests the rules events and actions.'),
+      'group' => t('Userpoints'),
+    );
+  }
+
+  public function setUp() {
+    parent::setUp(array('userpoints', 'entity', 'rules', 'userpoints_rules'));
+
+  }
+
+  public function testEvents() {
+    $user = $this->drupalCreateUser(array('view userpoints'));
+
+    $before_rule = '{ "rules_userpoints_transaction_before_test_rule" : {
+        "LABEL" : "Userpoints Transaction Before Test rule",
+        "PLUGIN" : "reaction rule",
+        "REQUIRES" : [ "rules", "userpoints_rules" ],
+        "ON" : [ "userpoints_event_points_awarded_before" ],
+        "IF" : [
+          { "data_is" : {
+              "data" : [ "userpoints-transaction:operation" ],
+              "value" : "userpoints_rules_trigger_rule"
+            }
+          }
+        ],
+        "DO" : [
+          { "data_set" : { "data" : [ "userpoints-transaction:status" ], "value" : "2" } },
+          { "data_set" : {
+              "data" : [ "userpoints-transaction:description" ],
+              "value" : "Transaction was declined through rules."
+            }
+          }
+        ]
+      }
+    }';
+
+    $rule = rules_import($before_rule);
+
+    $rule->save();
+
+
+
+    $transaction = userpoints_grant_points('userpoints_rules_trigger_rule', 10, $user->uid)
+      ->save();
+    debug($transaction);
+
+    $transaction = userpoints_grant_points('userpoints_rules_no_trigger_rule', 15, $user->uid)
+      ->save();
+    debug($transaction);
+  }
+
+}
