@@ -852,7 +852,6 @@ class UserpointsTransaction {
   protected function checkChange($only_new = FALSE) {
     if ($this->isReadOnly($only_new)) {
       $this->abort();
-      ddebug_backtrace();
       throw new UserpointsChangeException(t('This transaction is saved and approved or declined and can not be changed.'));
     }
   }
