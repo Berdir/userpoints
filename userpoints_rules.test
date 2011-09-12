@@ -15,6 +15,7 @@ class UserpointsRulesTestCase extends DrupalWebTestCase {
       'name' => t('Rules integration'),
       'description' => t('Tests the rules events and actions.'),
       'group' => t('Userpoints'),
+      'dependencies' => array('rules'),
     );
   }
 
