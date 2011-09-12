@@ -218,9 +218,11 @@ class UserpointsTransaction {
       throw new UserpointsChangeException(t('Invalid status'));
     }
 
-    // Preserve the original status to be able to check if changes in this
-    // transaction are still allowed.
-    $this->orig_status = $this->getStatus();
+    if ($this->txn_id > 0) {
+      // Preserve the original status to be able to check if changes in this
+      // transaction are still allowed.
+      $this->orig_status = $this->getStatus();
+    }
 
     $this->fields['status'] = $status;
     return $this;
@@ -236,7 +238,7 @@ class UserpointsTransaction {
    *
    * @return UserpointsTransaction
    */
-  function setExpirationDate($expirydate) {
+  function setExpiryDate($expirydate) {
     $this->checkChange();
 
     if ($expirydate > 0 || $expirydate === 0 || $expirydate === NULL) {
@@ -495,9 +497,9 @@ class UserpointsTransaction {
    * @return
    *   The expiration date as timestamp or NULL.
    *
-   * @see UserpointsTransaction::setExpirationDate()
+   * @see UserpointsTransaction::setExpiryDate()
    */
-  function getExpirationDate() {
+  function getExpiryDate() {
     return $this->fields['expirydate'];
   }
 
@@ -850,7 +852,8 @@ class UserpointsTransaction {
   protected function checkChange($only_new = FALSE) {
     if ($this->isReadOnly($only_new)) {
       $this->abort();
-      throw new UserpointsChangeException(t('This transaction is saved and approved or pending and can not be changed.'));
+      ddebug_backtrace();
+      throw new UserpointsChangeException(t('This transaction is saved and approved or declined and can not be changed.'));
     }
   }
 
@@ -868,7 +871,15 @@ class UserpointsTransaction {
    *   TRUE if changes are allowed, FALSE if not.
    */
   function isReadOnly($only_new = FALSE) {
-    return !empty($this->txn_id) && ($only_new || $this->orig_status <> UserpointsTransaction::STATUS_PENDING);
+    if (!empty($this->txn_id)) {
+      if ($only_new) {
+        return TRUE;
+      }
+      if ($this->orig_status !== NULL && $this->orig_status <> UserpointsTransaction::STATUS_PENDING) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**
@@ -1246,7 +1257,28 @@ class UserpointsTransaction {
 }
 
 /**
- * This exception is thrown when a property is changed after a saved transaction
+ * This exception is thrown when a pr{ "rules_userpoints_transaction_after_test_rule" : {
+        "LABEL" : "Userpoints Transaction After Test rule",
+        "PLUGIN" : "reaction rule",
+        "REQUIRES" : [ "rules", "userpoints_rules" ],
+        "ON" : [ "userpoints_event_points_awarded_after" ],
+        "IF" : [
+          { "data_is" : {
+              "data" : [ "userpoints-transaction:operation" ],
+              "value" : "userpoints_rules_trigger_after_rule"
+            }
+          }
+        ],
+        "DO" : [
+          { "data_set" : { "data" : [ "userpoints-transaction:status" ], "value" : "1" } },
+          { "data_set" : {
+              "data" : [ "userpoints-transaction:reference" ],
+              "value" : "Transaction was set to pending through rules."
+            }
+          }
+        ]
+      }
+    }operty is changed after a saved transaction
  * has been approved or declined.
  */
 class UserpointsChangeException extends Exception {

@@ -18,7 +18,7 @@ function userpoints_confirm_approve_submit($form, &$form_state) {
 /**
  * Form builder for add/edit userpoints transaction form.
  */
-function userpoints_admin_txn($form, &$form_state, $mode, UserpointsTransaction $txn = NULL) {
+function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
 
   drupal_add_css(drupal_get_path('module', 'userpoints') . '/userpoints.css');
 
@@ -39,6 +39,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, UserpointsTransaction 
     if ($txn) {
       $txn_user = user_load($txn);
     }
+    $txn = NULL;
   }
 
   // If this transaction is read only, disable all fields.
@@ -349,7 +350,7 @@ function userpoints_admin_txn_submit($form, &$form_state) {
 
     // Check for the existence of an expirydate.
     if ($form_state['values']['expirydate']) {
-      $transaction->setExpirationDate(strtotime($form_state['values']['expirydate']));
+      $transaction->setExpiryDate(strtotime($form_state['values']['expirydate']));
     }
   }
   else {
@@ -363,9 +364,9 @@ function userpoints_admin_txn_submit($form, &$form_state) {
 
     // Allow to remove expiration date, first set it to 0 and only set it back
     // if explicitly set.
-    $transaction->setExpirationDate(0);
+    $transaction->setExpiryDate(0);
     if (!empty($form_state['values']['expirydate'])) {
-      $transaction->setExpirationDate(strtotime($form_state['values']['expirydate']));
+      $transaction->setExpiryDate(strtotime($form_state['values']['expirydate']));
     }
 
     // If status changed, the current user is the new approver.

@@ -333,14 +333,16 @@ function userpoints_view_transaction($transaction) {
 
   if (!empty($transaction->parent_txn_id)) {
     $parent_transaction = userpoints_transaction_load($transaction->parent_txn_id);
-    $parent = l(userpoints_create_description($parent_transaction, array('link' => FALSE)), 'userpoints/view/' . $transaction->parent_txn_id, array('html' => TRUE));
+    $uri = entity_uri('userpoints_transaction', $parent_transaction);
+    $parent = l($parent_transaction->getReason(array('link' => FALSE)), $uri['path'], array('html' => TRUE));
   }
 
   $child_txn_ids = db_query('SELECT txn_id FROM {userpoints_txn} WHERE parent_txn_id = :txn_id', array(':txn_id' => $transaction->txn_id))->fetchCol();
   $children = array();
   foreach ($child_txn_ids as $child_txn_id) {
     $child_transaction = userpoints_transaction_load($child_txn_id);
-    $children[] = l(userpoints_create_description($child_transaction, array('link' => FALSE)), 'userpoints/view/' . $child_txn_id, array('html' => TRUE));
+    $uri = entity_uri('userpoints_transaction', $child_transaction);
+    $children[] = l($child_transaction->getReason(array('link' => FALSE)), $uri['path'], array('html' => TRUE));
   }
   $children = !empty($children) ? theme('item_list', array('items' => $children)) : '';
 
@@ -385,7 +387,7 @@ function userpoints_view_transaction($transaction) {
       $content['admin']['moderator'] = array(
         '#theme' => 'userpoints_view_item',
         '#title' => t('Moderator'),
-        '#value' => theme('username', array('account' => user_load($transaction->approver_uid))),
+        '#value' => theme('username', array('account' => $transaction->getApprover())),
         '#weight' => 0,
         '#attributes' => array('class' => array('userpoints-item-moderator')),
       );
@@ -403,7 +405,7 @@ function userpoints_view_transaction($transaction) {
       $content['admin']['description_generated'] = array(
         '#theme' => 'userpoints_view_item',
         '#title' => t('Description (auto generated)'),
-        '#value' => userpoints_create_description($transaction, array('skip_description' => TRUE, 'truncate' => FALSE)),
+        '#value' => $transaction->getReason(array('skip_description' => TRUE, 'truncate' => FALSE)),
         '#weight' => 20,
         '#attributes' => array('class' => array('userpoints-item-description-generated')),
       );
@@ -430,7 +432,7 @@ function userpoints_view_transaction($transaction) {
     $content['admin']['actions'] = array(
       '#theme' => 'userpoints_view_item',
       '#title' => t('Actions'),
-      '#value' => userpoints_get_transaction_actions($transaction, FALSE),
+      '#value' => $transaction->getActions(FALSE),
       '#weight' => 50,
       '#attributes' => array('class' => array('userpoints-item-actions')),
     );

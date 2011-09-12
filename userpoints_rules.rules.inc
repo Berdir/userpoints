@@ -187,7 +187,7 @@ function userpoints_action_grant_points($params) {
   }
 
   if ($params['expirydate']) {
-    $transaction->setExpirationDate($params['expirydate']);
+    $transaction->setExpiryDate($params['expirydate']);
   }
   $transaction->save();
 }

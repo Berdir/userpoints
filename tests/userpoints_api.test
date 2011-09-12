@@ -184,7 +184,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     // First lets check to make sure it is blocking bad times.
     try {
       userpoints_grant_points('bad_time', $points, $this->non_admin_user->uid)
-        ->setExpirationDate($bad_time)
+        ->setExpiryDate($bad_time)
         ->save();
 
       $this->fail(t('API succesfully blocked an entry with a string as the expiry date'));
@@ -194,7 +194,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
 
     foreach ($times as $key => $time) {
       $transaction = userpoints_grant_points($key, $points, $this->non_admin_user->uid)
-        ->setExpirationDate($time['time'])
+        ->setExpiryDate($time['time'])
         ->save();
       $this->assertTrue((bool)$transaction->getTxnId(), t($time['string'] . " API responded with a successful grant of points"));
       // Check the database to ensure the points were properly saved.
@@ -222,12 +222,12 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $expire_points = rand(1, 100);
 
     $transaction = userpoints_grant_points('must_expire', $expire_points, $this->non_admin_user->uid)
-        ->setExpirationDate(REQUEST_TIME - 100)
+        ->setExpiryDate(REQUEST_TIME - 100)
         ->save();
     $this->assertTrue((bool)$transaction->getTxnId(), t("API succesfully added points for expiration"));
 
     $transaction = userpoints_grant_points('must_not_expire', $keep_points, $this->non_admin_user->uid)
-        ->setExpirationDate(REQUEST_TIME + 10000)
+        ->setExpiryDate(REQUEST_TIME + 10000)
         ->save();
     $this->assertTrue((bool)$transaction->getTxnId(), t("API succesfully added points for expiration"));
 
