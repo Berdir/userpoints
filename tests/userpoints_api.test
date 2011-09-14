@@ -29,11 +29,11 @@ class UserpointsBaseTestCase extends DrupalWebTestCase {
    *   The most recent transaction id, assuming that this belongs to this
    *   transaction.
    */
-  function addPoints($points, $user, $total = NULL) {
+  function addPoints($points, $user, $total = NULL, $additional = array()) {
     $edit = array(
       'txn_user' => $user->name,
       'points' => $points,
-    );
+    ) + $additional;
     $this->drupalPost('admin/config/people/userpoints/add', $edit, t('Save'));
     if ($total !== NULL) {
       $categories = userpoints_get_categories();
@@ -168,146 +168,6 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     return (int) $query->execute()->fetchField();
   }
 
-  /**
-   * Call userpoints_userpointsapi() with just points.
-   */
-  function testBasicCall() {
-    global $user;
-
-    $points = (int) rand(1, 500);
-    $sumpoints = $points;
-
-    // NOTE: increment max points with all positive point changes, tests userpoints_get_max_points.
-    $maxpoints = $points;
-
-    // Test the a basic API call.
-    $return = userpoints_userpointsapi($points);
-    $this->assertTrue($return['status'] == TRUE, t('API responded with successful grant of points'));
-
-    // Check the database to ensure the point were properly saved.
-    $this->assertTrue($this->getTxnPoints($user->uid, $points) === $points, t('Successfully verified points in the txn table'));
-
-    // Check that the transaction table and the summary table match.
-    $this->assertTrue($this->getTxnPoints($user->uid, NULL, TRUE) === $this->getPoints($user->uid, NULL, TRUE), t('Sum of transactions match total points for user'));
-
-    // Add negative points to the initial value and check the values.
-    $points = -rand(1, 500);
-    $sumpoints = $sumpoints + $points;
-    userpoints_userpointsapi($points);
-
-    // Check the database to ensure the negative point value was properly saved.
-    $this->assertTrue($this->getTxnPoints($user->uid, $points) === $points, t('Successfully verified negative points in the txn table'));
-
-    // Now test to make sure the transaction and and caching table stay in sync.
-    // Also test userpoints_get_max_points and userpoints_get_current_points.
-    for ($i = 0; $i <= rand(1, 50); $i++) {
-      $points = rand(1, 500);
-      if (rand() & 1) {
-        $points = - $points;
-      }
-      $sumpoints = $sumpoints + $points;
-      if ($sumpoints > $maxpoints) {
-        $maxpoints = $sumpoints;
-      }
-      userpoints_userpointsapi($points);
-    }
-
-    // Check the summary table to make sure everything is still kosher.
-    $this->assertEqual($this->getTxnPoints($user->uid, NULL, TRUE), $this->getPoints($user->uid, NULL, TRUE));
-    $this->assertEqual($this->getPoints($user->uid, NULL, TRUE), $sumpoints);
-    $this->assertEqual($sumpoints, userpoints_get_current_points());
-    $this->assertEqual($maxpoints, userpoints_get_max_points());
-  }
-
-  /**
-   * Call the api functions with an array.
-   */
-  function testParamsArrayCall() {
-    $points = rand();
-
-    // Assert that the use of a params array with simply points in it works.
-    $params = array(
-      'points' => $points,
-      'uid' => $this->non_admin_user->uid,
-    );
-
-    $this->assertTrue(userpoints_userpointsapi($params) == TRUE,
-      t('API call using a params array responded with successful grant of points')
-    );
-
-    // Check the Database to make sure the points made it there.
-    $this->assertTrue($this->getPoints($this->non_admin_user->uid, NULL, TRUE) == $points, t('Successfully verified points in the txn table'));
-
-    // Test to ensure that calling it with no points returns FALSE indicating an error.
-    $params = array(
-      'points' => '',
-      'uid' => $this->non_admin_user->uid,
-    );
-
-    $return = userpoints_userpointsapi($params);
-    $this->assertFalse($return['status'],
-            t('API successfully prevented null points from being added'));
-
-    $params = array(
-      'points' => 'abcd',
-      'uid' => $this->non_admin_user->uid,
-    );
-    $return = userpoints_userpointsapi($params);
-    $this->assertFalse($return['status'], t('API successfully prevented non-numeric points from being added'));
-
-    // Award points to admin user and test to ensure they were awarded to the correct user.
-    $params = array(
-      'points' => $points,
-      'uid' => $this->admin_user->uid,
-    );
-
-    $this->assertTrue(userpoints_userpointsapi($params) == TRUE, t('Successfully granted points to admin user'));
-
-    // Check the Database to make sure the points made it there.
-    $this->assertTrue($this->getPoints($this->non_admin_user->uid, NULL, TRUE) == $points, t('Successfully verified points in the txn table'));
-
-    // Attempt to award points to a non-existent user.
-    $sql = "SELECT MAX(uid) FROM {users}";
-    $nonuid = db_query($sql)->fetchField() + 1;
-    $params = array(
-      'points' => $points,
-      'uid' => $nonuid,
-    );
-
-    $ret = userpoints_userpointsapi($params);
-    $this->assertFalse($ret['status'], t('Successfully blocked points given to a non-existent user'));
-
-    /**
-     * @todo: This is not actually implemented, just passed the tests because it
-     *        has set the 'uid' key instead of 'tid'.
-    // Attempt to award points to a non-existent term.
-    $maxtid = "SELECT MAX(tid) from {taxonomy_term_data}";
-    $nontid = db_query($sql)->fetchField() + 1;
-    $params = array(
-      'points' => $points,
-      'tid' => $nontid,
-    );
-
-    $ret = userpoints_userpointsapi($params);
-    $this->assertFalse($ret['status'], t('Successfully blocked points given to a non-existent tid'));
-    */
-    // Test various aspects of the API to ensure the DB is being updated successfully.
-    $points = rand(1, 500);
-    $description = $this->randomName();
-    $operation = $this->randomName();
-    $params = array(
-      'points' => $points,
-      'description' => $description,
-      'operation' => $operation,
-    );
-
-    $ret = userpoints_userpointsapi($params);
-    $sql = "SELECT description, operation, reference FROM {userpoints_txn} WHERE description = :description AND operation = :operation";
-    $db_point_rec = db_query($sql, array(':description' => $description, ':operation' => $operation))->fetchAssoc();
-    $this->assertTrue($db_point_rec['description'] == $description, t('Point description successfully verified in DB'));
-    $this->assertTrue($db_point_rec['operation'] == $operation, t('Point event successfully verified in DB'));
-  }
-
   function testExpiration() {
     $points = rand(1, 100);
     $sum_points = 0;
@@ -322,30 +182,27 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
 
     $bad_time = 'test string';
     // First lets check to make sure it is blocking bad times.
-    $params = array(
-        'uid' => $this->non_admin_user->uid,
-        'points' => $points,
-        'expirydate' => $bad_time,
-    );
-    $return = userpoints_userpointsapi($params);
-    $this->assertFalse($return['status'], t(print_r($return, TRUE) . "API succesfully blocked an entry with a string as the expiry date"));
+    try {
+      userpoints_grant_points('bad_time', $points, $this->non_admin_user->uid)
+        ->setExpiryDate($bad_time)
+        ->save();
 
+      $this->fail(t('API succesfully blocked an entry with a string as the expiry date'));
+    } catch (UserpointsInvalidArgumentException $e) {
+      $this->pass(t('API succesfully blocked an entry with a string as the expiry date'));
+    }
 
-    foreach ($times as $time) {
-      $params = array(
-          'uid' => $this->non_admin_user->uid,
-          'points' => $points,
-          'expirydate' => $time['time'],
-      );
-      $return = userpoints_userpointsapi($params);
-      $this->assertTrue($return['status'], t($time['string'] . " API responded with a successful grant of points"));
+    foreach ($times as $key => $time) {
+      $transaction = userpoints_grant_points($key, $points, $this->non_admin_user->uid)
+        ->setExpiryDate($time['time'])
+        ->save();
+      $this->assertTrue((bool)$transaction->getTxnId(), t($time['string'] . " API responded with a successful grant of points"));
       // Check the database to ensure the points were properly saved.
       $sql = "SELECT points FROM {userpoints_txn} WHERE uid = :uid AND points = :points AND expirydate = :date";
       $db_points = (int) db_query($sql, array(':uid' => $this->non_admin_user->uid, ':points' => $points, ':date' => (int) $time['time']))->fetchField();
       $this->assertEqual($db_points, $points, t($time['string'] . "Successfully verified points in the txn table."));
-      if ($db_points == $points) {
-        $sum_points = $sum_points + $points;
-      }
+
+      $sum_points += $points;
 
       // Check update point to 'userpoints' table.
       $this->assertEqual($this->getPoints($this->non_admin_user->uid), $sum_points, t($time['string'] . "Successfully verified that the summary table was updated"));
@@ -363,23 +220,16 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     // Add two different points in, one to post immediately another to expire in the future.
     $keep_points = rand(1, 100);
     $expire_points = rand(1, 100);
-    $params = array(
-      'uid' => $this->non_admin_user->uid,
-      'points' => $expire_points,
-      'expirydate' => REQUEST_TIME - 1000,
-      'operation' => 'must_expire',
-    );
-    $return = userpoints_userpointsapi($params);
-    $this->assertTrue($return['status'], t("API succesfully added points for expiration"));
 
-    $params = array(
-      'uid' => $this->non_admin_user->uid,
-      'points' => $keep_points,
-      'expirydate' => REQUEST_TIME + 10000,
-      'operation' => 'must_not_expire',
-    );
-    userpoints_userpointsapi($params);
-    $this->assertTrue($return['status'], t("API succesfully added points for expiration"));
+    $transaction = userpoints_grant_points('must_expire', $expire_points, $this->non_admin_user->uid)
+        ->setExpiryDate(REQUEST_TIME - 100)
+        ->save();
+    $this->assertTrue((bool)$transaction->getTxnId(), t("API succesfully added points for expiration"));
+
+    $transaction = userpoints_grant_points('must_not_expire', $keep_points, $this->non_admin_user->uid)
+        ->setExpiryDate(REQUEST_TIME + 10000)
+        ->save();
+    $this->assertTrue((bool)$transaction->getTxnId(), t("API succesfully added points for expiration"));
 
     // Load timestamp of the first transaction.
     $time_stamp = db_query('SELECT time_stamp FROM {userpoints_txn} WHERE operation = :op', array(':op' => 'must_expire'))->fetchField();
@@ -497,11 +347,7 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $this->assertTrue($content == FALSE, t("Successful navigated to the page modify points"));
 
     // check modify points.
-    $edit = array(
-        'txn_user' => $this->admin_user->name,
-        'points' => $points,
-    );
-    $this->drupalPost('admin/config/people/userpoints/add', $edit, 'Save');
+    $this->addPoints($points, $this->admin_user);
 
     // Check database.
     $this->assertEqual($this->getTxnPoints($this->admin_user->uid, $points), $points, t("Successful verified that points were added into database."));
@@ -517,192 +363,6 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $this->drupalGet('admin/config/people/userpoints');
     $this->assertResponse(403, t("Successful verified that a user without admin userpoints permissions can not access the admin interface."));
   }
-
-  function testModeration() {
-    $points = rand(1, 100);
-
-    // condition1 moderate=TRUE.
-    $params = array(
-        'uid' => $this->non_admin_user->uid,
-        'points' => $points,
-        'moderate' => TRUE,
-    );
-    // add points to user.
-    $return = userpoints_userpointsapi($params);
-    $this->assertTrue($return['status'] == TRUE, t("1. (moderate=TRUE) API responded with successful grant of points"));
-
-    // Check the database to ensure the point were properly saved.
-    $this->assertTrue($this->getTxnPoints($this->non_admin_user->uid, $points) == $points, t("1. (moderate=TRUE) Successfully verified points in the txn table and waiting moderation."));
-
-    // Check do not update point to 'userpoints' table.
-    $this->assertTrue($this->getPoints($this->non_admin_user->uid) == 0, t("1. (moderate=TRUE) Successfully verified that points were added and the summary table was not updated."));
-
-    /*
-      //DISABLED because it should be checking if it adhered to the sites default moderation status
-      $params = array (
-      'uid' => $this->non_admin_user->uid,
-      'points' => $points,
-      'moderate' => NULL,
-      );
-      $return = userpoints_userpointsapi($params);
-      $this->assertTrue($return['status'] == TRUE , t("6. (moderate=NULL) API responded with successful grant of points"));
-
-      $sql = "SELECT points FROM {userpoints_txn} WHERE uid = %d AND points = %d AND status = 1";
-      $db_points = (int) db_result(db_query($sql, $this->non_admin_user->uid, $points));
-      $this->assertTrue($db_points == $points,t("6. (moderate=NULL) Successfully verified points in the txn table and waiting moder.") );
-
-      $sql1 = "SELECT points FROM {userpoints} WHERE uid=%d";
-      $db_points = (int) db_result(db_query($sql1, $this->non_admin_user->uid));
-      $this->assertTrue($db_points == 0,t("6. (moderate=NULL) Successfully, Points added and does not modify summary table.") );
-
-    */
-
-    // condition7 moderate=FALSE.
-    $params = array(
-        'uid' => $this->non_admin_user->uid,
-        'points' => $points,
-        'moderate' => FALSE,
-    );
-    // add points to user.
-    $return = userpoints_userpointsapi($params);
-    $this->assertTrue($return['status'] == TRUE, t("7. (moderate=FALSE) API responded with successful grant of points"));
-
-    // Check the database to ensure the point were properly saved.
-    $sql = "SELECT points FROM {userpoints_txn} WHERE uid = :uid AND points = :points AND status = 0";
-    $db_points = (int) db_query($sql, array(':uid' => $this->non_admin_user->uid, ':points' => $points))->fetchField();
-    $this->assertTrue($db_points == $points, t("7. (moderate=FALSE) Successfully verified points in the txn table and NOT waiting moderation."));
-  }
-
-  /**
-   * Tests the userpoints_get_categories() function.
-   */
-  function testGetCategories() {
-    $cats = userpoints_get_categories();
-    $this->assertTrue(is_array($cats), 'Successfully verified userpoints_get_categories() returned an array');
-  }
-
-
-  /**
-   * Test that editing points correctly updates the current and max points.
-   */
-  function testEditingTransactions() {
-    // First, add some points to two different categories.
-    $uid = $this->non_admin_user->uid;
-    $params = array(
-      'points' => 100,
-      'tid' => 0,
-      'uid' => $uid,
-    );
-    userpoints_userpointsapi($params);
-
-    $params = array(
-      'points' => 50,
-      'tid' => 1,
-      'uid' => $uid,
-    );
-    userpoints_userpointsapi($params);
-
-    // Add a third transaction that can be edited.
-    $params = array(
-      'points' => 5,
-      'tid' => 0,
-      'uid' => $uid,
-    );
-    $return = userpoints_userpointsapi($params);
-    $txn_id = $return['transaction']['txn_id'];
-
-    // Verify points up to this point.
-    $this->verifyPoints($uid, 105, 105, 0);
-    $this->verifyPoints($uid, 50, 50, 1);
-
-    // Now, edit the transaction. Mix any combination of point, category and
-    // status changes. After the change, verify current and max points.
-
-    // Points change.
-    $params = array(
-      'txn_id' => $txn_id,
-      'points' => -5,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 95, 105, 0);
-
-    // Change status to pending.
-    $params = array(
-      'txn_id' => $txn_id,
-      'status' => USERPOINTS_TXN_STATUS_PENDING,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 100, 105, 0);
-
-    // Change status back to approved.
-    $params = array(
-      'txn_id' => $txn_id,
-      'status' => USERPOINTS_TXN_STATUS_APPROVED,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 95, 105, 0);
-
-    // Change category.
-    $params = array(
-      'txn_id' => $txn_id,
-      'tid' => 1,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 100, 105, 0);
-    $this->verifyPoints($uid, 45, 50, 1);
-
-    // Change points and status.
-    $params = array(
-      'txn_id' => $txn_id,
-      'points' => 3,
-      'status' => USERPOINTS_TXN_STATUS_PENDING,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 100, 105, 0);
-    $this->verifyPoints($uid, 50, 50, 1);
-
-    // Change status back to approved.
-    $params = array(
-      'txn_id' => $txn_id,
-      'status' => USERPOINTS_TXN_STATUS_APPROVED,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 53, 53, 1);
-
-    // Change points and category.
-    $params = array(
-      'txn_id' => $txn_id,
-      'points' => 9,
-      'tid' => 0,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 109, 109, 0);
-    $this->verifyPoints($uid, 50, 53, 1);
-
-    // Change points and status and category.
-    $params = array(
-      'txn_id' => $txn_id,
-      'points' => 10,
-      'tid' => 1,
-      'status' => USERPOINTS_TXN_STATUS_DECLINED,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 100, 109, 0);
-    $this->verifyPoints($uid, 50, 53, 1);
-
-    // Change points and status back to approved.
-    $params = array(
-      'txn_id' => $txn_id,
-      'points' => 4,
-      'status' => USERPOINTS_TXN_STATUS_APPROVED,
-    );
-    userpoints_userpointsapi($params);
-    $this->verifyPoints($uid, 100, 109, 0);
-    $this->verifyPoints($uid, 54, 54, 1);
-
-    $this->verifyPoints($uid, 154, 159, 'all');
-  }
-
 }
 
 /**
@@ -744,12 +404,13 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $category = $categories[$tid];
 
     // Grant some points with admin user.
-    $txn_id = $this->addPoints(10, $user, 10);
+    $txn_id = $this->addPoints(10, $user, NULL, array('moderate' => 1));
+    $this->assertText(t('@user just earned @points points, pending administrator approval.', array('@user' => $user->name, '@points' => 10)));
 
-    // Go to the listing page, verify that the user is shown.
+    // Go to the listing page, verify that the user is not shown yet, as the
+    // points are still pending.
     $row = $this->xpath('//table/tbody/tr');
-    //$this->assertEqual(strip_tags((string)$row[0]->td[0]), t('@name (details)', array('@name' => $user->name)), t('User name with details link displayed.'));
-    $this->assertEqual((string)$row[0]->td[1], 10, t('Points correctly displayed.'));
+    $this->assertTrue(empty($row));
 
     // Go to the transaction listing page, verify that the transaction is shown.
     $this->clickLink(t('Transactions'));
@@ -759,12 +420,12 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $this->assertEqual((string)$row[0]->td[1], 10, t('Points correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[2], format_date($transaction->time_stamp, 'small'), t('Date correctly displayed.'));
     $this->assertEqual((string)$row[0]->td[3], 'admin', t('Reason correctly displayed.'));
-    $this->assertEqual((string)$row[0]->td[4], t('Approved'), t('Status correctly displayed.'));
+    $this->assertEqual((string)$row[0]->td[4], t('Pending'), t('Status correctly displayed.'));
 
     $this->clickLink(t('edit'));
 
     // Verify default values.
-    $this->assertFieldByName('points', 10);
+    $this->assertFieldByName('points', 10, t('Points default value is correct.'));
     $value = $this->xpath("//input[@name=:name and @disabled=:disabled]/@value", array(':name' => 'txn_user', ':disabled' => 'disabled'));
     $this->assertEqual($value[0]['value'], $user->name, t('User field has the correct value and is disabled.'));
     $this->assertFieldByName('approver', $this->admin_user->name);
@@ -774,6 +435,7 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
       'operation' => $this->randomName(),
       'description' => $this->randomName(),
       'reference' => $this->randomName(),
+      'status' => UserpointsTransaction::STATUS_APPROVED,
     );
     $this->drupalPost(NULL, $edit, t('Save'));
 
@@ -798,5 +460,99 @@ class UserpointsAdminTestCase extends UserpointsBaseTestCase {
     $this->clickLink('view');
 
 
+  }
+}
+
+
+/**
+ * API Tests.
+ */
+class UserpointsGrantPointsTestCase extends UserpointsBaseTestCase {
+
+  private $admin_user;
+  private $non_admin_user;
+
+  /**
+   * Implements getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Userpoints grant points'),
+      'description' => t('Tests the core API for proper inserts & updates to the database tables.'),
+      'group' => t('Userpoints'),
+    );
+  }
+
+  /**
+   * Install userpoints module and create users.
+   */
+  function setUp() {
+    parent::setUp('userpoints');
+
+    // Create an administrator account.
+    $this->admin_user = $this->drupalCreateUser(array('administer userpoints'));
+
+    // Create a standard Drupal account and log in as that person.
+    $this->non_admin_user = $this->drupalCreateUser();
+    $this->drupalLogin($this->non_admin_user);
+  }
+
+  /**
+   * Test basic usage of the API to create and update transactions.
+   */
+  function testGrantPoints() {
+    // Most basic usage, with automated saving.
+    userpoints_grant_points('test', 10, $this->non_admin_user->uid);
+    $this->verifyPoints($this->non_admin_user->uid, 10, 10);
+
+    // Negative points, use of save().
+    userpoints_grant_points('test', -5, $this->non_admin_user->uid)
+      ->save();
+    $this->verifyPoints($this->non_admin_user->uid, 5, 10);
+
+    // Verify that pending points are not added to the total.
+    $transaction = userpoints_grant_points('test', 7, $this->non_admin_user->uid)
+      ->pending()
+      ->save();
+    $this->verifyPoints($this->non_admin_user->uid, 5, 10);
+
+    // Make sure that loaded transactions can be updated, and after marked as
+    // approved, the points are correct.
+    $transaction = userpoints_transaction_load($transaction->getTxnId());
+    $transaction
+      ->approve()
+      ->save();
+    $this->verifyPoints($this->non_admin_user->uid, 12, 12);
+
+    try {
+      // Approved transaction must not be changed.
+      $transaction
+        ->setPoints(123)
+        ->save();
+      $this->fail(t('Changing a approved transaction was not denied.'));
+    } catch (UserpointsChangeException $e) {
+      $this->pass(t('Changing a approved transaction was denied.'));
+    }
+
+    $transaction = userpoints_grant_points('test', 19, $this->non_admin_user->uid)
+      ->pending()
+      ->save();
+    $this->verifyPoints($this->non_admin_user->uid, 12, 12);
+
+    // Transactions can be declined.
+    $transaction
+      ->decline()
+      ->save();
+    $this->verifyPoints($this->non_admin_user->uid, 12, 12);
+
+    try {
+      // Declined transaction must not be changed.
+      $transaction
+        ->setPoints(123)
+        ->save();
+      $this->fail(t('Changing a declined transaction was not denied.'));
+    } catch (UserpointsChangeException $e) {
+      $this->pass(t('Changing a declined transaction was denied.'));
+    }
   }
 }

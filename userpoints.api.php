@@ -6,6 +6,32 @@
  */
 
 /**
+ * @mainpage Userpoints API Documentation
+ * API Documentation of the Userpoints module.
+ *
+ * - Topics:
+ *  - @link userpoints_api API functions @endlink
+ *  - @link userpoints_hooks Provided hooks @endlink
+ */
+
+/**
+ * @defgroup userpoints_api API functions
+ *
+ * The function userpoints_grant_points() allows to grant a number of points,
+ * positive or negative, to a user.
+ */
+
+/**
+ * @defgroup userpoints_hooks Provided hooks
+ *
+ */
+
+/**
+ * @addtogroup userpoints_hooks
+ * @{
+ */
+
+/**
  * Return information about registered operations.
  *
  * Modules can register operation strings
@@ -82,3 +108,32 @@ function hook_userpoints_settings() {
     '#description' => t('If checked, all content types award !points by default. This can be overridden for each content type on the content type edit page.', userpoints_translation()),
   );
 }
+
+/**
+ * Invoked before a transaction is saved.
+ *
+ * To prohibit this transaction from being saved, use
+ * UserpointsTransaction::deny().
+ *
+ * @param $transaction
+ *   A UserpointsTransaction object which contains all information about the
+ *   new or updated transaction.
+ */
+function hook_userpoints_transaction_before(UserpointsTransaction $transaction) {
+
+}
+
+/**
+ * Invoked after a transaction has been saved.
+ *
+ * @param $transaction
+ *   A UserpointsTransaction object which contains all information about the
+ *   new or updated transaction.
+ */
+function hook_userpoints_transaction_after(UserpointsTransaction $transaction) {
+
+}
+
+/**
+ * @}
+ */

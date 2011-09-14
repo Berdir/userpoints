@@ -35,7 +35,7 @@ function userpoints_list_transactions($form, &$form_state, $account = NULL, $tid
   $header = userpoints_get_transaction_header($settings);
 
   $query = db_select('userpoints_txn', 'p')->extend('PagerDefault')->extend('TableSort')
-    ->fields('p')
+    ->fields('p', array('txn_id'))
     ->condition('p.uid', $account->uid)
     ->orderByHeader($header)
     // Enforce consistent sort order.
@@ -48,7 +48,7 @@ function userpoints_list_transactions($form, &$form_state, $account = NULL, $tid
 
   $unapproved_query = db_select('userpoints_txn', 'p')
     ->condition('uid', $account->uid)
-    ->condition('status', USERPOINTS_TXN_STATUS_PENDING);
+    ->condition('status', UserpointsTransaction::STATUS_PENDING);
   $unapproved_query->addExpression('SUM(points)');
 
   $values = userpoints_filter_parse_input($form_state, $tid);
@@ -65,8 +65,10 @@ function userpoints_list_transactions($form, &$form_state, $account = NULL, $tid
   }
 
   $rows = array();
-  foreach ($query->execute() as $transaction) {
-    $rows[] = userpoints_get_transaction_row($transaction, $settings);
+  $result = $query->execute();
+  $transactions = userpoints_transaction_load_multiple($result->fetchCol());
+  foreach ($transactions as $transaction) {
+    $rows[] = $transaction->getTableRow($settings);
   }
 
   // Store context in the output array so that modules have access to it.
@@ -219,9 +221,9 @@ function userpoints_view_transaction($transaction) {
   drupal_set_title(t('View transaction #@txn_id', array('@txn_id' => $transaction->txn_id)));
 
   $css_stati = array(
-    USERPOINTS_TXN_STATUS_APPROVED => 'approved',
-    USERPOINTS_TXN_STATUS_DECLINED => 'declined',
-    USERPOINTS_TXN_STATUS_PENDING => 'pending',
+    UserpointsTransaction::STATUS_APPROVED => 'approved',
+    UserpointsTransaction::STATUS_DECLINED => 'declined',
+    UserpointsTransaction::STATUS_PENDING => 'pending',
   );
   $classes = 'userpoints-view-' . $css_stati[$transaction->status] . ' userpoints-view-category-' . $transaction->tid . ' userpoints-view-' . ($transaction->points > 0 ? 'positive' : 'negative');
   if (!empty($transaction->expirydate)) {
@@ -267,7 +269,7 @@ function userpoints_view_transaction($transaction) {
   $content['details']['reason'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('Reason'),
-    '#value' => userpoints_create_description($transaction, array('truncate' => FALSE)),
+    '#value' => $transaction->getReason(array('truncate' => FALSE)),
     '#weight' => 30,
     '#attributes' => array('class' => array('userpoints-item-reason')),
   );
@@ -331,14 +333,16 @@ function userpoints_view_transaction($transaction) {
 
   if (!empty($transaction->parent_txn_id)) {
     $parent_transaction = userpoints_transaction_load($transaction->parent_txn_id);
-    $parent = l(userpoints_create_description($parent_transaction, array('link' => FALSE)), 'userpoints/view/' . $transaction->parent_txn_id, array('html' => TRUE));
+    $uri = entity_uri('userpoints_transaction', $parent_transaction);
+    $parent = l($parent_transaction->getReason(array('link' => FALSE)), $uri['path'], array('html' => TRUE));
   }
 
   $child_txn_ids = db_query('SELECT txn_id FROM {userpoints_txn} WHERE parent_txn_id = :txn_id', array(':txn_id' => $transaction->txn_id))->fetchCol();
   $children = array();
   foreach ($child_txn_ids as $child_txn_id) {
     $child_transaction = userpoints_transaction_load($child_txn_id);
-    $children[] = l(userpoints_create_description($child_transaction, array('link' => FALSE)), 'userpoints/view/' . $child_txn_id, array('html' => TRUE));
+    $uri = entity_uri('userpoints_transaction', $child_transaction);
+    $children[] = l($child_transaction->getReason(array('link' => FALSE)), $uri['path'], array('html' => TRUE));
   }
   $children = !empty($children) ? theme('item_list', array('items' => $children)) : '';
 
@@ -383,7 +387,7 @@ function userpoints_view_transaction($transaction) {
       $content['admin']['moderator'] = array(
         '#theme' => 'userpoints_view_item',
         '#title' => t('Moderator'),
-        '#value' => theme('username', array('account' => user_load($transaction->approver_uid))),
+        '#value' => theme('username', array('account' => $transaction->getApprover())),
         '#weight' => 0,
         '#attributes' => array('class' => array('userpoints-item-moderator')),
       );
@@ -401,7 +405,7 @@ function userpoints_view_transaction($transaction) {
       $content['admin']['description_generated'] = array(
         '#theme' => 'userpoints_view_item',
         '#title' => t('Description (auto generated)'),
-        '#value' => userpoints_create_description($transaction, array('skip_description' => TRUE, 'truncate' => FALSE)),
+        '#value' => $transaction->getReason(array('skip_description' => TRUE, 'truncate' => FALSE)),
         '#weight' => 20,
         '#attributes' => array('class' => array('userpoints-item-description-generated')),
       );
@@ -428,7 +432,7 @@ function userpoints_view_transaction($transaction) {
     $content['admin']['actions'] = array(
       '#theme' => 'userpoints_view_item',
       '#title' => t('Actions'),
-      '#value' => userpoints_get_transaction_actions($transaction, FALSE),
+      '#value' => $transaction->getActions(FALSE),
       '#weight' => 50,
       '#attributes' => array('class' => array('userpoints-item-actions')),
     );
