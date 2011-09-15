@@ -759,11 +759,13 @@ class UserpointsTransaction {
       throw new UserpointsTransactionDeniedException($this->getDenyReasons());
     }
 
+    field_attach_presave('userpoints_transaction', $this);
     if (empty($this->txn_id)) {
       // This is a new transaction, save.
       $this->txn_id = db_insert('userpoints_txn')
           ->fields($this->fields)
           ->execute();
+      field_attach_insert('userpoints_transaction', $this);
     }
     else {
       // Existing transaction, update.
@@ -771,6 +773,7 @@ class UserpointsTransaction {
         ->condition('txn_id', $this->txn_id)
         ->fields($this->fields)
         ->execute();
+      field_attach_update('userpoints_transaction', $this);
     }
 
     // Update totals if the transaction is approved and not expired.
@@ -1211,7 +1214,7 @@ class UserpointsTransaction {
    */
   function __destruct() {
     // Automatically save new transactions to improve DX.
-    if (!$this->getTxnId() && !$this->isAborted()) {
+    if (!$this->getTxnId() && !$this->isAborted() && $this->getPoints() && $this->getUid()) {
       $this->save();
     }
   }
@@ -1220,21 +1223,15 @@ class UserpointsTransaction {
    * Magic function to allow access to property by name.
    */
   function __get($name) {
-
-    // Compatibility with dpm().
-    if (strpos($name, 'krumo') !== FALSE) {
-      if (!isset($this->$name)) {
-        $this->$name = NULL;
-      }
-      return $this->$name;
-    }
-
     $method = 'get' . str_replace('_', '', $name);
     if (method_exists($this, $method)) {
       return $this->$method();
     }
     else {
-      throw new UserpointsInvalidPropertyException($name);
+      if (!isset($this->$name)) {
+        $this->$name = NULL;
+      }
+      return $this->$name;
     }
   }
 
@@ -1253,31 +1250,21 @@ class UserpointsTransaction {
       return $this->$name = $value;
     }
   }
+
+  /**
+   * Magic method for isset($transaction->$property) calls.
+   */
+  public function __isset($name) {
+    $method = 'get' . str_replace('_', '', $name);
+    if (method_exists($this, $method)) {
+      return TRUE;
+    }
+    return FALSE;
+  }
 }
 
 /**
- * This exception is thrown when a pr{ "rules_userpoints_transaction_after_test_rule" : {
-        "LABEL" : "Userpoints Transaction After Test rule",
-        "PLUGIN" : "reaction rule",
-        "REQUIRES" : [ "rules", "userpoints_rules" ],
-        "ON" : [ "userpoints_event_points_awarded_after" ],
-        "IF" : [
-          { "data_is" : {
-              "data" : [ "userpoints-transaction:operation" ],
-              "value" : "userpoints_rules_trigger_after_rule"
-            }
-          }
-        ],
-        "DO" : [
-          { "data_set" : { "data" : [ "userpoints-transaction:status" ], "value" : "1" } },
-          { "data_set" : {
-              "data" : [ "userpoints-transaction:reference" ],
-              "value" : "Transaction was set to pending through rules."
-            }
-          }
-        ]
-      }
-    }operty is changed after a saved transaction
+ * This exception is thrown when a property is changed after a saved transaction
  * has been approved or declined.
  */
 class UserpointsChangeException extends Exception {

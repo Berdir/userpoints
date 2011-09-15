@@ -760,6 +760,33 @@ function userpoints_field_extra_fields() {
       )
     )
   );
+  $extra['userpoints_transaction']['userpoints_transaction'] = array(
+    'form' => array(
+      'txn_points' => array(
+        'label' => t('Transaction user'),
+        'description' => t('The user of the transaction'),
+        'weight' => -20,
+      ),
+      'points' => array(
+        'label' => t('!Points', userpoints_translation()),
+        'description' => t('!Points amount of the transaction', userpoints_translation()),
+        'weight' => -15,
+      ),
+      'additional_settings' => array(
+        'label' => t('Additional settings', userpoints_translation()),
+        'description' => t('The vertical tab that contains the optional settings', userpoints_translation()),
+        'weight' => 0,
+      ),
+    ),
+  );
+
+  if (module_exists('taxonomy') && count(userpoints_get_categories()) > 1) {
+    $extra['userpoints_transaction']['userpoints_transaction']['form']['tid'] = array(
+      'label' => t('Category'),
+      'description' => t('Category of the transaction'),
+      'weight' => 0,
+    );
+  }
   return $extra;
 }
 
@@ -1470,11 +1497,19 @@ function userpoints_entity_info() {
       'controller class' => 'UserpointsTransactionController',
       'base table' => 'userpoints_txn',
       'uri callback' => 'userpoints_transaction_uri_callback',
-      'fieldable' => FALSE,
+      'fieldable' => TRUE,
       'entity keys' => array(
         'id' => 'txn_id',
       ),
-      'bundles' => array(),
+      'bundles' => array(
+        'userpoints_transaction' => array(
+          'label' => t('Default bundle'),
+          'admin' => array(
+            'path' => 'admin/config/people/userpoints',
+            'access arguments' => array('administer userpoints'),
+          ),
+        ),
+      ),
       'view modes' => array(
         'full' => array(
           'label' => t('Full content'),
