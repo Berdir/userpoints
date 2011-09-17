@@ -772,11 +772,6 @@ function userpoints_field_extra_fields() {
         'description' => t('!Points amount of the transaction', userpoints_translation()),
         'weight' => -15,
       ),
-      'additional_settings' => array(
-        'label' => t('Additional settings', userpoints_translation()),
-        'description' => t('The vertical tab that contains the optional settings', userpoints_translation()),
-        'weight' => 0,
-      ),
     ),
   );
 
@@ -1669,7 +1664,7 @@ function userpoints_field_group_info() {
     'label' => 'Additional settings',
     'weight' => '0',
     'children' => array(
-      0 => 'status',
+      'status', 'reason', 'reference',
     ),
     'format_type' => 'tabs',
     'format_settings' => array(
@@ -1680,31 +1675,36 @@ function userpoints_field_group_info() {
   );
   $field_groups['additional_settings|userpoints_transaction|userpoints_transaction|form'] = $field_group;
 
-  $field_group = new stdClass;
-  $field_group->disabled = FALSE; /* Edit this to true to make a default field_group disabled initially */
-  $field_group->api_version = 1;
-  $field_group->identifier = 'status|userpoints_transaction|userpoints_transaction|form';
-  $field_group->group_name = 'status';
-  $field_group->entity_type = 'userpoints_transaction';
-  $field_group->bundle = 'userpoints_transaction';
-  $field_group->mode = 'form';
-  $field_group->parent_name = '';
-  $field_group->locked = FALSE; /* Edit this to true to lock the field group definition and position of its children */
-  $field_group->data = array(
-    'label' => 'Status vertical tab',
-    'weight' => '0',
-    'children' => array(
-      0 => 'status',
-    ),
-    'format_type' => 'tab',
-    'format_settings' => array(
-      'instance_settings' => array(
-        'classes' => '',
-      ),
-    ),
+  $tabs = array(
+    'status' => t('Status'),
+    'reason' => t('Reason'),
+    'reference' => t('Reference'),
   );
-  $field_groups['status|userpoints_transaction|userpoints_transaction|form'] = $field_group;
-
+  foreach ($tabs as $key => $label) {
+    $field_group = new stdClass;
+    $field_group->disabled = FALSE; /* Edit this to true to make a default field_group disabled initially */
+    $field_group->api_version = 1;
+    $field_group->identifier = $key . '|userpoints_transaction|userpoints_transaction|form';
+    $field_group->group_name = $key;
+    $field_group->entity_type = 'userpoints_transaction';
+    $field_group->bundle = 'userpoints_transaction';
+    $field_group->mode = 'form';
+    $field_group->parent_name = 'additional_settings';
+    $field_group->locked = FALSE; /* Edit this to true to lock the field group definition and position of its children */
+    $field_group->data = array(
+      'label' => $label,
+      'weight' => '0',
+      'children' => array(
+      ),
+      'format_type' => 'tab',
+      'format_settings' => array(
+        'instance_settings' => array(
+          'classes' => '',
+        ),
+      ),
+    );
+    $field_groups[$key . '|userpoints_transaction|userpoints_transaction|form'] = $field_group;
+  }
 
   return $field_groups;
 }
