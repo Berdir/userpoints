@@ -1230,7 +1230,7 @@ function userpoints_userpoints_info() {
  *   A loaded userpoints transaction object.
  */
 function userpoints_transaction_load($txn_id, $reset = FALSE) {
-  $txn_ids = (isset($txn_id) ? array($txn_id) : array());
+  $txn_ids = (!empty($txn_id) ? array($txn_id) : array());
   $temp = userpoints_transaction_load_multiple($txn_ids, array(), $reset);
   return $temp ? reset($temp) : FALSE;
 }
