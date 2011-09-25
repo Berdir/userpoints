@@ -1149,6 +1149,7 @@ function userpoints_get_categories($account = NULL) {
             ->condition('t.vid', userpoints_get_vid())
             ->groupBy('t.tid')
             ->groupBy('t.name')
+            ->groupBy('t.weight')
             ->orderBy('t.weight');
           $query->join('userpoints_txn', 'p', 't.tid = p.tid AND p.uid = :uid', array(':uid' => $account->uid));
           $terms = $query->execute();
