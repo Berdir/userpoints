@@ -42,7 +42,7 @@ function userpoints_service_index($page, $tid, $sort, $dir) {
     }
     $select->condition('tid', $tid);
   }
-  services_resource_build_index_query($select, $page, 'uid, points, max_points', array());
+  services_resource_build_index_query($select, $page, 'uid, points, max_points', array(), 20);
 
   $results = $select->execute();
 
