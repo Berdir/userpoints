@@ -660,7 +660,7 @@ function userpoints_get_max_points($uid = NULL, $tid = NULL) {
  * // Grant points to another, add a entity reference to a node and save
  * // explicitly.
  * userpoints_grant_points('mymodule_type_otheraction', $points, $account->uid)
- *   ->setEntity($node)
+ *   ->setEntity('node', $node->nid)
  *   ->save();
  * @endcode
  *
