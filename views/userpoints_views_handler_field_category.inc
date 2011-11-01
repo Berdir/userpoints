@@ -1,4 +1,8 @@
 <?php
+/**
+ * @file
+ * Views field handler for the Userpoints category.
+ */
 
 /**
  * Field handler for categories.

@@ -1126,14 +1126,14 @@ class UserpointsTransaction {
     $url_prefix = $uri['path'];
 
     if ($show_view && userpoints_access_view_transaction($this)) {
-      $actions[] = l('view', $url_prefix . '/view');
+      $actions[] = l(t('view'), $url_prefix . '/view');
     }
     if (userpoints_admin_access('edit')) {
-      $actions[] = l('edit', $url_prefix . '/edit', $url_options);
+      $actions[] = l(t('edit'), $url_prefix . '/edit', $url_options);
     }
     if (userpoints_admin_access('moderate') && $this->isPending()) {
-      $actions[] = l('approve', $url_prefix . '/approve', $url_options);
-      $actions[] = l('decline', $url_prefix . '/decline', $url_options);
+      $actions[] = l(t('approve'), $url_prefix . '/approve', $url_options);
+      $actions[] = l(t('decline'), $url_prefix . '/decline', $url_options);
     }
     return implode(' ', $actions);
   }
