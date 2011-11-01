@@ -487,9 +487,9 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
       if ($name == 'all') {
         $tid = 'all';
       }
-      else if (strpos($name, 'category-') === 0) {
+      elseif (strpos($name, 'category-') === 0) {
         // Extract the category id from the string that looks like category-1.
-        list(,$tid) = explode('-', $name);
+        list(, $tid) = explode('-', $name);
       }
       if ($tid) {
         $replacements[$original] = userpoints_get_current_points($data['user']->uid, $tid);
@@ -504,9 +504,9 @@ function userpoints_tokens($type, $tokens, array $data = array(), array $options
       if ($name == 'all') {
         $tid = 'all';
       }
-      else if (strpos($name, 'category-') === 0) {
+      elseif (strpos($name, 'category-') === 0) {
         // Extract the category id from the string that looks like category-1.
-        list(,$tid) = explode('-', $name);
+        list(, $tid) = explode('-', $name);
       }
       if ($tid) {
         $replacements[$original] = userpoints_get_max_points($uid, $tid);
@@ -1238,7 +1238,7 @@ function userpoints_user_view($account, $view_mode) {
     if (!empty($details) || $points_list) {
       $account->content['userpoints'] = array(
         'title' => array(
-          '#markup' => '<h3>' .  t('!Points', userpoints_translation()) . '</h3>',
+          '#markup' => '<h3>' . t('!Points', userpoints_translation()) . '</h3>',
         ),
         '#weight' => 0,
       );
@@ -1964,7 +1964,7 @@ function userpoints_get_list_row($data) {
   if ($user->uid == $data->uid) {
     $details = "&nbsp;&nbsp;" . l(t("details"), 'myuserpoints');
   }
-  else if (userpoints_admin_access('edit')) {
+  elseif (userpoints_admin_access('edit')) {
     $details = "&nbsp;&nbsp;" . l(t("details"), 'user/' . $data->uid . '/points');
   }
 
