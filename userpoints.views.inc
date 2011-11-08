@@ -112,6 +112,7 @@ function userpoints_views_data() {
     'help' => t("The last update timestamp for a User's current !points.", userpoints_translation()),
     'field' => array(
       'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
     ),
     'sort' => array(
       'handler' => 'views_handler_sort_date',
@@ -226,6 +227,7 @@ function userpoints_views_data() {
     'help' => t('The created timestamp for the transaction.'),
     'field' => array(
       'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
     ),
     'sort' => array(
       'handler' => 'views_handler_sort_date',
@@ -240,6 +242,7 @@ function userpoints_views_data() {
     'help' => t('The changed timestamp for the transaction, for when the transaction is updated.'),
     'field' => array(
       'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
     ),
     'sort' => array(
       'handler' => 'views_handler_sort_date',
@@ -290,6 +293,7 @@ function userpoints_views_data() {
     'help' => t('The expiration date for the transaction.'),
     'field' => array(
       'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
     ),
     'sort' => array(
       'handler' => 'views_handler_sort_date',
