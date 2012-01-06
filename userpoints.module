@@ -221,7 +221,7 @@ function userpoints_menu() {
     'title arguments' => userpoints_translation(),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('userpoints_list_transactions'),
-    'access callback' => 'userpoints_access_my_points',
+    'access callback' => 'userpoints_access_transactions',
     'file' => 'userpoints.pages.inc',
     'type' => MENU_NORMAL_ITEM,
     'menu_name' => 'user-menu',
@@ -232,7 +232,7 @@ function userpoints_menu() {
     'title arguments' => userpoints_translation(),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('userpoints_list_transactions', NULL, 1),
-    'access callback' => 'userpoints_access_my_points',
+    'access callback' => 'userpoints_access_transactions',
     'file' => 'userpoints.pages.inc',
     'type' => MENU_NORMAL_ITEM,
     'menu_name' => 'user-menu',
@@ -243,7 +243,7 @@ function userpoints_menu() {
     'title arguments' => userpoints_translation(),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('userpoints_list_transactions', 1),
-    'access callback' => 'userpoints_access_my_points',
+    'access callback' => 'userpoints_access_transactions',
     'access arguments' => array(1),
     'file' => 'userpoints.pages.inc',
     'type' => MENU_LOCAL_TASK,
@@ -359,9 +359,13 @@ function userpoints_admin_access_transaction_pending(UserpointsTransaction $tran
 /**
  * Checks if user can access their points - used via hook_menu().
  *
+ * @param $account
+ *   (optional) The account to check; if not given use currently
+ *   logged in user.
+ *
  * @return
- *   TRUE if user has permissions to view userpoints and if the user is logged
- *   in.
+ *   TRUE if user has permissions to view userpoints and if the user
+ *   is logged in.
  */
 function userpoints_access_my_points($account = NULL) {
   global $user;
@@ -370,6 +374,33 @@ function userpoints_access_my_points($account = NULL) {
     return userpoints_admin_access('edit');
   }
   return (user_access('view userpoints') && user_is_logged_in()) || user_access('view own userpoints');
+}
+
+/**
+ * Checks if a user has access to own or other users transactions history.
+ *
+ * The user must be logged in to have access both, own or other users
+ * transactions.
+ *
+ * @param $account
+ *   (optional) The account to check; if not given use currently
+ *   logged in user.
+ *
+ * @return
+ *   TRUE if the user has access to view the transactions of the requested
+ *   account and FALSE otherwise.
+ */
+function userpoints_access_transactions($account = NULL) {
+  global $user;
+
+  // Other users accounts.
+  if ($account && $user->uid != $account->uid) {
+    return (user_access('view userpoints transactions') || userpoints_admin_access('edit')) && user_is_logged_in();
+  }
+
+  // Own user account.
+  $user_has_transactions_permissions = user_access('view own userpoints transactions') || user_access('view userpoints transactions') ? TRUE : FALSE;
+  return ($user_has_transactions_permissions || userpoints_admin_access('edit')) && user_is_logged_in();
 }
 
 /**
@@ -389,11 +420,19 @@ function userpoints_permission() {
   return array(
     'view own userpoints' => array(
       'title' => t('View own !points', userpoints_translation()),
-      'description' => t('Allows to view own !points, including own !point transactions.', userpoints_translation()),
+      'description' => t('Allows to view own !points.', userpoints_translation()),
     ),
     'view userpoints' => array(
       'title' => t('View all !points', userpoints_translation()),
-      'description' => t('Allows to view the !points of other users, but not the transactions.', userpoints_translation()),
+      'description' => t('Allows to view the !points of other users.', userpoints_translation()),
+    ),
+    'view own userpoints transactions' => array(
+      'title' => t('View own transactions'),
+      'description' => t('Allows to view own userpoints transactions history.', userpoints_translation()),
+    ),
+    'view userpoints transactions' => array(
+      'title' => t('View all transactions'),
+      'description' => t('Allows to view the userpoints transactions history of other users.', userpoints_translation()),
     ),
     'add userpoints' => array(
       'title' => t('Add new !point transactions', userpoints_translation()),
@@ -812,7 +851,7 @@ function userpoints_get_points_list($account = NULL) {
   }
 
   $links = array();
-  if (userpoints_access_my_points($account)) {
+  if (userpoints_access_transactions($account)) {
     $links['userpoints-view'] = array(
       'title' => t('View !points transactions', userpoints_translation()),
       'href' => $user->uid == $account->uid ? 'myuserpoints' : 'user/' . $account->uid . '/points',

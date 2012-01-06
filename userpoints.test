@@ -363,6 +363,101 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $this->drupalGet('admin/config/people/userpoints');
     $this->assertResponse(403, t("Successful verified that a user without admin userpoints permissions can not access the admin interface."));
   }
+
+  /**
+   * Test user userpoints transactions permissions
+   *
+   * Creates users with different permissions on userpoints transactions, and
+   * check both, own and other users accounts access to the userpoints
+   * transaction history.
+   */
+  function testUserTransactionPermissions() {
+    // Sets default points and creates default test users.
+    $points = 10;
+    $view_own_transactions_user = $this->DrupalCreateUser(array('view own userpoints transactions'));
+    $view_all_transactions_user = $this->DrupalCreateUser(array('view userpoints transactions'));
+
+    // Login with the admin user.
+    $this->drupalLogin($this->admin_user);
+    // Add points to every user created.
+    $this->addPoints($points, $this->non_admin_user);
+    $this->addPoints($points, $view_own_transactions_user);
+    $this->addPoints($points, $view_all_transactions_user);
+
+    // Login with no permissions.
+    $this->drupalLogin($this->non_admin_user);
+    // Checking own account.
+    $this->drupalGet('myuserpoints');
+    $this->assertResponse(403, t("Successful verified that a user without view own userpoints transactions permission can not access to myuserpoints."));
+    // Checking against other's user account.
+    $this->drupalGet('user/'.$view_all_transactions_user->uid.'/points');
+    $this->assertResponse(403, t("Successful verified that a user without view own userpoints transactions permission can not access to others user points transactions."));
+
+    // Login as view own userpoints transactions.
+    $this->drupalLogin($view_own_transactions_user);
+    // Checking own account.
+    $this->drupalGet('myuserpoints');
+    $this->assertResponse(200, t("Successful verified that a user with view own userpoints transactions permission can access to myuserpoints."));
+    $this->drupalGet('user');
+    // Checking against other's user account.
+    $this->drupalGet('user/'.$view_all_transactions_user->uid.'/points');
+    $this->assertResponse(403, t("Successful verified that a user with view own userpoints transactions permission can not access to others user points transactions."));
+
+    // Login as view userpoints transactions.
+    $this->drupalLogin($view_all_transactions_user);
+    // Checking own account.
+    $this->drupalGet('myuserpoints');
+    $this->assertResponse(200, t("Successful verified that a user with view userpoints transactions can access to myuserpoints."));
+    $this->drupalGet('user');
+    // Checking against other's user account.
+    $this->drupalGet('user/'.$this->non_admin_user->uid.'/points');
+    $this->assertResponse(200, t("Successful verified that a user with view userpoints transactions permission can access to others user points transactions."));
+  }
+
+  /**
+   * Test user transactions links permissions on users profile.
+   *
+   * Creates users with different permissions on userpoints, userpoints
+   * transactions and access user profiles, and check both, own and other
+   * users accounts access to the userpoints transaction history links.
+   */
+  function testUserTransactionLinksPermissions() {
+    // Sets default points and creates default test users
+    $points = 10;
+    $view_own_transactions_links_user = $this->DrupalCreateUser(array('access user profiles', 'view own userpoints', 'view own userpoints transactions'));
+    $view_all_transactions_links_user = $this->DrupalCreateUser(array('access user profiles', 'view userpoints', 'view userpoints transactions'));
+
+    // Login with the admin user.
+    $this->drupalLogin($this->admin_user);
+    // Add points to every user created.
+    $this->addPoints($points, $this->non_admin_user);
+    $this->addPoints($points, $view_own_transactions_links_user);
+    $this->addPoints($points, $view_all_transactions_links_user);
+
+    // Login with no permissions.
+    $this->drupalLogin($this->non_admin_user);
+    // Checking own user account.
+    $this->drupalGet('user');
+    $this->assertNoLink(t('View !points transactions', userpoints_translation()),t("Successful verified that a user without view own userpoints transactions permission can not access to view points transaction link."));
+
+    // Login as access user profiles, view own userpoints, view own userpoints transactions.
+    $this->drupalLogin($view_own_transactions_links_user);
+    // Checking own user account.
+    $this->drupalGet('user');
+    $this->assertLink(t('View !points transactions', userpoints_translation()), 0, t("Successful verified that a user with view own userpoints transactions permission and view own userpoints permission can access to view own points transaction link."));
+    // Checking others user accounts.
+    $this->drupalGet('user/'.$view_all_transactions_links_user->uid);
+    $this->assertNoLink(t('View !points transactions', userpoints_translation()), t("Successful verified that a user with view own userpoints transactions permission and view own userpoints permission can not access to view points transaction link from other user."));
+
+    // Login as access user profiles, view userpoints, view userpoints transactions.
+    $this->drupalLogin($view_all_transactions_links_user);
+    // Checking own user account.
+    $this->drupalGet('user');
+    $this->assertLink(t('View !points transactions', userpoints_translation()), 0, t("Successful verified that a user with view userpoints transactions permission and view userpoints permission can access to view points transaction link."));
+    // Checking others user accounts.
+    $this->drupalGet('user/'.$view_own_transactions_links_user->uid);
+    $this->assertLink(t('View !points transactions', userpoints_translation()), 0, t("Successful verified that a user with view userpoints transactions permission and view userpoints permission can access to view points transaction link from other user."));
+  }
 }
 
 /**

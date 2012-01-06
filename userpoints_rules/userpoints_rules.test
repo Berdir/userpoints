@@ -28,7 +28,7 @@ class UserpointsRulesTestCase extends DrupalWebTestCase {
    * Test the rules actions exposed by this module.
    */
   public function testActions() {
-    $user = $this->drupalCreateUser(array('view userpoints'));
+    $user = $this->drupalCreateUser(array('view userpoints', 'view userpoints transactions'));
 
     $this->createActionRules();
 
