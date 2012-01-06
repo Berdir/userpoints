@@ -30,7 +30,7 @@ function userpoints_rules_action_info() {
           'user' => array('type' => 'user', 'label' => t('User'))
         ),
       'module' => 'Userpoints',
-      'eval input' => array('points', 'entity_id'),
+      'eval input' => array('points', 'entity_id', 'description', 'operation'),
     ),
   );
 }
