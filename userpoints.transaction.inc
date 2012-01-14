@@ -10,7 +10,7 @@
  *
  * @ingroup userpoints_api
  */
-class UserpointsTransaction {
+class UserpointsTransaction extends Entity {
 
   /**
    * The transaction has been approved.
@@ -29,18 +29,39 @@ class UserpointsTransaction {
   /**
    * The transaction id (primary key) of this transaction
    *
-   * @var int
+   * @var integer
    */
-  protected $txn_id = NULL;
+  public $txn_id = NULL;
 
-  /**
-   * The actual fields of this transaction.
-   *
-   * Stored in this array to simplify the save/update process.
-   *
-   * @var array
-   */
-  protected $fields = array();
+  public $uid = 0;
+
+  public $points;
+
+  public $operation;
+
+  public $status;
+
+  public $tid;
+
+  public $expirydate;
+
+  public $expired;
+
+  public $time_stamp;
+
+  public $changed;
+
+  public $approver_uid = 0;
+
+  public $description;
+
+  public $reference;
+
+  public $parent_txn_id = 0;
+
+  public $entity_type;
+
+  public $entity_id = 0;
 
   /**
    * Deny reasons.
@@ -85,36 +106,27 @@ class UserpointsTransaction {
    * @param $txn_id
    *   Transaction id if an existing transaction should be loaded.
    */
-  function __construct($values = FALSE) {
-    if ($values) {
+  function __construct($values = array()) {
+    parent::__construct($values, 'userpoints_transaction');
 
-      // The txn_id is stored in a separate property.
-      $this->txn_id = $values['txn_id'];
-      unset($values['txn_id']);
-
-      // All other values are stored in the fields property.
-      $this->fields = $values;
-      $this->orig_status = $this->getStatus();
+    // Apply default status.
+    if (!isset($values['status'])) {
+      $this->status = variable_get('userpoints_points_moderation', UserpointsTransaction::STATUS_APPROVED);
     }
     else {
-      // Initalize fields.
-      $this->fields = array(
-        'uid' => 0,
-        'points' => NULL,
-        'operation' => NULL,
-        'status' => variable_get('userpoints_points_moderation', UserpointsTransaction::STATUS_APPROVED),
-        'tid' => userpoints_get_default_tid(),
-        'expirydate' => userpoints_get_default_expiry_date(),
-        'expired' => 0,
-        'time_stamp' => REQUEST_TIME,
-        'changed' => REQUEST_TIME,
-        'approver_uid' => 0,
-        'description' => '',
-        'reference' => '',
-        'parent_txn_id' => 0,
-        'entity_type' => NULL,
-        'entity_id' => 0,
-      );
+      $this->orig_status = $this->getStatus();
+    }
+
+    if (!isset($values['tid'])) {
+      $this->tid = userpoints_get_default_tid();
+    }
+
+    if (!isset($values['expirydate'])) {
+      $this->expirydate = userpoints_get_default_expiry_date();
+    }
+
+    if (!isset($values['time_stamp'])) {
+      $this->time_stamp = REQUEST_TIME;
     }
   }
 
@@ -150,8 +162,8 @@ class UserpointsTransaction {
       return $this;
     }
 
-    $this->fields['entity_type'] = $entity_type;
-    $this->fields['entity_id'] = $entity_id;
+    $this->entity_type = $entity_type;
+    $this->entity_id = $entity_id;
     return $this;
   }
 
@@ -166,7 +178,7 @@ class UserpointsTransaction {
   function setReference($reference) {
     $this->checkChange();
 
-    $this->fields['reference'] = $reference;
+    $this->reference = $reference;
     return $this;
   }
 
@@ -186,7 +198,7 @@ class UserpointsTransaction {
   function setDescription($description) {
     $this->checkChange();
 
-    $this->fields['description'] = $description;
+    $this->description = $description;
     return $this;
   }
 
@@ -224,7 +236,7 @@ class UserpointsTransaction {
       $this->orig_status = $this->getStatus();
     }
 
-    $this->fields['status'] = $status;
+    $this->status = $status;
     return $this;
   }
 
@@ -242,7 +254,7 @@ class UserpointsTransaction {
     $this->checkChange();
 
     if ($expirydate > 0 || $expirydate === 0 || $expirydate === NULL) {
-      $this->fields['expirydate'] = (int)$expirydate;
+      $this->expirydate = (int)$expirydate;
     }
     else {
       $this->abort();
@@ -265,10 +277,10 @@ class UserpointsTransaction {
   function setExpired($expired) {
 
     // A transaction can always be expired but this can not be reversed.
-    if (!$expired && $this->fields['expired']) {
+    if (!$expired && $this->expired) {
       $this->checkChange();
     }
-    $this->fields['expired'] = $expired;
+    $this->expired = $expired;
     return $this;
   }
 
@@ -282,7 +294,7 @@ class UserpointsTransaction {
    */
   function setUid($uid) {
     $this->checkChange();
-    $this->fields['uid'] = $uid;
+    $this->uid = $uid;
     return $this;
   }
 
@@ -296,7 +308,7 @@ class UserpointsTransaction {
    */
   function setApproverUid($uid) {
     $this->checkChange();
-    $this->fields['approver_uid'] = (int)$uid;
+    $this->approver_uid = (int)$uid;
     return $this;
   }
 
@@ -318,7 +330,7 @@ class UserpointsTransaction {
       throw new UserpointsInvalidArgumentException();
     }
 
-    $this->fields['points'] = $points;
+    $this->points = $points;
     return $this;
   }
 
@@ -340,7 +352,7 @@ class UserpointsTransaction {
     if (variable_get('userpoints_transaction_timestamp', 1)) {
       return $this;
     }
-    $this->fields['time_stamp'] = $time_stamp;
+    $this->time_stamp = $time_stamp;
     return $this;
   }
 
@@ -358,7 +370,7 @@ class UserpointsTransaction {
   function setParent($txn_id) {
     $this->checkChange();
 
-    $this->fields['parent_txn_id'] = $txn_id;
+    $this->parent_txn_id = $txn_id;
     return $this;
   }
 
@@ -372,7 +384,7 @@ class UserpointsTransaction {
    */
   function setTid($tid) {
     $this->checkChange();
-    $this->fields['tid'] = $tid;
+    $this->tid = $tid;
     return $this;
   }
 
@@ -396,7 +408,7 @@ class UserpointsTransaction {
   function setOperation($operation) {
     $this->checkChange();
 
-    $this->fields['operation'] = $operation;
+    $this->operation = $operation;
     return $this;
   }
 
@@ -423,8 +435,8 @@ class UserpointsTransaction {
    *   An entity object or NULL.
    */
   function getEntity() {
-    if (!empty($this->fields['entity_id']) && !empty($this->fields['entity_type']) && entity_get_info($this->fields['entity_type'])) {
-      return array_shift(entity_load($this->fields['entity_type'], array($this->fields['entity_id'])));
+    if (!empty($this->entity_id) && !empty($this->entity_type) && entity_get_info($this->entity_type)) {
+      return array_shift(entity_load($this->entity_type, array($this->entity_id)));
     }
   }
 
@@ -435,7 +447,7 @@ class UserpointsTransaction {
    *   The entity type as a string.
    */
   function getEntityType() {
-    return $this->fields['entity_type'];
+    return $this->entity_type;
   }
 
   /**
@@ -445,7 +457,7 @@ class UserpointsTransaction {
    *   The entity id as an integer.
    */
   function getEntityId() {
-    return $this->fields['entity_id'];
+    return $this->entity_id;
   }
 
   /**
@@ -457,7 +469,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setReference()
    */
   function getReference() {
-    return $this->fields['reference'];
+    return $this->reference;
   }
 
   /**
@@ -469,7 +481,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setDescription()
    */
   function getDescription() {
-    return $this->fields['description'];
+    return $this->description;
   }
 
   /**
@@ -488,7 +500,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::isDeclined()
    */
   function getStatus() {
-    return $this->fields['status'];
+    return $this->status;
   }
 
   /**
@@ -500,7 +512,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setExpiryDate()
    */
   function getExpiryDate() {
-    return $this->fields['expirydate'];
+    return $this->expirydate;
   }
 
   /**
@@ -512,7 +524,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setExpired()
    */
   function isExpired() {
-    return $this->fields['expired'];
+    return $this->expired;
   }
 
   /**
@@ -524,7 +536,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setUid()
    */
   function getUid() {
-    return $this->fields['uid'];
+    return $this->uid;
   }
 
   /**
@@ -537,7 +549,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::getUid()
    */
   function getUser() {
-    return user_load($this->fields['uid']);
+    return user_load($this->uid);
   }
 
   /**
@@ -549,7 +561,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setApproverUid()
    */
   function getApproverUid() {
-    return $this->fields['approver_uid'];
+    return $this->approver_uid;
   }
 
   /**
@@ -562,7 +574,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::getApproverUid()
    */
   function getApprover() {
-    return user_load($this->fields['approver_uid']);
+    return user_load($this->approver_uid);
   }
 
   /**
@@ -574,7 +586,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setPoints()
    */
   function getPoints() {
-    return $this->fields['points'];
+    return $this->points;
   }
 
   /**
@@ -586,7 +598,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setTimestamp()
    */
   function getTimestamp() {
-    return $this->fields['time_stamp'];
+    return $this->time_stamp;
   }
 
   /**
@@ -596,7 +608,7 @@ class UserpointsTransaction {
    *   Unix timestamp of the changed date.
    */
   function getChanged() {
-    return $this->fields['changed'];
+    return $this->changed;
   }
 
   /**
@@ -608,8 +620,8 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setParent()
    */
   function getParent() {
-    if (!empty($this->fields['parent_txn_id'])) {
-      return userpoints_transaction_load($this->fields['parent_txn_id']);
+    if (!empty($this->parent_txn_id)) {
+      return userpoints_transaction_load($this->parent_txn_id);
     }
   }
 
@@ -625,7 +637,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::getCategory()
    */
   function getTid() {
-    return $this->fields['tid'];
+    return $this->tid;
   }
 
   /**
@@ -637,7 +649,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setOperation()
    */
   function getOperation() {
-    return $this->fields['operation'];
+    return $this->operation;
   }
 
   /**
@@ -759,27 +771,12 @@ class UserpointsTransaction {
       throw new UserpointsTransactionDeniedException($this->getDenyReasons());
     }
 
-    if (empty($this->txn_id)) {
-      // This is a new transaction, save.
-      $this->txn_id = db_insert('userpoints_txn')
-          ->fields($this->fields)
-          ->execute();
-    }
-    else {
-      // Existing transaction, update.
-      db_update('userpoints_txn')
-        ->condition('txn_id', $this->txn_id)
-        ->fields($this->fields)
-        ->execute();
-    }
+    $return = parent::save();
 
     // Update totals if the transaction is approved and not expired.
     if ($this->isApproved() && !$this->isExpired()) {
       $this->updateTotals();
     }
-
-    // Call the after hook so that modules can react on this.
-    module_invoke_all('userpoints_transaction_after', $this);
 
     // Display a message unless disabled or no message exists.
     if ($this->getDisplay() && $message = $this->getMessage()) {
@@ -788,7 +785,7 @@ class UserpointsTransaction {
 
     // Reset original status to current one.
     $this->orig_status = $this->getStatus();
-    return $this;
+    return $return;
   }
 
   /**
@@ -1205,79 +1202,10 @@ class UserpointsTransaction {
     );
     return $row;
   }
-
-  /**
-   * Automatically called if this object is goes out of scope and is destructed.
-   */
-  function __destruct() {
-    // Automatically save new transactions to improve DX.
-    if (!$this->getTxnId() && !$this->isAborted()) {
-      $this->save();
-    }
-  }
-
-  /**
-   * Magic function to allow access to property by name.
-   */
-  function __get($name) {
-
-    // Compatibility with dpm().
-    if (strpos($name, 'krumo') !== FALSE) {
-      if (!isset($this->$name)) {
-        $this->$name = NULL;
-      }
-      return $this->$name;
-    }
-
-    $method = 'get' . str_replace('_', '', $name);
-    if (method_exists($this, $method)) {
-      return $this->$method();
-    }
-    else {
-      throw new UserpointsInvalidPropertyException($name);
-    }
-  }
-
-  /**
-   * Magic function to allow access to property by name.
-   */
-  function __set($name, $value) {
-
-    $method = 'get' . str_replace('_', '', $name);
-    if (method_exists($this, $method)) {
-      return $this->$method($value);
-    }
-    else {
-      // Some modules, e.g rdf.module and devel.module try to set custom
-      // properties on entites. Do not prevent this.
-      return $this->$name = $value;
-    }
-  }
 }
 
 /**
- * This exception is thrown when a pr{ "rules_userpoints_transaction_after_test_rule" : {
-        "LABEL" : "Userpoints Transaction After Test rule",
-        "PLUGIN" : "reaction rule",
-        "REQUIRES" : [ "rules", "userpoints_rules" ],
-        "ON" : [ "userpoints_event_points_awarded_after" ],
-        "IF" : [
-          { "data_is" : {
-              "data" : [ "userpoints-transaction:operation" ],
-              "value" : "userpoints_rules_trigger_after_rule"
-            }
-          }
-        ],
-        "DO" : [
-          { "data_set" : { "data" : [ "userpoints-transaction:status" ], "value" : "1" } },
-          { "data_set" : {
-              "data" : [ "userpoints-transaction:reference" ],
-              "value" : "Transaction was set to pending through rules."
-            }
-          }
-        ]
-      }
-    }operty is changed after a saved transaction
+ * This exception is thrown when a property is changed after a saved transaction
  * has been approved or declined.
  */
 class UserpointsChangeException extends Exception {
@@ -1306,4 +1234,85 @@ class UserpointsInvalidArgumentException extends Exception {
  */
 class UserpointsTransactionIncompleteException extends Exception {
 
+}
+
+
+/**
+ * Userpoints transaction controller.
+ */
+class UserpointsTransactionController extends EntityAPIController {
+
+  /**
+   * Overrides DrupalDefaultEntityController::load().
+   */
+  public function load($ids = array(), $conditions = array()) {
+    $entities = array();
+
+    // Revisions are not statically cached, and require a different query to
+    // other conditions, so separate the revision id into its own variable.
+    if ($this->revisionKey && isset($conditions[$this->revisionKey])) {
+      $revision_id = $conditions[$this->revisionKey];
+      unset($conditions[$this->revisionKey]);
+    }
+    else {
+      $revision_id = FALSE;
+    }
+
+    // Create a new variable which is either a prepared version of the $ids
+    // array for later comparison with the entity cache, or FALSE if no $ids
+    // were passed. The $ids array is reduced as items are loaded from cache,
+    // and we need to know if it's empty for this reason to avoid querying the
+    // database when all requested entities are loaded from cache.
+    $passed_ids = !empty($ids) ? array_flip($ids) : FALSE;
+    // Try to load entities from the static cache, if the entity type supports
+    // static caching.
+    if ($this->cache && !$revision_id) {
+      $entities += $this->cacheGet($ids, $conditions);
+      // If any entities were loaded, remove them from the ids still to load.
+      if ($passed_ids) {
+        $ids = array_keys(array_diff_key($passed_ids, $entities));
+      }
+    }
+
+    // Load any remaining entities from the database. This is the case if $ids
+    // is set to FALSE (so we load all entities), if there are any ids left to
+    // load, if loading a revision, or if $conditions was passed without $ids.
+    if ($ids === FALSE || $ids || $revision_id || ($conditions && !$passed_ids)) {
+      // Build the query.
+      $query = $this->buildQuery($ids, $conditions, $revision_id);
+      $queried_entities = array();
+      $result = $query->execute();
+      foreach ($result->fetchAllAssoc($this->idKey, PDO::FETCH_ASSOC) as $row) {
+        $queried_entities[$row[$this->idKey]] = new UserpointsTransaction($row);
+      }
+    }
+
+    // Pass all entities loaded from the database through $this->attachLoad(),
+    // which attaches fields (if supported by the entity type) and calls the
+    // entity type specific load callback, for example hook_node_load().
+    if (!empty($queried_entities)) {
+      $this->attachLoad($queried_entities, $revision_id);
+      $entities += $queried_entities;
+    }
+
+    if ($this->cache) {
+      // Add entities to the cache if we are not loading a revision.
+      if (!empty($queried_entities) && !$revision_id) {
+        $this->cacheSet($queried_entities);
+      }
+    }
+
+    // Ensure that the returned array is ordered the same as the original
+    // $ids array if this was passed in and remove any invalid ids.
+    if ($passed_ids) {
+      // Remove any invalid ids from the array.
+      $passed_ids = array_intersect_key($passed_ids, $entities);
+      foreach ($entities as $entity) {
+        $passed_ids[$entity->{$this->idKey}] = $entity;
+      }
+      $entities = $passed_ids;
+    }
+
+    return $entities;
+  }
 }
