@@ -1850,8 +1850,10 @@ function userpoints_userpoints_info() {
  *   A loaded userpoints transaction object.
  */
 function userpoints_transaction_load($txn_id) {
-  $transaction = db_query('SELECT * from {userpoints_txn} WHERE txn_id = :txn', array(':txn' => (int)$txn_id))->fetchObject();
-  if (!$transaction) {
+  if (!empty($txn_id)) {
+    $transaction = db_query('SELECT * from {userpoints_txn} WHERE txn_id = :txn', array(':txn' => $txn_id))->fetchObject();
+  }
+  if (empty($transaction)) {
     return FALSE;
   }
 
