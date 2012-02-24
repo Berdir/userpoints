@@ -10,7 +10,7 @@
  *
  * @ingroup userpoints_api
  */
-class UserpointsTransaction {
+class UserpointsTransaction extends Entity {
 
   /**
    * The transaction has been approved.
@@ -20,7 +20,6 @@ class UserpointsTransaction {
    * The transaction is pending for approval.
    */
   const STATUS_PENDING = 1;
-
   /**
    * The transaction has been declined.
    */
@@ -29,18 +28,39 @@ class UserpointsTransaction {
   /**
    * The transaction id (primary key) of this transaction
    *
-   * @var int
+   * @var integer
    */
-  protected $txn_id = NULL;
+  public $txn_id = NULL;
 
-  /**
-   * The actual fields of this transaction.
-   *
-   * Stored in this array to simplify the save/update process.
-   *
-   * @var array
-   */
-  protected $fields = array();
+  public $uid = 0;
+
+  public $points;
+
+  public $operation;
+
+  public $status;
+
+  public $tid;
+
+  public $expirydate;
+
+  public $expired;
+
+  public $time_stamp;
+
+  public $changed;
+
+  public $approver_uid = 0;
+
+  public $description;
+
+  public $reference;
+
+  public $parent_txn_id = 0;
+
+  public $entity_type;
+
+  public $entity_id = 0;
 
   /**
    * Deny reasons.
@@ -85,37 +105,58 @@ class UserpointsTransaction {
    * @param $txn_id
    *   Transaction id if an existing transaction should be loaded.
    */
-  function __construct($values = FALSE) {
-    if ($values) {
+  function __construct($values = array()) {
+    parent::__construct($values, 'userpoints_transaction');
 
-      // The txn_id is stored in a separate property.
-      $this->txn_id = $values['txn_id'];
-      unset($values['txn_id']);
-
-      // All other values are stored in the fields property.
-      $this->fields = $values;
-      $this->orig_status = $this->getStatus();
+    // Apply default status.
+    if ($this->status === NULL) {
+      $this->status = variable_get('userpoints_points_moderation', UserpointsTransaction::STATUS_APPROVED);
     }
     else {
-      // Initalize fields.
-      $this->fields = array(
-        'uid' => 0,
-        'points' => NULL,
-        'operation' => NULL,
-        'status' => variable_get('userpoints_points_moderation', UserpointsTransaction::STATUS_APPROVED),
-        'tid' => userpoints_get_default_tid(),
-        'expirydate' => userpoints_get_default_expiry_date(),
-        'expired' => 0,
-        'time_stamp' => REQUEST_TIME,
-        'changed' => REQUEST_TIME,
-        'approver_uid' => 0,
-        'description' => '',
-        'reference' => '',
-        'parent_txn_id' => 0,
-        'entity_type' => NULL,
-        'entity_id' => 0,
-      );
+      $this->orig_status = $this->getStatus();
     }
+
+    if ($this->tid === NULL) {
+      $this->tid = userpoints_get_default_tid();
+    }
+
+    if ($this->expirydate === NULL) {
+      $this->expirydate = userpoints_get_default_expiry_date();
+    }
+
+    if ($this->time_stamp === NULL) {
+      $this->time_stamp = REQUEST_TIME;
+    }
+  }
+
+  /**
+   * Overrides Entity::defaultUri().
+   *
+   * @param bool $prefix_only
+   *   If only the url prefix (without /view suffix) should be returned. Defaults to FALSE.
+   */
+  function defaultUri($prefix_only = FALSE) {
+    global $user;
+    $uri = array(
+      // Default path is displaying it below myuserpoints for the current user.
+      'path' => 'myuserpoints/transaction/' . $this->txn_id,
+      'options' => array(),
+    );
+    // When viewing the transaction in the admin UI (but not the add points page, as this might be called for generating
+    // tokens), use the admin link.
+    if (strpos($_GET['q'], 'admin/config/people/userpoints') !== FALSE && strpos($_GET['q'], 'admin/config/people/userpoints/add') === FALSE ) {
+      $uri['path'] = "admin/config/people/userpoints/transaction/$this->txn_id";
+    }
+    elseif ($this->uid != $user->uid) {
+      // When not in the admin ui but viewing the transaction of someone else, use the path for another user.
+      $uri['path'] = "user/$this->uid/points/$this->txn_id";
+    }
+
+    if (!$prefix_only) {
+      $uri['path'] .= '/view';
+    }
+
+    return $uri;
   }
 
   /**
@@ -150,8 +191,8 @@ class UserpointsTransaction {
       return $this;
     }
 
-    $this->fields['entity_type'] = $entity_type;
-    $this->fields['entity_id'] = $entity_id;
+    $this->entity_type = $entity_type;
+    $this->entity_id = $entity_id;
     return $this;
   }
 
@@ -166,7 +207,7 @@ class UserpointsTransaction {
   function setReference($reference) {
     $this->checkChange();
 
-    $this->fields['reference'] = $reference;
+    $this->reference = $reference;
     return $this;
   }
 
@@ -186,7 +227,7 @@ class UserpointsTransaction {
   function setDescription($description) {
     $this->checkChange();
 
-    $this->fields['description'] = $description;
+    $this->description = $description;
     return $this;
   }
 
@@ -224,7 +265,7 @@ class UserpointsTransaction {
       $this->orig_status = $this->getStatus();
     }
 
-    $this->fields['status'] = $status;
+    $this->status = $status;
     return $this;
   }
 
@@ -242,7 +283,7 @@ class UserpointsTransaction {
     $this->checkChange();
 
     if ($expirydate > 0 || $expirydate === 0 || $expirydate === NULL) {
-      $this->fields['expirydate'] = (int)$expirydate;
+      $this->expirydate = (int)$expirydate;
     }
     else {
       $this->abort();
@@ -265,10 +306,10 @@ class UserpointsTransaction {
   function setExpired($expired) {
 
     // A transaction can always be expired but this can not be reversed.
-    if (!$expired && $this->fields['expired']) {
+    if (!$expired && $this->expired) {
       $this->checkChange();
     }
-    $this->fields['expired'] = $expired;
+    $this->expired = $expired;
     return $this;
   }
 
@@ -282,7 +323,7 @@ class UserpointsTransaction {
    */
   function setUid($uid) {
     $this->checkChange();
-    $this->fields['uid'] = $uid;
+    $this->uid = $uid;
     return $this;
   }
 
@@ -296,7 +337,7 @@ class UserpointsTransaction {
    */
   function setApproverUid($uid) {
     $this->checkChange();
-    $this->fields['approver_uid'] = (int)$uid;
+    $this->approver_uid = (int)$uid;
     return $this;
   }
 
@@ -318,7 +359,7 @@ class UserpointsTransaction {
       throw new UserpointsInvalidArgumentException();
     }
 
-    $this->fields['points'] = $points;
+    $this->points = $points;
     return $this;
   }
 
@@ -340,7 +381,7 @@ class UserpointsTransaction {
     if (variable_get('userpoints_transaction_timestamp', 1)) {
       return $this;
     }
-    $this->fields['time_stamp'] = $time_stamp;
+    $this->time_stamp = $time_stamp;
     return $this;
   }
 
@@ -358,7 +399,7 @@ class UserpointsTransaction {
   function setParent($txn_id) {
     $this->checkChange();
 
-    $this->fields['parent_txn_id'] = $txn_id;
+    $this->parent_txn_id = $txn_id;
     return $this;
   }
 
@@ -372,7 +413,7 @@ class UserpointsTransaction {
    */
   function setTid($tid) {
     $this->checkChange();
-    $this->fields['tid'] = $tid;
+    $this->tid = $tid;
     return $this;
   }
 
@@ -396,7 +437,7 @@ class UserpointsTransaction {
   function setOperation($operation) {
     $this->checkChange();
 
-    $this->fields['operation'] = $operation;
+    $this->operation = $operation;
     return $this;
   }
 
@@ -423,8 +464,8 @@ class UserpointsTransaction {
    *   An entity object or NULL.
    */
   function getEntity() {
-    if (!empty($this->fields['entity_id']) && !empty($this->fields['entity_type']) && entity_get_info($this->fields['entity_type'])) {
-      return array_shift(entity_load($this->fields['entity_type'], array($this->fields['entity_id'])));
+    if (!empty($this->entity_id) && !empty($this->entity_type) && entity_get_info($this->entity_type)) {
+      return array_shift(entity_load($this->entity_type, array($this->entity_id)));
     }
   }
 
@@ -435,7 +476,7 @@ class UserpointsTransaction {
    *   The entity type as a string.
    */
   function getEntityType() {
-    return $this->fields['entity_type'];
+    return $this->entity_type;
   }
 
   /**
@@ -445,7 +486,7 @@ class UserpointsTransaction {
    *   The entity id as an integer.
    */
   function getEntityId() {
-    return $this->fields['entity_id'];
+    return $this->entity_id;
   }
 
   /**
@@ -457,7 +498,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setReference()
    */
   function getReference() {
-    return $this->fields['reference'];
+    return $this->reference;
   }
 
   /**
@@ -469,7 +510,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setDescription()
    */
   function getDescription() {
-    return $this->fields['description'];
+    return $this->description;
   }
 
   /**
@@ -488,7 +529,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::isDeclined()
    */
   function getStatus() {
-    return $this->fields['status'];
+    return $this->status;
   }
 
   /**
@@ -500,7 +541,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setExpiryDate()
    */
   function getExpiryDate() {
-    return $this->fields['expirydate'];
+    return $this->expirydate;
   }
 
   /**
@@ -512,7 +553,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setExpired()
    */
   function isExpired() {
-    return $this->fields['expired'];
+    return $this->expired;
   }
 
   /**
@@ -524,7 +565,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setUid()
    */
   function getUid() {
-    return $this->fields['uid'];
+    return $this->uid;
   }
 
   /**
@@ -537,7 +578,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::getUid()
    */
   function getUser() {
-    return user_load($this->fields['uid']);
+    return user_load($this->uid);
   }
 
   /**
@@ -549,7 +590,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setApproverUid()
    */
   function getApproverUid() {
-    return $this->fields['approver_uid'];
+    return $this->approver_uid;
   }
 
   /**
@@ -562,7 +603,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::getApproverUid()
    */
   function getApprover() {
-    return user_load($this->fields['approver_uid']);
+    return user_load($this->approver_uid);
   }
 
   /**
@@ -574,7 +615,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setPoints()
    */
   function getPoints() {
-    return $this->fields['points'];
+    return $this->points;
   }
 
   /**
@@ -586,7 +627,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setTimestamp()
    */
   function getTimestamp() {
-    return $this->fields['time_stamp'];
+    return $this->time_stamp;
   }
 
   /**
@@ -596,7 +637,7 @@ class UserpointsTransaction {
    *   Unix timestamp of the changed date.
    */
   function getChanged() {
-    return $this->fields['changed'];
+    return $this->changed;
   }
 
   /**
@@ -608,8 +649,8 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setParent()
    */
   function getParent() {
-    if (!empty($this->fields['parent_txn_id'])) {
-      return userpoints_transaction_load($this->fields['parent_txn_id']);
+    if (!empty($this->parent_txn_id)) {
+      return userpoints_transaction_load($this->parent_txn_id);
     }
   }
 
@@ -625,7 +666,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::getCategory()
    */
   function getTid() {
-    return $this->fields['tid'];
+    return $this->tid;
   }
 
   /**
@@ -637,7 +678,7 @@ class UserpointsTransaction {
    * @see UserpointsTransaction::setOperation()
    */
   function getOperation() {
-    return $this->fields['operation'];
+    return $this->operation;
   }
 
   /**
@@ -734,110 +775,6 @@ class UserpointsTransaction {
    */
   function isApproved() {
     return $this->getStatus() == UserpointsTransaction::STATUS_APPROVED;
-  }
-
-  /**
-   * Save or update this transaction.
-   *
-   * It is not permitted to update a approved or denied transaction except
-   * marking it as expird. Any attemt to change a property of such a transaction
-   * will result in an immediate exception.
-   */
-  function save() {
-    // Prevent saving when any of the required properties are missing.
-    if (!$this->getPoints() || !$this->getUid() || !$this->getOperation()) {
-      $this->abort();
-      throw new UserpointsTransactionIncompleteException();
-    }
-
-    // Call the before hook to allow modules to change and deny this.
-    module_invoke_all('userpoints_transaction_before', $this);
-
-    // Abort if the transaction has been denied.
-    if ($this->isDenied()) {
-      $this->abort();
-      throw new UserpointsTransactionDeniedException($this->getDenyReasons());
-    }
-
-    if (empty($this->txn_id)) {
-      // This is a new transaction, save.
-      $this->txn_id = db_insert('userpoints_txn')
-          ->fields($this->fields)
-          ->execute();
-    }
-    else {
-      // Existing transaction, update.
-      db_update('userpoints_txn')
-        ->condition('txn_id', $this->txn_id)
-        ->fields($this->fields)
-        ->execute();
-    }
-
-    // Update totals if the transaction is approved and not expired.
-    if ($this->isApproved() && !$this->isExpired()) {
-      $this->updateTotals();
-    }
-
-    // Call the after hook so that modules can react on this.
-    module_invoke_all('userpoints_transaction_after', $this);
-
-    // Display a message unless disabled or no message exists.
-    if ($this->getDisplay() && $message = $this->getMessage()) {
-      drupal_set_message($message);
-    }
-
-    // Reset original status to current one.
-    $this->orig_status = $this->getStatus();
-    return $this;
-  }
-
-  /**
-   * Update the total aggregations of the corresponding user.
-   */
-  protected function updateTotals() {
-    // Update this category.
-    $this->updateTotalsCategory($this->getTid());
-    // Update the total over all categories.
-    $this->updateTotalsCategory('all');
-  }
-
-  /**
-   * Update the totals of a specific category.
-   *
-   * Updating the total of all categories is supported by using 'all' for the
-   * $tid.
-   */
-  protected function updateTotalsCategory($tid) {
-    $table = 'userpoints';
-    if ($tid === 'all') {
-      // Use a different table for the overall total.
-      $table = 'userpoints_total';
-    }
-
-    // Always update the time stamp and the total points.
-    $total = array(
-      'last_update' => REQUEST_TIME,
-      'points' => $this->getPoints() + userpoints_get_current_points($this->getUid(), $tid),
-    );
-    // Update the total max points if necessary.
-    $max_points_total = userpoints_get_max_points($this->getUid(), $tid);
-    if ($total['points'] > $max_points_total) {
-      $total['max_points'] = $total['points'];
-    }
-
-    // The keys for the merge query. The tid is only added when not 'all'.
-    $keys = array(
-      'uid' => $this->getUid(),
-    );
-    if ($tid !== 'all') {
-      $keys['tid'] = $tid;
-    }
-
-    // Save the updates.
-    db_merge($table)
-      ->key($keys)
-      ->fields($total)
-      ->execute();
   }
 
   /**
@@ -959,10 +896,10 @@ class UserpointsTransaction {
     // Prepare arguments. They are the same for all string combinations.
     $categories = userpoints_get_categories();
     $arguments = array_merge(userpoints_translation(), array(
-        '!username' => theme('username', array('account' => $this->getUser())),
-        '%total' => userpoints_get_current_points($this->getUid(), $this->getTid()),
-        '%category' => $this->getCategory(),
-      ));
+      '!username' => theme('username', array('account' => $this->getUser())),
+      '%total' => userpoints_get_current_points($this->getUid(), $this->getTid()),
+      '%category' => $this->getCategory(),
+    ));
 
     $view_own_points = user_access('view own userpoints') || user_access('view userpoints') || user_access('administer userpoints');
     $view_all_points = user_access('view userpoints') || user_access('administer userpoints');
@@ -1122,7 +1059,7 @@ class UserpointsTransaction {
     $actions = array();
     $url_options = array('query' => drupal_get_destination());
 
-    $uri = userpoints_transaction_uri_callback($this, TRUE);
+    $uri = $this->defaultUri(TRUE);
     $url_prefix = $uri['path'];
 
     if ($show_view && userpoints_access_view_transaction($this)) {
@@ -1164,8 +1101,8 @@ class UserpointsTransaction {
       UserpointsTransaction::STATUS_PENDING => 'pending',
     );
     $row = array('class' => array(
-        'userpoints-transaction-row-status-' . $css_stati[$this->getStatus()],
-        'userpoints-transaction-row-category-' . $this->getTid()),
+      'userpoints-transaction-row-status-' . $css_stati[$this->getStatus()],
+      'userpoints-transaction-row-category-' . $this->getTid()),
     );
     if ($settings['show_user']) {
       $row['data'][] = array(
@@ -1207,77 +1144,15 @@ class UserpointsTransaction {
   }
 
   /**
-   * Automatically called if this object is goes out of scope and is destructed.
+   * Resets the original status to the current one.
    */
-  function __destruct() {
-    // Automatically save new transactions to improve DX.
-    if (!$this->getTxnId() && !$this->isAborted()) {
-      $this->save();
-    }
-  }
-
-  /**
-   * Magic function to allow access to property by name.
-   */
-  function __get($name) {
-
-    // Compatibility with dpm().
-    if (strpos($name, 'krumo') !== FALSE) {
-      if (!isset($this->$name)) {
-        $this->$name = NULL;
-      }
-      return $this->$name;
-    }
-
-    $method = 'get' . str_replace('_', '', $name);
-    if (method_exists($this, $method)) {
-      return $this->$method();
-    }
-    else {
-      throw new UserpointsInvalidPropertyException($name);
-    }
-  }
-
-  /**
-   * Magic function to allow access to property by name.
-   */
-  function __set($name, $value) {
-
-    $method = 'get' . str_replace('_', '', $name);
-    if (method_exists($this, $method)) {
-      return $this->$method($value);
-    }
-    else {
-      // Some modules, e.g rdf.module and devel.module try to set custom
-      // properties on entites. Do not prevent this.
-      return $this->$name = $value;
-    }
+  public function resetOriginalStatus() {
+    $this->orig_status = $this->getStatus();
   }
 }
 
 /**
- * This exception is thrown when a pr{ "rules_userpoints_transaction_after_test_rule" : {
-        "LABEL" : "Userpoints Transaction After Test rule",
-        "PLUGIN" : "reaction rule",
-        "REQUIRES" : [ "rules", "userpoints_rules" ],
-        "ON" : [ "userpoints_event_points_awarded_after" ],
-        "IF" : [
-          { "data_is" : {
-              "data" : [ "userpoints-transaction:operation" ],
-              "value" : "userpoints_rules_trigger_after_rule"
-            }
-          }
-        ],
-        "DO" : [
-          { "data_set" : { "data" : [ "userpoints-transaction:status" ], "value" : "1" } },
-          { "data_set" : {
-              "data" : [ "userpoints-transaction:reference" ],
-              "value" : "Transaction was set to pending through rules."
-            }
-          }
-        ]
-      }
-    }operty is changed after a saved transaction
+ * This exception is thrown when a property is changed after a saved transaction
  * has been approved or declined.
  */
 class UserpointsChangeException extends Exception {
@@ -1306,4 +1181,248 @@ class UserpointsInvalidArgumentException extends Exception {
  */
 class UserpointsTransactionIncompleteException extends Exception {
 
+}
+
+/**
+ * Userpoints transaction controller.
+ */
+class UserpointsTransactionController extends EntityAPIController {
+
+  /**
+   * Overrides EntityAPIController::save().
+   *
+   * It is not permitted to update a approved or denied transaction except
+   * marking it as expird. Any attemt to change a property of such a transaction
+   * will result in an immediate exception.
+   */
+  public function save($entity, DatabaseTransaction $transaction = NULL) {
+
+    // Prevent saving when any of the required properties are missing.
+    if (!$entity->getPoints() || !$entity->getUid() || !$entity->getOperation()) {
+      $entity->abort();
+      throw new UserpointsTransactionIncompleteException();
+    }
+
+    // Call the before hook to allow modules to change and deny this.
+    // @todo: Rename this hook?
+    module_invoke_all('userpoints_transaction_before', $entity);
+
+    // Abort if the transaction has been denied.
+    if ($entity->isDenied()) {
+      $entity->abort();
+      return FALSE;
+    }
+
+    $return = parent::save($entity, $transaction);
+
+    // Update totals if the transaction is approved and not expired.
+    if ($entity->isApproved() && !$entity->isExpired()) {
+      $this->updateTotals($entity->tid, $entity->uid, $entity->points);
+    }
+
+    // Display a message unless disabled or no message exists.
+    if ($entity->getDisplay() && $message = $entity->getMessage()) {
+      drupal_set_message($message);
+    }
+
+    // Reset original status to current one
+    $entity->resetOriginalStatus();
+    return $return;
+  }
+
+
+  /**
+   * Update the total aggregations of the corresponding user.
+   */
+  protected function updateTotals($tid, $uid, $points) {
+    // Update this category.
+    $this->updateTotalsCategory($tid, $uid, $points);
+    // Update the total over all categories.
+    $this->updateTotalsCategory('all', $uid, $points);
+  }
+
+  /**
+   * Update the totals of a specific category.
+   *
+   * Updating the total of all categories is supported by using 'all' for the
+   * $tid.
+   */
+  protected function updateTotalsCategory($tid, $uid, $points) {
+    $table = 'userpoints';
+    if ($tid === 'all') {
+      // Use a different table for the overall total.
+      $table = 'userpoints_total';
+    }
+
+    // Always update the time stamp and the total points.
+    $total = array(
+      'last_update' => REQUEST_TIME,
+      'points' => $points + userpoints_get_current_points($uid, $tid),
+    );
+    // Update the total max points if necessary.
+    $max_points_total = userpoints_get_max_points($uid, $tid);
+    if ($total['points'] > $max_points_total) {
+      $total['max_points'] = $total['points'];
+    }
+
+    // The keys for the merge query. The tid is only added when not 'all'.
+    $keys = array(
+      'uid' => $uid,
+    );
+    if ($tid !== 'all') {
+      $keys['tid'] = $tid;
+    }
+
+    // Save the updates.
+    db_merge($table)
+      ->key($keys)
+      ->fields($total)
+      ->execute();
+  }
+
+}
+
+/**
+ * Extends property metadata for the Userpoints Transaction entity.
+ */
+class UserpointsTransactionMetadataController extends EntityDefaultMetadataController {
+
+  /**
+   * Overrides EntityDefaultMetadataController::entityPropertyInfo().
+   */
+  public function entityPropertyInfo() {
+    $info = parent::entityPropertyInfo();
+
+    $properties = &$info['userpoints_transaction']['properties'];
+    $properties['user'] = array(
+      'type' => 'user',
+      'label' => t('User'),
+      'description' => t('The user that will receive the !points', userpoints_translation()),
+      'setter callback' => 'userpoints_transaction_property_set',
+      'getter callback' => 'userpoints_transaction_property_get',
+    );
+    $properties['points']['label'] = t('!Points', userpoints_translation());
+    $properties['points']['description'] = t('Amount of !points to give or take.', userpoints_translation());
+
+    $properties['points_abs'] = array(
+      'label' => t('!Points absolute', userpoints_translation()),
+      'description' => t('The absolute (positive) amount of !points of this transaction.', userpoints_translation()),
+      'type' => 'integer',
+      'getter callback' => 'userpoints_transaction_get_points_absolute',
+    );
+
+    $properties['tid'] = array(
+      'label' => t('!Points category', userpoints_translation()),
+      'description' => t('The category to which these transaction belongs.'),
+      'options list' => 'userpoints_rules_get_categories',
+    ) + $properties['tid'];
+
+    $properties['entity'] = array(
+      'label' => t('Entity'),
+      'type' => 'entity',
+      'description' => t('The entity to which this transaction refers.'),
+      'optional' => TRUE,
+      'getter callback' => 'userpoints_transaction_property_get',
+    );
+    $properties['description'] = array(
+      'label' => t('Description'),
+      'description' => t('Can contain the reason why the points have been given.'),
+      'optional' => TRUE,
+    ) + $properties['description'];
+
+    $properties['reference'] = array(
+      'label' => t('Reference'),
+      'description' => t('Can contain a reference for this transaction.'),
+      'optional' => TRUE,
+    ) + $properties['reference'];
+
+    $properties['operation'] = array(
+      'label' => t('Operation'),
+      'description' => t('Describes the operation (Insert/Remove/...).'),
+    ) + $properties['operation'];
+
+    $properties['reason'] = array(
+      'label' => t('Reason'),
+      'type' => 'text',
+      'description' => t('The reason why the points were granted.'),
+      'getter callback' => 'userpoints_transaction_property_get',
+    );
+    $properties['parent_txn_id'] = array(
+      'label' => t('Parent transaction'),
+      'description' => t('ID of the parent transaction.'),
+    ) + $properties['parent_txn_id'];
+
+    $properties['entity_id'] = array(
+      'label' => t('Entity ID'),
+      'description' => t('Id of the referenced entity.'),
+    ) + $properties['entity_id'];
+
+    $properties['entity_type'] = array(
+      'label' => t('Entity type'),
+      'description' => t('Type of the referenced entity.'),
+    ) + $properties['entity_type'];
+
+    $properties['uid'] = array(
+      'label' => t('User ID'),
+      'description' => t('ID of the user who received the point.'),
+    ) + $properties['uid'];
+
+    $properties['approver_uid'] = array(
+      'label' => t('Approver UID'),
+      'description' => t('User ID of the user who approved the transaction.'),
+    ) + $properties['approver_uid'];
+
+    $properties['time_stamp'] = array(
+      'label' => t('Timestamp'),
+      'type' => 'date',
+      'description' => t('Time when the points were given.'),
+    ) + $properties['time_stamp'];
+
+    $properties['changed'] = array(
+      'label' => t('Changed'),
+      'type' => 'date',
+      'description' => t('Time when the transaction was last changed.'),
+    ) + $properties['time_stamp'];
+
+    $properties['expired'] = array(
+      'label' => t('Expired'),
+      'type' => 'boolean',
+      'description' => t('If the transaction is expired.'),
+    ) + $properties['expired'];
+
+    $properties['expirydate'] = array(
+      'label' => t('Expiry date'),
+      'type' => 'date',
+      'description' => t('Time when the points will expire.'),
+    ) + $properties['expirydate'];
+
+    $properties['display'] = array(
+      'label' => t('Display'),
+      'type' => 'boolean',
+      'description' => t('Whether to show a message to the user for this transaction or not.'),
+      'setter callback' => 'userpoints_transaction_property_set',
+      'getter callback' => 'userpoints_transaction_property_get',
+    );
+    $properties['status'] = array(
+      'label' => t('Status'),
+      'description' => t('Status of this transaction.'),
+      'options list' => 'userpoints_txn_status',
+    ) + $properties['status'];
+
+    // Add default setter callback.
+    foreach ($properties as $key => &$property) {
+      if (isset($property['setter callback'])) {
+        continue;
+      }
+
+      // Exclude some read only properties.
+      if (in_array($key, array('display', 'reason', 'entity', 'points_abs'))) {
+        continue;
+      }
+
+      $property['setter callback'] = 'entity_property_verbatim_set';
+    }
+
+    return $info;
+  }
 }

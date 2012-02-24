@@ -8,3 +8,4 @@ files[]=views/userpoints_views_handler_field_category.inc
 files[]=views/userpoints_views_handler_filter_category.inc
 files[]=views/userpoints_views_handler_argument_category.inc
 configure = admin/config/people/userpoints/settings
+dependencies[]=entity

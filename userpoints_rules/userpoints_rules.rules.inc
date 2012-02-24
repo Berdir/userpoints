@@ -143,16 +143,6 @@ function userpoints_rules_rules_event_info() {
         ),
        'group' => t('!Points', userpoints_translation()),
     ),
-    'userpoints_event_points_awarded_after' => array(
-       'label' => t('User was awarded !points', userpoints_translation()),
-       'variables' => array(
-          'userpoints_transaction' => array(
-            'type' => 'userpoints_transaction',
-            'label' => t('!Points transaction', userpoints_translation()),
-          )
-        ),
-       'group' => t('!Points', userpoints_translation()),
-    ),
   );
 }
 

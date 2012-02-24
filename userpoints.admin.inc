@@ -27,7 +27,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
   if ($mode == 'edit') {
     drupal_set_title(t('Edit !points transaction', userpoints_translation()));
     $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i:s O');
-    $txn_user = $txn->user;
+    $txn_user = $txn->getUser();
 
     $form['txn'] = array(
       '#type' => 'value',

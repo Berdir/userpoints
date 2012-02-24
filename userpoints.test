@@ -194,8 +194,8 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
 
     foreach ($times as $key => $time) {
       $transaction = userpoints_grant_points($key, $points, $this->non_admin_user->uid)
-        ->setExpiryDate($time['time'])
-        ->save();
+        ->setExpiryDate($time['time']);
+      $transaction->save();
       $this->assertTrue((bool)$transaction->getTxnId(), t($time['string'] . " API responded with a successful grant of points"));
       // Check the database to ensure the points were properly saved.
       $sql = "SELECT points FROM {userpoints_txn} WHERE uid = :uid AND points = :points AND expirydate = :date";
@@ -222,13 +222,13 @@ class UserpointsAPITestCase extends UserpointsBaseTestCase {
     $expire_points = rand(1, 100);
 
     $transaction = userpoints_grant_points('must_expire', $expire_points, $this->non_admin_user->uid)
-        ->setExpiryDate(REQUEST_TIME - 100)
-        ->save();
+      ->setExpiryDate(REQUEST_TIME - 100);
+    $transaction->save();
     $this->assertTrue((bool)$transaction->getTxnId(), t("API succesfully added points for expiration"));
 
     $transaction = userpoints_grant_points('must_not_expire', $keep_points, $this->non_admin_user->uid)
-        ->setExpiryDate(REQUEST_TIME + 10000)
-        ->save();
+      ->setExpiryDate(REQUEST_TIME + 10000);
+    $transaction->save();
     $this->assertTrue((bool)$transaction->getTxnId(), t("API succesfully added points for expiration"));
 
     // Load timestamp of the first transaction.
@@ -597,7 +597,7 @@ class UserpointsGrantPointsTestCase extends UserpointsBaseTestCase {
    */
   function testGrantPoints() {
     // Most basic usage, with automated saving.
-    userpoints_grant_points('test', 10, $this->non_admin_user->uid);
+    userpoints_grant_points('test', 10, $this->non_admin_user->uid)->save();
     $this->verifyPoints($this->non_admin_user->uid, 10, 10);
 
     // Negative points, use of save().
@@ -607,8 +607,8 @@ class UserpointsGrantPointsTestCase extends UserpointsBaseTestCase {
 
     // Verify that pending points are not added to the total.
     $transaction = userpoints_grant_points('test', 7, $this->non_admin_user->uid)
-      ->pending()
-      ->save();
+      ->pending();
+    $transaction->save();
     $this->verifyPoints($this->non_admin_user->uid, 5, 10);
 
     // Make sure that loaded transactions can be updated, and after marked as
@@ -630,8 +630,8 @@ class UserpointsGrantPointsTestCase extends UserpointsBaseTestCase {
     }
 
     $transaction = userpoints_grant_points('test', 19, $this->non_admin_user->uid)
-      ->pending()
-      ->save();
+      ->pending();
+    $transaction->save();
     $this->verifyPoints($this->non_admin_user->uid, 12, 12);
 
     // Transactions can be declined.

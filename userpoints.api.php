@@ -124,16 +124,5 @@ function hook_userpoints_transaction_before(UserpointsTransaction $transaction) 
 }
 
 /**
- * Invoked after a transaction has been saved.
- *
- * @param $transaction
- *   A UserpointsTransaction object which contains all information about the
- *   new or updated transaction.
- */
-function hook_userpoints_transaction_after(UserpointsTransaction $transaction) {
-
-}
-
-/**
  * @}
  */

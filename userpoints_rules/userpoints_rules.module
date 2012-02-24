@@ -11,10 +11,3 @@
 function userpoints_rules_userpoints_transaction_before($userpoints_transaction) {
   rules_invoke_event('userpoints_event_points_awarded_before', $userpoints_transaction);
 }
-
-/**
- * Implements hook_userpoints().
- */
-function userpoints_rules_userpoints_transaction_after($userpoints_transaction) {
-  rules_invoke_event('userpoints_event_points_awarded_after', $userpoints_transaction);
-}

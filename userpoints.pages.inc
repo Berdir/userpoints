@@ -245,7 +245,7 @@ function userpoints_view_transaction($transaction) {
   $content['details']['user'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('User'),
-    '#value' => theme('username', array('account' => $transaction->user)),
+    '#value' => theme('username', array('account' => $transaction->getUser())),
     '#weight' => 0,
     '#attributes' => array('class' => array('userpoints-item-user')),
   );
@@ -261,7 +261,7 @@ function userpoints_view_transaction($transaction) {
   $content['details']['category'] = array(
     '#theme' => 'userpoints_view_item',
     '#title' => t('Category'),
-    '#value' => $transaction->category,
+    '#value' => $transaction->tid,
     '#weight' => 20,
     '#attributes' => array('class' => array('userpoints-item-category')),
   );

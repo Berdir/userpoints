@@ -63,8 +63,8 @@ class UserpointsRulesTestCase extends DrupalWebTestCase {
 
     $this->createEventRules();
 
-    $transaction = userpoints_grant_points('userpoints_rules_trigger_before_rule', 10, $user->uid)
-      ->save();
+    $transaction = userpoints_grant_points('userpoints_rules_trigger_before_rule', 10, $user->uid);
+    $transaction->save();
 
     // Verify that the changes defined in the rules have been done.
     $this->assertTrue($transaction->isDeclined(), t('Transaction has been marked as declined.'));
@@ -76,19 +76,13 @@ class UserpointsRulesTestCase extends DrupalWebTestCase {
     $this->assertEqual('Transaction was declined through rules.', $transaction->getDescription(), t('Transaction description has been set.'));
 
     $transaction = userpoints_grant_points('userpoints_rules_trigger_after_rule', 15, $user->uid)
-      ->pending()
-      ->save();
+      ->pending();
+    $transaction->save();
 
     // Verify that the changes defined in the rules have been done.
-    $this->assertTrue($transaction->isApproved(), t('Transaction has been marked as pending.'));
-    $this->assertEqual('Transaction was set to pending through rules.', $transaction->getReference(), t('Transaction reference has been set.'));
-
-    // Verify that the changes have not be written to the database as this is
-    // the after event.
     $transaction = userpoints_transaction_load($transaction->getTxnId());
-    $this->assertFalse($transaction->isApproved(), t('Transaction has not been marked as pending.'));
-    $this->assertEqual('', $transaction->getReference(), t('Transaction reference has not been saved.'));
-
+    $this->assertTrue($transaction->isApproved(), t('Transaction has been marked as approved.'));
+    $this->assertEqual('Transaction was set to pending through rules.', $transaction->getReference(), t('Transaction reference has been set.'));
   }
 
   /**
@@ -122,7 +116,7 @@ class UserpointsRulesTestCase extends DrupalWebTestCase {
         "LABEL" : "Userpoints Transaction After Test rule",
         "PLUGIN" : "reaction rule",
         "REQUIRES" : [ "rules", "userpoints_rules" ],
-        "ON" : [ "userpoints_event_points_awarded_after" ],
+        "ON" : [ "userpoints_transaction_insert" ],
         "IF" : [
           { "data_is" : {
               "data" : [ "userpoints-transaction:operation" ],
