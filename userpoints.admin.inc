@@ -28,22 +28,18 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
     drupal_set_title(t('Edit !points transaction', userpoints_translation()));
     $timestamp = format_date($txn->time_stamp, 'custom', 'Y-m-d H:i:s O');
     $txn_user = $txn->getUser();
-
-    $form['txn'] = array(
-      '#type' => 'value',
-      '#value' => $txn,
-    );
   }
   elseif ($mode == 'add') {
     drupal_set_title(t('Add !points', userpoints_translation()));
     if ($txn) {
       $txn_user = user_load($txn);
     }
-    $txn = NULL;
+    $txn = new UserpointsTransaction();
   }
+  $form_state['userpoints_transaction'] = $txn;
 
   // If this transaction is read only, disable all fields.
-  $disable = $txn && $txn->isReadOnly();
+  $disable = $txn->isReadOnly();
 
   if ($disable) {
     drupal_set_message(t('This transaction is read only and can not be changed.'), 'warning');
@@ -92,6 +88,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
 
   $form['additional_settings'] = array(
     '#type' => 'vertical_tabs',
+    '#weight' => 20,
   );
 
   $form['status'] = array(
@@ -170,7 +167,7 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
   $form['reason']['operation'] = array(
       '#type' => 'textfield',
       '#title' => t('Operation'),
-      '#default_value' => isset($txn) ? $txn->operation : t('admin'),
+      '#default_value' => $txn->getOperation() ? $txn->operation : t('admin'),
       '#maxlength' => 48,
       '#description' => t('The operation type for this transaction (default is %admin). Any value is valid but using a defined operation will cause an auto-generated description (specific to the chosen operation) to be included. This description can be translated into multiple languages.', array('%admin' => t('admin'))),
       '#weight' => 5,
@@ -251,12 +248,18 @@ function userpoints_admin_txn($form, &$form_state, $mode, $txn = NULL) {
       '#default_value' => $mode
   );
 
-  $form['submit'] = array(
+  $form['actions'] = array(
+    '#type' => 'actions',
+  );
+
+  $form['actions']['submit'] = array(
       '#type' => 'submit',
       '#value' => t('Save'),
       '#weight' => 50,
       '#disabled' => $disable,
   );
+
+  field_attach_form('userpoints_transaction', $txn, $form, $form_state);
   return $form;
 }
 /**
@@ -325,6 +328,7 @@ function userpoints_admin_txn_validate($form, &$form_state) {
     form_set_error('time_stamp', t('The provided timestamp is not a valid date.'));
   }
 
+  field_attach_form_validate('userpoints_transaction', $form_state['userpoints_transaction'], $form, $form_state);
 }
 
 /**
@@ -333,11 +337,13 @@ function userpoints_admin_txn_validate($form, &$form_state) {
 function userpoints_admin_txn_submit($form, &$form_state) {
   global $user;
 
+  $transaction = $form_state['userpoints_transaction'];
+
   // Check if this is a new transaction or if we are editing an existing one.
   if ($form_state['values']['mode'] == 'add') {
-
-    // Create a new transaction object.
-    $transaction = userpoints_grant_points($form_state['values']['operation'], $form_state['values']['points'], $form_state['values']['txn_user']->uid)
+    // Set basic properties.
+    $transaction
+      ->setUid($form_state['values']['txn_user']->uid)
       ->setTimestamp($form_state['values']['time_stamp']);
 
     // If the transaction should be moderated, set it to pending.
@@ -356,8 +362,7 @@ function userpoints_admin_txn_submit($form, &$form_state) {
   else {
 
     // Updating an existing transaction, load and update values.
-    $transaction = userpoints_transaction_load($form_state['values']['txn']->txn_id)
-      ->setPoints($form_state['values']['points'])
+    $transaction
       ->setStatus($form_state['values']['status'])
       // We display a custom message instead of the default.
       ->setMessage(t('Changes to the !points transaction have been saved.', userpoints_translation()));
@@ -370,14 +375,23 @@ function userpoints_admin_txn_submit($form, &$form_state) {
     }
 
     // If status changed, the current user is the new approver.
-    if ($form_state['values']['txn']->status != $form_state['values']['status']) {
+    if ($transaction->getStatus() != $form_state['values']['status']) {
       $transaction->setApproverUid($user->uid);
     }
   }
 
+  // Attach field information directly to the userpoints transaction object.
+  foreach (field_info_instances('userpoints_transaction', 'userpoints_transaction') as $instance) {
+    $field_name = $instance['field_name'];
+    $transaction->$field_name = $form_state['values'][$field_name];
+  }
+
+  field_attach_submit('userpoints_transaction', $transaction, $form, $form_state);
+
   // Set common properties and save the transaction.
   $transaction
     ->setTid($form_state['values']['tid'])
+    ->setPoints($form_state['values']['points'])
     ->setOperation($form_state['values']['operation'])
     ->setReference($form_state['values']['reference'])
     ->setDescription($form_state['values']['description'])

@@ -651,3 +651,58 @@ class UserpointsGrantPointsTestCase extends UserpointsBaseTestCase {
     }
   }
 }
+
+
+/**
+ * Tests for fields integration.
+ */
+class UserpointsFieldsTestCase extends UserpointsBaseTestCase {
+  /**
+   * Implements getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Userpoints fields.'),
+      'description' => t('Tests integration with fields.'),
+      'group' => t('Userpoints'),
+    );
+  }
+
+  /**
+   * Implements setUp().
+   */
+  function setUp() {
+    parent::setUp('userpoints');
+  }
+
+  function testSingleField() {
+    // Create an administrator account.
+    $admin = $this->drupalCreateUser(array('administer userpoints'));
+    $this->drupalLogin($admin);
+
+    // Create a new field.
+    $edit = array(
+      'fields[_add_new_field][label]' => $this->randomName(),
+      'fields[_add_new_field][field_name]' => $name = strtolower($this->randomName()),
+      'fields[_add_new_field][type]' => 'text',
+      'fields[_add_new_field][widget_type]' => 'text_textfield',
+    );
+    $this->drupalPost('admin/config/people/userpoints/fields', $edit, t('Save'));
+    $this->drupalPost(NULL, array(), t('Save field settings'));
+    $this->drupalPost(NULL, array(), t('Save settings'));
+
+    // Create transaction.
+    $message = array(
+      'txn_user' => $admin->name,
+      'points' => 10,
+      'field_' . $name . '[' . LANGUAGE_NONE . '][0][value]' => $this->randomName(50),
+    );
+    $this->drupalPost('admin/config/people/userpoints/add', $message, t('Save'));
+
+    // Check message.
+    $this->drupalGet('myuserpoints');
+    $this->clickLink(t('view'));
+
+    $this->assertText($message['field_' . $name . '[' . LANGUAGE_NONE . '][0][value]'], t('Content of new field is displayed.'));
+  }
+}

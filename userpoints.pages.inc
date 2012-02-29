@@ -218,6 +218,7 @@ function userpoints_list_users($form, &$form_state, $tid = NULL) {
 function userpoints_view_transaction($transaction) {
   drupal_add_css(drupal_get_path('module', 'userpoints') . '/userpoints.css');
 
+  field_attach_prepare_view('userpoints_transaction', array($transaction->getTxnId() => $transaction), 'full');
   drupal_set_title(t('View transaction #@txn_id', array('@txn_id' => $transaction->txn_id)));
 
   $css_stati = array(
@@ -437,5 +438,8 @@ function userpoints_view_transaction($transaction) {
       '#attributes' => array('class' => array('userpoints-item-actions')),
     );
   }
+
+  $content += field_attach_view('userpoints_transaction', $transaction, 'full');
+
   return $content;
 }
