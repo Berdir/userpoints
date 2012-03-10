@@ -212,11 +212,6 @@ function userpoints_uninstall() {
   db_delete('variable')
     ->condition('name', 'userpoints_%', 'LIKE')
     ->execute();
-
-  $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module='userpoints'")->fetchField();
-  if ($vid && function_exists('taxonomy_vocabulary_delete')) {
-    taxonomy_vocabulary_delete($vid);
-  }
 }
 
 /**
@@ -331,4 +326,19 @@ function userpoints_update_7004(&$sandbox) {
   $sandbox['current_uid'] = $last_uid;
   // Set #finished based on sandbox.
   $sandbox['#finished'] = (empty($sandbox['max']) || $last_uid == 0) ? 1 : ($sandbox['current_uid'] / $sandbox['max']);
+}
+
+/**
+ * Check if there is a category vocabulary and if so, convert to a taxonomy field.
+ */
+function userpoints_update_7200() {
+
+  $vid = variable_get('userpoints_category_default_vid', '');
+  if (!empty($vid) && $vocabulary = taxonomy_vocabulary_load($vid)) {
+    // Count terms.
+    $count = db_query('SELECT COUNT(*) FROM {taxonomy_term_data} WHERE vid = :vid', array(':vid' => $vid));
+    if ($count > 2) {
+      
+    }
+  }
 }
